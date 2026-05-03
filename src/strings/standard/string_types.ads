@@ -1,0 +1,156 @@
+-------------------------------------------------------------------------------
+--  String_Types - Standard String Configuration
+--
+--  Copyright (c) 2025
+--  SPDX-License-Identifier: Apache-2.0
+-------------------------------------------------------------------------------
+
+--  @summary
+--  Re-exports string types and operations from Standard_Strings.
+--
+--  @description
+--  This is the Standard (Unbounded_String) variant of String_Types.
+--  It uses Ada.Strings.Unbounded.Unbounded_String as the underlying type.
+
+with Ada.Containers;
+with Standard_Strings;
+with Standard_String_Operations;
+
+package String_Types is
+
+   ---------------------------------------------------------------------------
+   --  Core Types (from the underlying string implementation)
+   ---------------------------------------------------------------------------
+
+   subtype String_Type is Standard_String_Operations.Unbounded_String;
+   subtype Character_Type is Character;
+
+   ---------------------------------------------------------------------------
+   --  Constants
+   ---------------------------------------------------------------------------
+
+   Empty_String : constant String_Type := Standard_Strings.Empty_String;
+
+   ---------------------------------------------------------------------------
+   --  Query Operations
+   ---------------------------------------------------------------------------
+
+   function Length (Source : String_Type) return Natural renames Standard_String_Operations.Length;
+
+   function Is_Empty (Source : String_Type) return Boolean renames Standard_String_Operations.Is_Empty;
+
+   function Get_Length (Source : String_Type) return Natural renames Standard_Strings.Get_Length;
+
+   function Is_Null_Or_Empty (Source : String_Type) return Boolean renames Standard_Strings.Is_Null_Or_Empty;
+
+   function Element (Source : String_Type; Index : Positive) return Character_Type
+   renames Standard_String_Operations.Element;
+
+   function Get_Element (Source : String_Type; Index : Positive) return Character_Type
+   renames Standard_Strings.Get_Element;
+
+   function First_Index (Source : String_Type) return Positive renames Standard_Strings.First_Index;
+
+   function Last_Index (Source : String_Type) return Natural renames Standard_Strings.Last_Index;
+
+   --  Check if Source contains Pattern
+   function Contains (Source : String_Type; Pattern : String_Type) return Boolean renames Standard_Strings.Contains;
+
+   ---------------------------------------------------------------------------
+   --  Concatenation Operations
+   ---------------------------------------------------------------------------
+
+   function Concat (Left : String_Type; Right : String_Type) return String_Type renames Standard_Strings.Concat;
+
+   function Append_Character (Left : String_Type; Right : Character_Type) return String_Type
+   renames Standard_Strings.Append_Character;
+
+   function Prepend_Character (Left : Character_Type; Right : String_Type) return String_Type
+   renames Standard_Strings.Prepend_Character;
+
+   function "&" (Left : String_Type; Right : String_Type) return String_Type
+   renames Standard_String_Operations.Concat_Strings;
+
+   function "&" (Left : String_Type; Right : Character_Type) return String_Type
+   renames Standard_String_Operations.Concat_String_Character;
+
+   function "&" (Left : Character_Type; Right : String_Type) return String_Type
+   renames Standard_String_Operations.Concat_Character_String;
+
+   --  Concatenation with Latin-1 String
+   function "&" (Left : String_Type; Right : String) return String_Type
+   renames Standard_String_Operations.Concat_String_Latin_1;
+
+   function "&" (Left : String; Right : String_Type) return String_Type
+   renames Standard_String_Operations.Concat_Latin_1_String;
+
+   ---------------------------------------------------------------------------
+   --  Comparison Operations
+   ---------------------------------------------------------------------------
+
+   function "=" (Left, Right : String_Type) return Boolean renames Standard_Strings.Equal;
+
+   function "<" (Left, Right : String_Type) return Boolean renames Standard_Strings.Less_Than;
+
+   function "<=" (Left, Right : String_Type) return Boolean renames Standard_Strings.Less_Or_Equal;
+
+   function ">" (Left, Right : String_Type) return Boolean renames Standard_Strings.Greater_Than;
+
+   function ">=" (Left, Right : String_Type) return Boolean renames Standard_Strings.Greater_Or_Equal;
+
+   ---------------------------------------------------------------------------
+   --  Conversion Operations
+   ---------------------------------------------------------------------------
+
+   --  Convert from Latin-1 String to String_Type
+   function To_String_Type (Source : String) return String_Type renames Standard_String_Operations.To_Unbounded_String;
+
+   --  Convert from String_Type to Latin-1 String
+   function To_Latin_1 (Source : String_Type) return String renames Standard_String_Operations.To_String;
+
+   ---------------------------------------------------------------------------
+   --  Extended String Operations
+   ---------------------------------------------------------------------------
+
+   --  Hash function for use with hashed containers
+   function Hash (Key : String_Type) return Ada.Containers.Hash_Type renames Standard_String_Operations.Hash;
+
+   --  Slice extraction
+   function Slice (Source : String_Type; Low : Positive; High : Natural) return String_Type
+   renames Standard_String_Operations.Slice;
+
+   --  Index/search operations
+   function Index (Source : String_Type; Pattern : String_Type) return Natural renames Standard_String_Operations.Index;
+
+   function Index (Source : String_Type; Pattern : String) return Natural
+   renames Standard_String_Operations.Index_Latin_1;
+
+   --  Case conversion
+   function To_Lower (Source : String_Type) return String_Type renames Standard_String_Operations.To_Lower;
+
+   function To_Upper (Source : String_Type) return String_Type renames Standard_String_Operations.To_Upper;
+
+   --  Prefix/suffix checking
+   function Starts_With (Source : String_Type; Prefix : String_Type) return Boolean
+   renames Standard_String_Operations.Starts_With;
+
+   function Starts_With (Source : String_Type; Prefix : String) return Boolean
+   renames Standard_String_Operations.Starts_With_Latin_1;
+
+   function Ends_With (Source : String_Type; Suffix : String_Type) return Boolean
+   renames Standard_String_Operations.Ends_With;
+
+   --  Trim operations
+   function Trim (Source : String_Type) return String_Type renames Standard_String_Operations.Trim;
+
+   --  Character operations
+   function From_Character (C : Character_Type) return String_Type renames Standard_String_Operations.From_Character;
+
+   --  Character predicates
+   function Is_Equals_Sign (C : Character_Type) return Boolean
+   is (C = '=');
+
+   function Is_Dash (C : Character_Type) return Boolean
+   is (C = '-');
+
+end String_Types;

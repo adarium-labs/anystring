@@ -1,0 +1,70 @@
+with "config/anystrings_config.gpr";
+project Anystrings is
+
+   for Library_Name use "Anystring";
+   for Library_Version use Project'Library_Name & ".so." & Anystrings_Config.Crate_Version;
+
+   ---------------------------------------------------------------------------
+   --  String Type Selection
+   ---------------------------------------------------------------------------
+   --  Use environment variable STRING_TYPE to select the string type:
+   --    - "standard"        : Ada.Strings.Unbounded.Unbounded_String (default)
+   --    - "wide_string"     : Ada.Strings.Wide_Unbounded.Unbounded_Wide_String
+   --    - "wide_wide_string": Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String
+   --    - "uxstring"        : UXStrings.UXString (requires uxstrings dependency)
+   --    - "custom"          : Use STRING_PATH to specify custom path
+   --
+   --  Example usage:
+   --    STRING_TYPE=wide_string alr build
+   --    STRING_TYPE=custom STRING_PATH=/path/to/my/strings alr build
+
+   type String_Type_Choice is
+     ("standard", "wide_string", "wide_wide_string", "uxstring", "custom");
+   String_Type : String_Type_Choice :=
+     external ("STRING_TYPE", "standard");
+
+   String_Source_Dirs := ();
+   case String_Type is
+      when "standard" =>
+         String_Source_Dirs := ("src/strings/standard");
+      when "wide_string" =>
+         String_Source_Dirs := ("src/strings/wide_string");
+      when "wide_wide_string" =>
+         String_Source_Dirs := ("src/strings/wide_wide_string");
+      when "uxstring" =>
+         String_Source_Dirs := ("src/strings/uxstring");
+      when "custom" =>
+         String_Source_Dirs := (external ("STRING_PATH", ""));
+   end case;
+
+   for Source_Dirs use ("src/", "config/") & String_Source_Dirs;
+   for Object_Dir use "obj/" & Anystrings_Config.Build_Profile;
+   for Create_Missing_Dirs use "True";
+   for Library_Dir use "lib";
+
+   type Library_Type_Type is ("relocatable", "static", "static-pic");
+   Library_Type : Library_Type_Type :=
+     external ("ANYSTRING_LIBRARY_TYPE", external ("LIBRARY_TYPE", "static"));
+   for Library_Kind use Library_Type;
+
+   package Compiler is
+      for Default_Switches ("Ada") use Anystrings_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2012");
+   end Compiler;
+
+   package Binder is
+      for Switches ("Ada") use ("-Es"); --  Symbolic traceback
+   end Binder;
+
+   package Install is
+      for Artifacts (".") use ("share");
+   end Install;
+
+    package Format is
+      for Width ("Ada") use "120";
+      for Charset ("Ada") use "utf-8";
+   end Format;
+
+   package Documentation is
+      for Style use "leading";
+   end Documentation;
+end Anystrings;

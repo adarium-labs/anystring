@@ -1,0 +1,10 @@
+name = "anystrings"
+description = "A string abstraction library"
+version = "0.1.0-dev"
+
+authors = ["Heziode"]
+maintainers = ["Heziode <heziode@protonmail.com>"]
+maintainers-logins = ["heziode"]
+licenses = "Apache-2.0 WITH LLVM-exception"
+website = ""
+tags = ["string", "abstraction", "vss", "uxstrings"]
