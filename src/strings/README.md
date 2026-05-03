@@ -1,24 +1,24 @@
-# Aclida String Abstraction
+# Anystrings String Abstraction
 
-This directory contains alternative string type implementations for Aclida.
+This directory contains alternative string type implementations for Anystrings.
 
 ## Overview
 
-Aclida uses a generic string abstraction that allows users to choose their preferred string representation at compile time. By default, Aclida uses `Ada.Strings.Unbounded.Unbounded_String`.
+Anystrings uses a generic string abstraction that allows users to choose a preferred string representation at compile time. By default, it uses `Ada.Strings.Unbounded.Unbounded_String`.
 
 ## Quick Start
 
-Set the `ACLIDA_STRING_TYPE` environment variable before building:
+Set the `STRING_TYPE` environment variable before building:
 
 ```bash
 # Use standard Unbounded_String (default)
 alr build
 
 # Use UXStrings (requires uxstrings dependency)
-ACLIDA_STRING_TYPE=uxstring alr build
+STRING_TYPE=uxstring alr build
 
 # Use a custom implementation
-ACLIDA_STRING_TYPE=custom ACLIDA_STRING_PATH=/path/to/my/strings alr build
+STRING_TYPE=custom STRING_PATH=/path/to/my/strings alr build
 ```
 
 ## Status of Implementations
@@ -27,21 +27,18 @@ ACLIDA_STRING_TYPE=custom ACLIDA_STRING_PATH=/path/to/my/strings alr build
 |------|--------|-------|
 | `standard` | ✅ Ready | Default, uses `Unbounded_String` |
 | `uxstring` | ✅ Ready | Full Unicode support, requires `uxstrings` dependency |
-| `wide_string` | 🚧 Template | Requires framework changes for full support |
-| `wide_wide_string` | 🚧 Template | Requires framework changes for full support |
-| `custom` | ✅ Ready | Specify path via `ACLIDA_STRING_PATH` |
-
-> **Note**: Wide_String and Wide_Wide_String templates are provided but require
-> additional framework changes because some internal code uses Character literals.
+| `wide_string` | ✅ Ready | Uses `Wide_Character` and builds as a selectable variant |
+| `wide_wide_string` | ✅ Ready | Uses `Wide_Wide_Character` and builds as a selectable variant |
+| `custom` | ✅ Ready | Specify path via `STRING_PATH` |
 
 ## Architecture
 
 The string abstraction consists of three layers:
 
-1. **`Aclida.Strings`** - Generic signature package defining all required string operations
-2. **`Aclida.*_Operations`** - Operations package providing implementations for a specific string type
-3. **`Aclida.*_Strings`** - Instantiation of `Aclida.Strings` with the operations
-4. **`Aclida.String_Types`** - Configuration package that re-exports from the chosen instantiation
+1. **`Anystrings`** - Generic signature package defining all required string operations
+2. **`*_Operations`** - Operations package providing implementations for a specific string type
+3. **`*_Strings`** - Instantiation of `Anystrings` with the operations
+4. **`String_Types`** - Configuration package that re-exports from the chosen instantiation
 
 ## Available String Types
 
@@ -49,14 +46,14 @@ The string abstraction consists of three layers:
 
 - **Type**: `Ada.Strings.Unbounded.Unbounded_String`
 - **Character Type**: `Character`
-- **Files**: `aclida-standard_string_operations.ads/adb`, `aclida-standard_strings.ads`
+- **Files**: `standard_string_operations.ads/adb`, `standard_strings.ads`
 - **Notes**: UTF-8 encoded, Length/Element operate on bytes
 
 ### UXStrings (src/strings/uxstring/)
 
 - **Type**: `UXStrings.UXString`
 - **Character Type**: `UXStrings.Unicode_Character`
-- **Files**: `aclida-uxstring_operations.ads/adb`, `aclida-uxstrings.ads`
+- **Files**: `uxstring_operations.ads/adb`, `uxstrings.ads`
 - **Notes**: Full Unicode support, Length/Element operate on code points
 - **Dependency**: Requires UXStrings library
 
@@ -68,17 +65,17 @@ Add the alternative string type directory to your GPR file's Source_Dirs:
 
 ```gpr
 project My_App is
-   for Source_Dirs use ("src", "../aclida/src/strings/uxstring");
+   for Source_Dirs use ("src", "../anystrings/src/strings/uxstring");
 end My_App;
 ```
 
-The alternative `aclida-string_types.ads` in the uxstring directory will override the default one.
+The alternative `string_types.ads` in the selected implementation directory overrides the default one.
 
 ### Method 2: Create Your Own Implementation
 
-1. Create an operations package (like `Aclida.My_String_Operations`) that implements all required functions
-2. Create an instantiation of `Aclida.Strings` with your operations
-3. Create an `Aclida.String_Types` package that re-exports from your instantiation
+1. Create an operations package that implements all required functions
+2. Create an instantiation of `Anystrings` with those operations
+3. Create a `String_Types` package that re-exports from that instantiation
 4. Use GPR to include your implementation directory
 
 ## Required Operations
@@ -97,8 +94,8 @@ To implement a new string type, you must provide these operations:
 - `"="`, `"<"`, `"<="`, `">"`, `">="` for String_Type
 
 ### Conversion Operations
-- `To_String_Type(String) -> String_Type` (from Latin-1/UTF-8)
-- `To_Latin_1(String_Type) -> String` (to Latin-1/UTF-8)
+- `To_String_Type(String) -> String_Type` (from Latin-1)
+- `To_Latin_1(String_Type) -> String` (to Latin-1, replacing non-Latin-1 code points as needed)
 
 ### Extended Operations
 - `Hash(Key) -> Hash_Type`
@@ -121,7 +118,7 @@ To implement a new string type, you must provide these operations:
 
 To add support for VSS (Virtual String Subsystem):
 
-1. Create `src/strings/vss/aclida-vss_operations.ads` with all required operations
-2. Create `src/strings/vss/aclida-vss_strings.ads` instantiating `Aclida.Strings`
-3. Create `src/strings/vss/aclida-string_types.ads` re-exporting from VSS instantiation
+1. Create `src/strings/vss/vss_operations.ads` with all required operations
+2. Create `src/strings/vss/vss_strings.ads` instantiating `Anystrings`
+3. Create `src/strings/vss/string_types.ads` re-exporting from the VSS instantiation
 4. Use GPR to select: `for Source_Dirs use ("src", "src/strings/vss")`

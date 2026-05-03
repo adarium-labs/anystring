@@ -104,14 +104,11 @@ package String_Types is
    function ">=" (Left, Right : String_Type) return Boolean
      renames Wide_Wide_Strings.Greater_Or_Equal;
 
-   --  function To_String_Type (Source : String) return String_Type
-   --    renames Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String;
-
-   function To_String_Type (Source : Wide_Wide_String) return String_Type
+   function To_String_Type (Source : String) return String_Type
      renames Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String;
 
    function To_Latin_1 (Source : String_Type) return String
-     renames Wide_Wide_String_Operations.To_String;
+      renames Wide_Wide_String_Operations.To_String;
 
    function Hash (Key : String_Type) return Ada.Containers.Hash_Type
      renames Wide_Wide_String_Operations.Hash;

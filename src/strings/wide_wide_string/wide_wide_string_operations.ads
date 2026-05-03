@@ -70,8 +70,8 @@ package Wide_Wide_String_Operations is
      (Left, Right : Unbounded_Wide_Wide_String) return Boolean
      renames Ada.Strings.Wide_Wide_Unbounded.">=";
 
-   --  function To_Unbounded_Wide_Wide_String
-   --    (Source : String) return Unbounded_Wide_Wide_String;
+   function To_Unbounded_Wide_Wide_String
+     (Source : String) return Unbounded_Wide_Wide_String;
 
    function To_Unbounded_Wide_Wide_String
      (Source : Wide_Wide_String) return Unbounded_Wide_Wide_String;
