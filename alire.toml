@@ -8,3 +8,9 @@ maintainers-logins = ["heziode"]
 licenses = "Apache-2.0 WITH LLVM-exception"
 website = ""
 tags = ["string", "abstraction", "vss", "uxstrings"]
+
+[[depends-on]]
+uxstrings = "~0.9"
+
+[environment]
+UXS_VARIANT.set = "UXS1"

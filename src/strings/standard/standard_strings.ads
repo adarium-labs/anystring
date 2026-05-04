@@ -47,12 +47,19 @@ package Standard_Strings is new
      "<="                    => Standard_String_Operations."<=",
      ">"                     => Standard_String_Operations.">",
      ">="                    => Standard_String_Operations.">=",
-     --  Conversion operations
-     To_String_Type          => Standard_String_Operations.To_Unbounded_String,
-     To_Latin_1              => Standard_String_Operations.To_String,
-     --  Extended operations
-     Hash                    => Standard_String_Operations.Hash,
-     Slice                   => Standard_String_Operations.Slice,
+      --  Conversion operations
+      To_String_Type          => Standard_String_Operations.To_Unbounded_String,
+      To_Latin_1              => Standard_String_Operations.To_String,
+      --  Environment operations
+      Environment_Value       => Standard_String_Operations.Environment_Value,
+      Environment_Exists      => Standard_String_Operations.Environment_Exists,
+      Environment_Set         => Standard_String_Operations.Environment_Set,
+      Environment_Clear       => Standard_String_Operations.Environment_Clear,
+      Environment_Clear_All   => Standard_String_Operations.Environment_Clear,
+      Environment_Iterate     => Standard_String_Operations.Environment_Iterate,
+      --  Extended operations
+      Hash                    => Standard_String_Operations.Hash,
+      Slice                   => Standard_String_Operations.Slice,
      Index                   => Standard_String_Operations.Index,
      Index_Latin_1           => Standard_String_Operations.Index_Latin_1,
      To_Lower                => Standard_String_Operations.To_Lower,

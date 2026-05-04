@@ -25,7 +25,7 @@ Ada library `anystrings` — a generic string-abstraction crate. One signature p
 |------|----------|
 | Add/modify a string operation visible to users | `src/anystrings.ads` (signature) **and** every `*_operations.ads/adb` under `src/strings/*/` **and** every `string_types.ads` |
 | Add a new backend (e.g. VSS) | New dir `src/strings/<name>/` with the 3-file pattern; add `STRING_TYPE` choice in `anystrings.gpr` |
-| Change build switches / library kind | `anystrings.gpr` (`Compiler.Default_Switches`, `Library_Kind` via `ANYSTRING_LIBRARY_TYPE`) |
+| Change build switches / library kind | `anystrings.gpr` (`Compiler.Default_Switches`, `Library_Kind` via `ANYSTRING_LIBRARY_TYPE`, wide env encoding via `ANYSTRING_WIDE_ENV_ENCODING`) |
 | Run/extend the demo | `examples/src/anystrings_examples.adb` |
 | Backend-swap mechanics | `src/strings/AGENTS.md` |
 
@@ -67,6 +67,7 @@ alr build
 # Pick a backend
 STRING_TYPE=wide_string alr build
 STRING_TYPE=wide_wide_string alr build
+STRING_TYPE=wide_string ANYSTRING_WIDE_ENV_ENCODING=latin_1 alr build
 STRING_TYPE=uxstring alr build              # adds uxstrings dependency
 STRING_TYPE=custom STRING_PATH=/abs/path alr build
 

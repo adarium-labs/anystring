@@ -15,8 +15,8 @@
 --  To use this variant, set `STRING_TYPE` environment variable to `uxstring`.
 
 with Ada.Containers;
-with UXStrings;
 with UXString_Operations;
+with UXString_Strings;
 with UXStrings;
 
 package String_Types is
@@ -32,7 +32,7 @@ package String_Types is
    --  Constants
    ---------------------------------------------------------------------------
 
-   Empty_String : constant String_Type := UXStrings.Empty_String;
+   Empty_String : constant String_Type := UXString_Strings.Empty_String;
 
    ---------------------------------------------------------------------------
    --  Query Operations
@@ -45,10 +45,10 @@ package String_Types is
      renames UXString_Operations.Is_Empty;
 
    function Get_Length (Source : String_Type) return Natural
-     renames UXStrings.Get_Length;
+      renames UXString_Strings.Get_Length;
 
    function Is_Null_Or_Empty (Source : String_Type) return Boolean
-     renames UXStrings.Is_Null_Or_Empty;
+      renames UXString_Strings.Is_Null_Or_Empty;
 
    function Element
      (Source : String_Type;
@@ -58,17 +58,50 @@ package String_Types is
    function Get_Element
      (Source : String_Type;
       Index  : Positive) return Character_Type
-     renames UXStrings.Get_Element;
+      renames UXString_Strings.Get_Element;
 
    function First_Index (Source : String_Type) return Positive
-     renames UXStrings.First_Index;
+      renames UXString_Strings.First_Index;
 
    function Last_Index (Source : String_Type) return Natural
-     renames UXStrings.Last_Index;
+      renames UXString_Strings.Last_Index;
+
+   function Get_Env (Name : String_Type) return String_Type
+      renames UXString_Strings.Get_Env;
+
+   function Get_Env
+     (Name    : String_Type;
+      Default : String_Type) return String_Type
+      renames UXString_Strings.Get_Env;
+
+   function Env_Exists (Name : String_Type) return Boolean
+      renames UXString_Strings.Env_Exists;
+
+   subtype Env_Processor is UXString_Strings.Env_Processor;
+   subtype Env_Filter is UXString_Strings.Env_Filter;
+
+   function Set_Env
+     (Name  : String_Type;
+      Value : String_Type) return Boolean
+      renames UXString_Strings.Set_Env;
+
+   function Clear_Env (Name : String_Type) return Boolean
+      renames UXString_Strings.Clear_Env;
+
+   function Clear_Env return Boolean
+      renames UXString_Strings.Clear_Env;
+
+   function Iterate_Env (Process : Env_Processor) return Boolean
+      renames UXString_Strings.Iterate_Env;
+
+   function Iterate_Env
+     (Include : Env_Filter;
+      Process : Env_Processor) return Boolean
+      renames UXString_Strings.Iterate_Env;
 
    --  Check if Source contains Pattern
    function Contains (Source : String_Type; Pattern : String_Type) return Boolean
-     renames UXStrings.Contains;
+      renames UXString_Strings.Contains;
 
    ---------------------------------------------------------------------------
    --  Concatenation Operations
@@ -77,17 +110,17 @@ package String_Types is
    function Concat
      (Left  : String_Type;
       Right : String_Type) return String_Type
-     renames UXStrings.Concat;
+      renames UXString_Strings.Concat;
 
    function Append_Character
      (Left  : String_Type;
       Right : Character_Type) return String_Type
-     renames UXStrings.Append_Character;
+      renames UXString_Strings.Append_Character;
 
    function Prepend_Character
      (Left  : Character_Type;
       Right : String_Type) return String_Type
-     renames UXStrings.Prepend_Character;
+      renames UXString_Strings.Prepend_Character;
 
    function "&"
      (Left  : String_Type;
@@ -120,19 +153,19 @@ package String_Types is
    ---------------------------------------------------------------------------
 
    function "=" (Left, Right : String_Type) return Boolean
-     renames UXStrings.Equal;
+      renames UXString_Strings.Equal;
 
    function "<" (Left, Right : String_Type) return Boolean
-     renames UXStrings.Less_Than;
+      renames UXString_Strings.Less_Than;
 
    function "<=" (Left, Right : String_Type) return Boolean
-     renames UXStrings.Less_Or_Equal;
+      renames UXString_Strings.Less_Or_Equal;
 
    function ">" (Left, Right : String_Type) return Boolean
-     renames UXStrings.Greater_Than;
+      renames UXString_Strings.Greater_Than;
 
    function ">=" (Left, Right : String_Type) return Boolean
-     renames UXStrings.Greater_Or_Equal;
+      renames UXString_Strings.Greater_Or_Equal;
 
    ---------------------------------------------------------------------------
    --  Conversion Operations
@@ -205,9 +238,9 @@ package String_Types is
 
    --  Character predicates
    function Is_Equals_Sign (C : Character_Type) return Boolean
-   is (UXStrings.To_Unicode (C) = Character'Pos ('='));
+   is (Wide_Wide_Character'Pos (C) = Character'Pos ('='));
 
    function Is_Dash (C : Character_Type) return Boolean
-   is (UXStrings.To_Unicode (C) = Character'Pos ('-'));
+   is (Wide_Wide_Character'Pos (C) = Character'Pos ('-'));
 
 end String_Types;

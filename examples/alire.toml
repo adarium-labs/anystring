@@ -9,7 +9,7 @@ licenses = "Apache-2.0 WITH LLVM-exception"
 website = ""
 tags = []
 
-executables = ["anystrings_examples"]
+executables = ["anystrings_examples", "anystrings_env_encoding_regression"]
 
 [[depends-on]]
 anystrings = "*"

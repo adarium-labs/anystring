@@ -16,12 +16,17 @@ project Anystrings is
    --
    --  Example usage:
    --    STRING_TYPE=wide_string alr build
+   --    STRING_TYPE=wide_string ANYSTRING_WIDE_ENV_ENCODING=latin_1 alr build
    --    STRING_TYPE=custom STRING_PATH=/path/to/my/strings alr build
 
    type String_Type_Choice is
      ("standard", "wide_string", "wide_wide_string", "uxstring", "custom");
    String_Type : String_Type_Choice :=
      external ("STRING_TYPE", "standard");
+
+   type Wide_Env_Encoding_Choice is ("utf_8", "latin_1");
+   Wide_Env_Encoding : Wide_Env_Encoding_Choice :=
+     external ("ANYSTRING_WIDE_ENV_ENCODING", "utf_8");
 
    String_Source_Dirs := ();
    case String_Type is
@@ -37,10 +42,28 @@ project Anystrings is
          String_Source_Dirs := (external ("STRING_PATH", ""));
    end case;
 
-   for Source_Dirs use ("src/", "config/") & String_Source_Dirs;
-   for Object_Dir use "obj/" & Anystrings_Config.Build_Profile;
+   Wide_Env_Encoding_Source_Dirs := ();
+   case Wide_Env_Encoding is
+      when "utf_8" =>
+         Wide_Env_Encoding_Source_Dirs := ("src/strings/wide_env_encoding/utf_8");
+      when "latin_1" =>
+         Wide_Env_Encoding_Source_Dirs := ("src/strings/wide_env_encoding/latin_1");
+   end case;
+
+   Wide_Env_Output_Suffix := "";
+   case String_Type is
+      when "wide_string" | "wide_wide_string" =>
+         Wide_Env_Output_Suffix := "/" & external ("ANYSTRING_WIDE_ENV_ENCODING", "utf_8");
+      when others =>
+         null;
+   end case;
+
+   for Source_Dirs use ("src/", "config/") & String_Source_Dirs & Wide_Env_Encoding_Source_Dirs;
+   for Object_Dir use
+     "obj/" & external ("STRING_TYPE", "standard") & Wide_Env_Output_Suffix & "/"
+     & Anystrings_Config.Build_Profile;
    for Create_Missing_Dirs use "True";
-   for Library_Dir use "lib";
+   for Library_Dir use "lib/" & external ("STRING_TYPE", "standard") & Wide_Env_Output_Suffix;
 
    type Library_Type_Type is ("relocatable", "static", "static-pic");
    Library_Type : Library_Type_Type :=

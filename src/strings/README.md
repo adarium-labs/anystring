@@ -17,6 +17,9 @@ alr build
 # Use UXStrings (requires uxstrings dependency)
 STRING_TYPE=uxstring alr build
 
+# Select how wide / wide_wide environment names and values are encoded
+STRING_TYPE=wide_string ANYSTRING_WIDE_ENV_ENCODING=latin_1 alr build
+
 # Use a custom implementation
 STRING_TYPE=custom STRING_PATH=/path/to/my/strings alr build
 ```
@@ -30,6 +33,9 @@ STRING_TYPE=custom STRING_PATH=/path/to/my/strings alr build
 | `wide_string` | ✅ Ready | Uses `Wide_Character` and builds as a selectable variant |
 | `wide_wide_string` | ✅ Ready | Uses `Wide_Wide_Character` and builds as a selectable variant |
 | `custom` | ✅ Ready | Specify path via `STRING_PATH` |
+
+For `wide_string` and `wide_wide_string`, environment operations are selected at build time through
+`ANYSTRING_WIDE_ENV_ENCODING`. Supported values are `utf_8` (default) and `latin_1`.
 
 ## Architecture
 

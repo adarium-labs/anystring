@@ -25,12 +25,19 @@ package Wide_Strings is new Anystrings
    "<="                     => Wide_String_Operations."<=",
    ">"                      => Wide_String_Operations.">",
    ">="                     => Wide_String_Operations.">=",
-   --  Conversion operations
-   To_String_Type           => Wide_String_Operations.To_Unbounded_Wide_String,
-   To_Latin_1               => Wide_String_Operations.To_String,
-   --  Extended operations
-   Hash                     => Wide_String_Operations.Hash,
-   Slice                    => Wide_String_Operations.Slice,
+    --  Conversion operations
+    To_String_Type           => Wide_String_Operations.To_Unbounded_Wide_String,
+    To_Latin_1               => Wide_String_Operations.To_String,
+    --  Environment operations
+    Environment_Value        => Wide_String_Operations.Environment_Value,
+    Environment_Exists       => Wide_String_Operations.Environment_Exists,
+    Environment_Set          => Wide_String_Operations.Environment_Set,
+    Environment_Clear        => Wide_String_Operations.Environment_Clear,
+    Environment_Clear_All    => Wide_String_Operations.Environment_Clear,
+    Environment_Iterate      => Wide_String_Operations.Environment_Iterate,
+    --  Extended operations
+    Hash                     => Wide_String_Operations.Hash,
+    Slice                    => Wide_String_Operations.Slice,
    Index                    => Wide_String_Operations.Index,
    Index_Latin_1            => Wide_String_Operations.Index_Latin_1,
    To_Lower                 => Wide_String_Operations.To_Lower,

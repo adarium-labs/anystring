@@ -7,7 +7,8 @@
 
 with Ada.Strings.Wide_Wide_Fixed;
 with Ada.Strings;
-with Wide_Wide_String_Operations;
+with Ada.Environment_Variables;
+with Anystrings_Internal_Wide_Environment_Encoding;
 
 package body Wide_Wide_String_Operations is
 
@@ -32,6 +33,119 @@ package body Wide_Wide_String_Operations is
       end loop;
       return Result;
    end To_String_From_Wide_Wide;
+
+   function Environment_Value
+     (Name    : Unbounded_Wide_Wide_String;
+      Default : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String
+   is
+   begin
+      if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name) then
+         return Default;
+      end if;
+
+      declare
+         Encoded_Name : constant String := Anystrings_Internal_Wide_Environment_Encoding.Encode (Name);
+      begin
+         if Ada.Environment_Variables.Exists (Encoded_Name) then
+            return Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide_Wide
+              (Ada.Environment_Variables.Value (Encoded_Name));
+         else
+            return Default;
+         end if;
+      end;
+   exception
+      when others =>
+         return Default;
+   end Environment_Value;
+
+   function Environment_Exists
+     (Name : Unbounded_Wide_Wide_String) return Boolean
+   is
+   begin
+      if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name) then
+         return False;
+      end if;
+
+      return Ada.Environment_Variables.Exists (Anystrings_Internal_Wide_Environment_Encoding.Encode (Name));
+   exception
+      when others =>
+         return False;
+   end Environment_Exists;
+
+   function Environment_Set
+     (Name  : Unbounded_Wide_Wide_String;
+      Value : Unbounded_Wide_Wide_String) return Boolean
+   is
+   begin
+      if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name)
+        or else not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Value)
+      then
+         return False;
+      end if;
+
+      Ada.Environment_Variables.Set
+        (Anystrings_Internal_Wide_Environment_Encoding.Encode (Name),
+         Anystrings_Internal_Wide_Environment_Encoding.Encode (Value));
+      return True;
+   exception
+      when others =>
+         return False;
+   end Environment_Set;
+
+   function Environment_Clear
+     (Name : Unbounded_Wide_Wide_String) return Boolean
+   is
+   begin
+      if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name) then
+         return False;
+      end if;
+
+      Ada.Environment_Variables.Clear (Anystrings_Internal_Wide_Environment_Encoding.Encode (Name));
+      return True;
+   exception
+      when others =>
+         return False;
+   end Environment_Clear;
+
+   function Environment_Clear return Boolean is
+   begin
+      Ada.Environment_Variables.Clear;
+      return True;
+   exception
+      when others =>
+         return False;
+   end Environment_Clear;
+
+   function Environment_Iterate
+     (Process : not null access procedure
+        (Name  : Unbounded_Wide_Wide_String;
+         Value : Unbounded_Wide_Wide_String)) return Boolean
+   is
+      Success : Boolean := True;
+
+      procedure Process_Item
+        (Name, Value : String)
+      is
+      begin
+         begin
+            Process.all
+              (Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide_Wide (Name),
+               Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide_Wide (Value));
+         exception
+            when others =>
+               Success := False;
+         end;
+      end Process_Item;
+   begin
+      begin
+         Ada.Environment_Variables.Iterate (Process_Item'Access);
+      exception
+         when others =>
+            Success := False;
+      end;
+
+      return Success;
+   end Environment_Iterate;
 
    function Concat_String_Latin_1
      (Left  : Unbounded_Wide_Wide_String;
@@ -101,7 +215,6 @@ package body Wide_Wide_String_Operations is
       Pattern : Unbounded_Wide_Wide_String) return Natural
    is
       use Ada.Strings.Wide_Wide_Unbounded;
-      use Ada.Strings.Wide_Wide_Fixed;
    begin
       return Ada.Strings.Wide_Wide_Fixed.Index
         (To_Wide_Wide_String (Source), To_Wide_Wide_String (Pattern));
@@ -155,15 +268,17 @@ package body Wide_Wide_String_Operations is
      (Source : Unbounded_Wide_Wide_String;
       Prefix : Unbounded_Wide_Wide_String) return Boolean
    is
-      use Ada.Strings.Wide_Wide_Unbounded;
-      Prefix_Len : constant Natural := Length (Prefix);
+      Prefix_Len : constant Natural := Ada.Strings.Wide_Wide_Unbounded.Length (Prefix);
    begin
       if Prefix_Len = 0 then
          return True;
-      elsif Prefix_Len > Length (Source) then
+      elsif Prefix_Len > Ada.Strings.Wide_Wide_Unbounded.Length (Source) then
          return False;
       else
-         return Wide_Wide_String_Operations."=" (Slice (Source, 1, Prefix_Len), Prefix);
+         return Wide_Wide_String_Operations."="
+           (Ada.Strings.Wide_Wide_Unbounded.To_Unbounded_Wide_Wide_String
+              (Ada.Strings.Wide_Wide_Unbounded.Slice (Source, 1, Prefix_Len)),
+            Prefix);
       end if;
    end Starts_With;
 
@@ -179,25 +294,27 @@ package body Wide_Wide_String_Operations is
      (Source : Unbounded_Wide_Wide_String;
       Suffix : Unbounded_Wide_Wide_String) return Boolean
    is
-      use Ada.Strings.Wide_Wide_Unbounded;
-      Source_Len : constant Natural := Length (Source);
-      Suffix_Len : constant Natural := Length (Suffix);
+      Source_Len : constant Natural := Ada.Strings.Wide_Wide_Unbounded.Length (Source);
+      Suffix_Len : constant Natural := Ada.Strings.Wide_Wide_Unbounded.Length (Suffix);
    begin
       if Suffix_Len = 0 then
          return True;
       elsif Suffix_Len > Source_Len then
          return False;
       else
-         return Wide_Wide_String_Operations."=" (Slice (Source, Source_Len - Suffix_Len + 1, Source_Len), Suffix);
+         return Wide_Wide_String_Operations."="
+           (Ada.Strings.Wide_Wide_Unbounded.To_Unbounded_Wide_Wide_String
+              (Ada.Strings.Wide_Wide_Unbounded.Slice
+                 (Source, Source_Len - Suffix_Len + 1, Source_Len)),
+            Suffix);
       end if;
    end Ends_With;
 
    function Trim
      (Source : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String
    is
-      use Ada.Strings.Wide_Wide_Unbounded;
    begin
-      return Trim (Source, Ada.Strings.Both);
+      return Ada.Strings.Wide_Wide_Unbounded.Trim (Source, Ada.Strings.Both);
    end Trim;
 
    function From_Character
