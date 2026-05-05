@@ -7,6 +7,7 @@
 
 with Ada.Strings;
 with Ada.Environment_Variables;
+with Ada.Text_IO;
 
 package body Standard_String_Operations is
 
@@ -86,6 +87,46 @@ package body Standard_String_Operations is
 
       return Success;
    end Environment_Iterate;
+
+   procedure Create_File
+     (File : in out File_Type;
+      Mode : File_Mode := Out_File_Mode;
+      Name : String := "")
+   is
+   begin
+      Ada.Text_IO.Create (File, Mode, Name);
+   end Create_File;
+
+   procedure Open_File
+     (File : in out File_Type;
+      Mode : File_Mode;
+      Name : String)
+   is
+   begin
+      Ada.Text_IO.Open (File, Mode, Name);
+   end Open_File;
+
+   procedure Put_File
+     (File : File_Type;
+      Item : Unbounded_String)
+   is
+   begin
+      Ada.Text_IO.Put (File, To_String (Item));
+   end Put_File;
+
+   function Get_Line_File
+     (File : File_Type) return Unbounded_String
+   is
+   begin
+      return To_Unbounded_String (Ada.Text_IO.Get_Line (File));
+   end Get_Line_File;
+
+   procedure New_Line_File
+     (File : File_Type)
+   is
+   begin
+      Ada.Text_IO.New_Line (File);
+   end New_Line_File;
 
    function Index (Source : Unbounded_String; Pattern : Unbounded_String) return Natural is
       S : constant String := To_String (Source);

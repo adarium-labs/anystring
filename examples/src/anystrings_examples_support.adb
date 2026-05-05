@@ -1,4 +1,4 @@
-with Ada.Text_IO; use Ada.Text_IO;
+with Ada.Text_IO;
 with String_Types; use String_Types;
 
 package body Anystrings_Examples_Support is
@@ -110,7 +110,8 @@ package body Anystrings_Examples_Support is
       Value : String_Type)
    is
    begin
-      Put_Line ("ENV " & To_Latin_1 (Name) & " = " & To_Latin_1 (Value));
+      Ada.Text_IO.Put_Line
+        ("ENV " & To_Latin_1 (Name) & " = " & To_Latin_1 (Value));
    end Print_Env;
 
    function Has_Example_Prefix

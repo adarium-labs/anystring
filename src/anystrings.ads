@@ -116,6 +116,61 @@ generic
          Value : String_Type)) return Boolean;
 
    ---------------------------------------------------------------------------
+   --  Text I/O Operations
+   ---------------------------------------------------------------------------
+
+   --  Text I/O semantics follow the selected backend's native Ada I/O family.
+   --  The standard and uxstring backends use Ada.Text_IO, the wide backend
+   --  uses Ada.Wide_Text_IO, and the wide_wide backend uses
+   --  Ada.Wide_Wide_Text_IO. As a result, external encoding and newline
+   --  behavior are backend-specific at this boundary.
+
+   type File_Type is limited private;
+   type File_Mode is private;
+
+   In_File_Mode     : File_Mode;
+   Out_File_Mode    : File_Mode;
+   Append_File_Mode : File_Mode;
+
+   with procedure Create_File
+     (File : in out File_Type;
+      Mode : File_Mode := Out_File_Mode;
+      Name : String := "");
+
+   with procedure Open_File
+     (File : in out File_Type;
+      Mode : File_Mode;
+      Name : String);
+
+   with procedure Close_File
+     (File : in out File_Type);
+
+   with function Is_Open_File
+     (File : File_Type) return Boolean;
+
+   with function Current_Input_File return File_Type;
+   with function Current_Output_File return File_Type;
+
+   with procedure Set_Input_File
+     (File : File_Type);
+
+   with procedure Set_Output_File
+     (File : File_Type);
+
+   with procedure Put_File
+     (File : File_Type;
+      Item : String_Type);
+
+   with function Get_Line_File
+     (File : File_Type) return String_Type;
+
+   with procedure New_Line_File
+     (File : File_Type);
+
+   with function End_Of_File_File
+     (File : File_Type) return Boolean;
+
+   ---------------------------------------------------------------------------
    --  Extended Operations (required by the framework)
    ---------------------------------------------------------------------------
 
@@ -301,7 +356,80 @@ is
      (Include : Env_Filter;
       Process : Env_Processor) return Boolean;
 
-   pragma SPARK_Mode (On);
+   In_File : constant File_Mode := In_File_Mode;
+   Out_File : constant File_Mode := Out_File_Mode;
+   Append_File : constant File_Mode := Append_File_Mode;
+
+   procedure Create
+     (File : in out File_Type;
+      Mode : File_Mode := Out_File;
+      Name : String := "")
+   renames Create_File;
+
+   procedure Open
+     (File : in out File_Type;
+      Mode : File_Mode;
+      Name : String)
+   renames Open_File;
+
+   procedure Close
+     (File : in out File_Type)
+   renames Close_File;
+
+   function Is_Open
+     (File : File_Type) return Boolean
+   renames Is_Open_File;
+
+   function Current_Input return File_Type
+   renames Current_Input_File;
+
+   function Current_Output return File_Type
+   renames Current_Output_File;
+
+   procedure Set_Input
+     (File : File_Type)
+   renames Set_Input_File;
+
+   procedure Set_Output
+     (File : File_Type)
+   renames Set_Output_File;
+
+   procedure Put (Item : String_Type);
+
+   procedure Put
+     (File : File_Type;
+      Item : String_Type)
+   renames Put_File;
+
+   procedure Put_Line
+     (File : File_Type;
+      Item : String_Type);
+
+   procedure Put_Line (Item : String_Type);
+
+   function Get_Line
+     (File : File_Type) return String_Type
+   renames Get_Line_File;
+
+   function Get_Line return String_Type;
+
+   procedure Get_Line
+     (File : File_Type;
+      Item : out String_Type);
+
+   procedure Get_Line (Item : out String_Type);
+
+   procedure New_Line;
+
+   procedure New_Line
+     (File : File_Type)
+   renames New_Line_File;
+
+   function End_Of_File return Boolean;
+
+   function End_Of_File
+     (File : File_Type) return Boolean
+   renames End_Of_File_File;
 
    ---------------------------------------------------------------------------
    --  Extended String Operations

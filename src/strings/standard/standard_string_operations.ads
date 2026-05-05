@@ -22,6 +22,7 @@
 --  instantiation.
 
 with Ada.Containers;
+with Ada.Text_IO;
 with Ada.Strings.Unbounded;
 with Ada.Strings.Unbounded.Hash;
 with Ada.Strings.Fixed;
@@ -115,6 +116,63 @@ package Standard_String_Operations is
      (Process : not null access procedure
         (Name  : Unbounded_String;
          Value : Unbounded_String)) return Boolean;
+
+   ---------------------------------------------------------------------------
+   --  Text I/O Operations
+   ---------------------------------------------------------------------------
+
+   subtype File_Type is Ada.Text_IO.File_Type;
+   subtype File_Mode is Ada.Text_IO.File_Mode;
+
+   In_File_Mode     : constant File_Mode := Ada.Text_IO.In_File;
+   Out_File_Mode    : constant File_Mode := Ada.Text_IO.Out_File;
+   Append_File_Mode : constant File_Mode := Ada.Text_IO.Append_File;
+
+   procedure Create_File
+     (File : in out File_Type;
+      Mode : File_Mode := Out_File_Mode;
+      Name : String := "");
+
+   procedure Open_File
+     (File : in out File_Type;
+      Mode : File_Mode;
+      Name : String);
+
+   procedure Close_File
+     (File : in out File_Type)
+   renames Ada.Text_IO.Close;
+
+   function Is_Open_File
+     (File : File_Type) return Boolean
+   renames Ada.Text_IO.Is_Open;
+
+   function Current_Input_File return File_Type
+   renames Ada.Text_IO.Current_Input;
+
+   function Current_Output_File return File_Type
+   renames Ada.Text_IO.Current_Output;
+
+   procedure Set_Input_File
+     (File : File_Type)
+   renames Ada.Text_IO.Set_Input;
+
+   procedure Set_Output_File
+     (File : File_Type)
+   renames Ada.Text_IO.Set_Output;
+
+   procedure Put_File
+     (File : File_Type;
+      Item : Unbounded_String);
+
+   function Get_Line_File
+     (File : File_Type) return Unbounded_String;
+
+   procedure New_Line_File
+     (File : File_Type);
+
+   function End_Of_File_File
+     (File : File_Type) return Boolean
+   renames Ada.Text_IO.End_Of_File;
 
    ---------------------------------------------------------------------------
    --  Extended Operations (used by String_Types)

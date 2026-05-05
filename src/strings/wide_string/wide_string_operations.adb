@@ -128,12 +128,22 @@ package body Wide_String_Operations is
       is
       begin
          begin
-            Process.all
-              (Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide (Name),
-               Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide (Value));
+            declare
+               Decoded_Name : constant Unbounded_Wide_String :=
+                 Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide (Name);
+               Decoded_Value : constant Unbounded_Wide_String :=
+                 Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide (Value);
+            begin
+               begin
+                  Process.all (Decoded_Name, Decoded_Value);
+               exception
+                  when others =>
+                     Success := False;
+               end;
+            end;
          exception
             when others =>
-               Success := False;
+               null;
          end;
       end Process_Item;
    begin
@@ -146,6 +156,49 @@ package body Wide_String_Operations is
 
       return Success;
    end Environment_Iterate;
+
+   procedure Create_File
+     (File : in out File_Type;
+      Mode : File_Mode := Out_File_Mode;
+      Name : String := "")
+   is
+   begin
+      Ada.Wide_Text_IO.Create (File, Mode, Name);
+   end Create_File;
+
+   procedure Open_File
+     (File : in out File_Type;
+      Mode : File_Mode;
+      Name : String)
+   is
+   begin
+      Ada.Wide_Text_IO.Open (File, Mode, Name);
+   end Open_File;
+
+   procedure Put_File
+     (File : File_Type;
+      Item : Unbounded_Wide_String)
+   is
+   begin
+      Ada.Wide_Text_IO.Put
+        (File,
+         Ada.Strings.Wide_Unbounded.To_Wide_String (Item));
+   end Put_File;
+
+   function Get_Line_File
+     (File : File_Type) return Unbounded_Wide_String
+   is
+   begin
+      return Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String
+        (Ada.Wide_Text_IO.Get_Line (File));
+   end Get_Line_File;
+
+   procedure New_Line_File
+     (File : File_Type)
+   is
+   begin
+      Ada.Wide_Text_IO.New_Line (File);
+   end New_Line_File;
 
    function Concat_String_Latin_1
      (Left  : Unbounded_Wide_String;

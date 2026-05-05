@@ -14,8 +14,13 @@ package String_Types is
    subtype String_Type is
      Wide_Wide_String_Operations.Unbounded_Wide_Wide_String;
    subtype Character_Type is Wide_Wide_Character;
+   subtype File_Type is Wide_Wide_String_Operations.File_Type;
+   subtype File_Mode is Wide_Wide_String_Operations.File_Mode;
 
    Empty_String : constant String_Type := Wide_Wide_Strings.Empty_String;
+   In_File      : constant File_Mode := Wide_Wide_Strings.In_File;
+   Out_File     : constant File_Mode := Wide_Wide_Strings.Out_File;
+   Append_File  : constant File_Mode := Wide_Wide_Strings.Append_File;
 
    function Length (Source : String_Type) return Natural
      renames Wide_Wide_String_Operations.Length;
@@ -78,8 +83,82 @@ package String_Types is
       Process : Env_Processor) return Boolean
      renames Wide_Wide_Strings.Iterate_Env;
 
+   procedure Create
+     (File : in out File_Type;
+      Mode : File_Mode := Out_File;
+      Name : String := "")
+     renames Wide_Wide_Strings.Create;
+
+   procedure Open
+     (File : in out File_Type;
+      Mode : File_Mode;
+      Name : String)
+     renames Wide_Wide_Strings.Open;
+
+   procedure Close
+     (File : in out File_Type)
+     renames Wide_Wide_Strings.Close;
+
+   function Is_Open (File : File_Type) return Boolean
+     renames Wide_Wide_Strings.Is_Open;
+
+   function Current_Input return File_Type
+     renames Wide_Wide_Strings.Current_Input;
+
+   function Current_Output return File_Type
+     renames Wide_Wide_Strings.Current_Output;
+
+   procedure Set_Input (File : File_Type)
+     renames Wide_Wide_Strings.Set_Input;
+
+   procedure Set_Output (File : File_Type)
+     renames Wide_Wide_Strings.Set_Output;
+
+   procedure Put
+     (File : File_Type;
+      Item : String_Type)
+     renames Wide_Wide_Strings.Put;
+
+   procedure Put (Item : String_Type)
+     renames Wide_Wide_Strings.Put;
+
+   procedure Put_Line
+     (File : File_Type;
+      Item : String_Type)
+     renames Wide_Wide_Strings.Put_Line;
+
+   procedure Put_Line (Item : String_Type)
+     renames Wide_Wide_Strings.Put_Line;
+
+   function Get_Line (File : File_Type) return String_Type
+     renames Wide_Wide_Strings.Get_Line;
+
+   function Get_Line return String_Type
+     renames Wide_Wide_Strings.Get_Line;
+
+   procedure Get_Line
+     (File : File_Type;
+      Item : out String_Type)
+     renames Wide_Wide_Strings.Get_Line;
+
+   procedure Get_Line (Item : out String_Type)
+     renames Wide_Wide_Strings.Get_Line;
+
+   procedure New_Line (File : File_Type)
+     renames Wide_Wide_Strings.New_Line;
+
+   procedure New_Line
+     renames Wide_Wide_Strings.New_Line;
+
+   function End_Of_File (File : File_Type) return Boolean
+     renames Wide_Wide_Strings.End_Of_File;
+
+   function End_Of_File return Boolean
+     renames Wide_Wide_Strings.End_Of_File;
+
    function Contains
-     (Source : String_Type; Pattern : String_Type) return Boolean
+     (Source : String_Type;
+      Pattern : String_Type) return Boolean
      renames Wide_Wide_Strings.Contains;
 
    function Concat
@@ -141,7 +220,7 @@ package String_Types is
      renames Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String;
 
    function To_Latin_1 (Source : String_Type) return String
-      renames Wide_Wide_String_Operations.To_String;
+     renames Wide_Wide_String_Operations.To_String;
 
    function Hash (Key : String_Type) return Ada.Containers.Hash_Type
      renames Wide_Wide_String_Operations.Hash;

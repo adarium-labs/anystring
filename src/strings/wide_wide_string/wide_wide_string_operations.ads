@@ -6,6 +6,7 @@
 -------------------------------------------------------------------------------
 
 with Ada.Containers;
+with Ada.Wide_Wide_Text_IO;
 with Ada.Strings.Wide_Wide_Unbounded;
 
 package Wide_Wide_String_Operations is
@@ -102,6 +103,63 @@ package Wide_Wide_String_Operations is
      (Process : not null access procedure
         (Name  : Unbounded_Wide_Wide_String;
          Value : Unbounded_Wide_Wide_String)) return Boolean;
+
+   ---------------------------------------------------------------------------
+   --  Text I/O Operations
+   ---------------------------------------------------------------------------
+
+   subtype File_Type is Ada.Wide_Wide_Text_IO.File_Type;
+   subtype File_Mode is Ada.Wide_Wide_Text_IO.File_Mode;
+
+   In_File_Mode     : constant File_Mode := Ada.Wide_Wide_Text_IO.In_File;
+   Out_File_Mode    : constant File_Mode := Ada.Wide_Wide_Text_IO.Out_File;
+   Append_File_Mode : constant File_Mode := Ada.Wide_Wide_Text_IO.Append_File;
+
+   procedure Create_File
+     (File : in out File_Type;
+      Mode : File_Mode := Out_File_Mode;
+      Name : String := "");
+
+   procedure Open_File
+     (File : in out File_Type;
+      Mode : File_Mode;
+      Name : String);
+
+   procedure Close_File
+     (File : in out File_Type)
+   renames Ada.Wide_Wide_Text_IO.Close;
+
+   function Is_Open_File
+     (File : File_Type) return Boolean
+   renames Ada.Wide_Wide_Text_IO.Is_Open;
+
+   function Current_Input_File return File_Type
+   renames Ada.Wide_Wide_Text_IO.Current_Input;
+
+   function Current_Output_File return File_Type
+   renames Ada.Wide_Wide_Text_IO.Current_Output;
+
+   procedure Set_Input_File
+     (File : File_Type)
+   renames Ada.Wide_Wide_Text_IO.Set_Input;
+
+   procedure Set_Output_File
+     (File : File_Type)
+   renames Ada.Wide_Wide_Text_IO.Set_Output;
+
+   procedure Put_File
+     (File : File_Type;
+      Item : Unbounded_Wide_Wide_String);
+
+   function Get_Line_File
+     (File : File_Type) return Unbounded_Wide_Wide_String;
+
+   procedure New_Line_File
+     (File : File_Type);
+
+   function End_Of_File_File
+     (File : File_Type) return Boolean
+   renames Ada.Wide_Wide_Text_IO.End_Of_File;
 
    function Hash
      (Key : Unbounded_Wide_Wide_String) return Ada.Containers.Hash_Type;
