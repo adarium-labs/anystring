@@ -14,6 +14,9 @@
 with Ada.Containers;
 with Wide_Strings;
 with Wide_String_Operations;
+with Wide_UTF_8_Results;
+with Wide_UTF_8_Bridge;
+with Anystrings_UTF_8;
 
 package String_Types is
 
@@ -224,6 +227,56 @@ package String_Types is
 
    function To_Latin_1 (Source : String_Type) return String
      renames Wide_String_Operations.To_String;
+
+   --  ----- UTF-8 boundary (FUNC-UTF8-001..013, NFR-UTF8-006) -----
+
+   --  @relation FUNC-UTF8-001, FUNC-UTF8-002, FUNC-UTF8-003, FUNC-UTF8-008, NFR-UTF8-006
+
+   subtype UTF_8_Decode_Error is Anystrings_UTF_8.UTF_8_Decode_Error;
+
+   --  Re-export enum literals so that "use String_Types" makes them
+   --  directly visible to callers (a subtype alone does not do this in Ada).
+   Invalid_Lead_Byte      : constant UTF_8_Decode_Error :=
+     Anystrings_UTF_8.Invalid_Lead_Byte;
+   Truncated_Sequence     : constant UTF_8_Decode_Error :=
+     Anystrings_UTF_8.Truncated_Sequence;
+   Invalid_Continuation   : constant UTF_8_Decode_Error :=
+     Anystrings_UTF_8.Invalid_Continuation;
+   Overlong_Encoding      : constant UTF_8_Decode_Error :=
+     Anystrings_UTF_8.Overlong_Encoding;
+   Surrogate_Code_Point   : constant UTF_8_Decode_Error :=
+     Anystrings_UTF_8.Surrogate_Code_Point;
+   Code_Point_Out_Of_Range : constant UTF_8_Decode_Error :=
+     Anystrings_UTF_8.Code_Point_Out_Of_Range;
+
+   function "=" (Left, Right : UTF_8_Decode_Error) return Boolean
+     renames Anystrings_UTF_8."=";
+
+   subtype UTF_8_Decode_Result is Wide_UTF_8_Results.UTF_8_Decode_Result;
+
+   function To_UTF_8 (Source : String_Type) return String
+     renames Wide_String_Operations.To_UTF_8;
+
+   function From_UTF_8 (Source : String) return UTF_8_Decode_Result
+     renames Wide_UTF_8_Bridge.From_UTF_8_Wide;
+
+   function Is_Ok (R : UTF_8_Decode_Result) return Boolean
+     renames Wide_UTF_8_Results.Is_Ok;
+
+   function Get_Value (R : UTF_8_Decode_Result) return String_Type
+     renames Wide_UTF_8_Results.Get_Value;
+
+   function Get_Error (R : UTF_8_Decode_Result) return UTF_8_Decode_Error
+     renames Wide_UTF_8_Results.Get_Error;
+
+   function As_UTF_8 (Source : String_Type) return String
+     renames Wide_Strings.As_UTF_8;
+
+   function Decode_UTF_8 (Source : String) return UTF_8_Decode_Result
+     renames Wide_Strings.Decode_UTF_8;
+
+   function UTF_8_Is_Valid (Source : String) return Boolean
+     renames Wide_Strings.UTF_8_Is_Valid;
 
    function Hash (Key : String_Type) return Ada.Containers.Hash_Type
      renames Wide_String_Operations.Hash;

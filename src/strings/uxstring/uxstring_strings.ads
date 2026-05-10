@@ -14,6 +14,8 @@
 
 with Anystrings;
 with UXString_Operations;
+with UXString_UTF_8_Results;
+with UXString_UTF_8_Bridge;
 with UXStrings;
 
 package UXString_Strings is new Anystrings
@@ -33,6 +35,9 @@ package UXString_Strings is new Anystrings
    ">="                     => UXString_Operations.">=",
    To_String_Type           => UXString_Operations.To_UXString,
    To_Latin_1               => UXString_Operations.To_String,
+   UTF_8                    => UXString_UTF_8_Results,
+   To_UTF_8                 => UXString_Operations.To_UTF_8,
+   From_UTF_8               => UXString_UTF_8_Bridge.From_UTF_8_UXString,
    Environment_Value        => UXString_Operations.Environment_Value,
    Environment_Exists       => UXString_Operations.Environment_Exists,
    Environment_Set          => UXString_Operations.Environment_Set,

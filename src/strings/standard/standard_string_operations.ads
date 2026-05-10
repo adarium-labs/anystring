@@ -96,26 +96,18 @@ package Standard_String_Operations is
    --  Environment Operations
    ---------------------------------------------------------------------------
 
-   function Environment_Value
-     (Name    : Unbounded_String;
-      Default : Unbounded_String) return Unbounded_String;
+   function Environment_Value (Name : Unbounded_String; Default : Unbounded_String) return Unbounded_String;
 
-   function Environment_Exists
-     (Name : Unbounded_String) return Boolean;
+   function Environment_Exists (Name : Unbounded_String) return Boolean;
 
-   function Environment_Set
-     (Name  : Unbounded_String;
-      Value : Unbounded_String) return Boolean;
+   function Environment_Set (Name : Unbounded_String; Value : Unbounded_String) return Boolean;
 
-   function Environment_Clear
-     (Name : Unbounded_String) return Boolean;
+   function Environment_Clear (Name : Unbounded_String) return Boolean;
 
    function Environment_Clear return Boolean;
 
    function Environment_Iterate
-     (Process : not null access procedure
-        (Name  : Unbounded_String;
-         Value : Unbounded_String)) return Boolean;
+     (Process : not null access procedure (Name : Unbounded_String; Value : Unbounded_String)) return Boolean;
 
    ---------------------------------------------------------------------------
    --  Text I/O Operations
@@ -128,51 +120,29 @@ package Standard_String_Operations is
    Out_File_Mode    : constant File_Mode := Ada.Text_IO.Out_File;
    Append_File_Mode : constant File_Mode := Ada.Text_IO.Append_File;
 
-   procedure Create_File
-     (File : in out File_Type;
-      Mode : File_Mode := Out_File_Mode;
-      Name : String := "");
+   procedure Create_File (File : in out File_Type; Mode : File_Mode := Out_File_Mode; Name : String := "");
 
-   procedure Open_File
-     (File : in out File_Type;
-      Mode : File_Mode;
-      Name : String);
+   procedure Open_File (File : in out File_Type; Mode : File_Mode; Name : String);
 
-   procedure Close_File
-     (File : in out File_Type)
-   renames Ada.Text_IO.Close;
+   procedure Close_File (File : in out File_Type) renames Ada.Text_IO.Close;
 
-   function Is_Open_File
-     (File : File_Type) return Boolean
-   renames Ada.Text_IO.Is_Open;
+   function Is_Open_File (File : File_Type) return Boolean renames Ada.Text_IO.Is_Open;
 
-   function Current_Input_File return File_Type
-   renames Ada.Text_IO.Current_Input;
+   function Current_Input_File return File_Type renames Ada.Text_IO.Current_Input;
 
-   function Current_Output_File return File_Type
-   renames Ada.Text_IO.Current_Output;
+   function Current_Output_File return File_Type renames Ada.Text_IO.Current_Output;
 
-   procedure Set_Input_File
-     (File : File_Type)
-   renames Ada.Text_IO.Set_Input;
+   procedure Set_Input_File (File : File_Type) renames Ada.Text_IO.Set_Input;
 
-   procedure Set_Output_File
-     (File : File_Type)
-   renames Ada.Text_IO.Set_Output;
+   procedure Set_Output_File (File : File_Type) renames Ada.Text_IO.Set_Output;
 
-   procedure Put_File
-     (File : File_Type;
-      Item : Unbounded_String);
+   procedure Put_File (File : File_Type; Item : Unbounded_String);
 
-   function Get_Line_File
-     (File : File_Type) return Unbounded_String;
+   function Get_Line_File (File : File_Type) return Unbounded_String;
 
-   procedure New_Line_File
-     (File : File_Type);
+   procedure New_Line_File (File : File_Type);
 
-   function End_Of_File_File
-     (File : File_Type) return Boolean
-   renames Ada.Text_IO.End_Of_File;
+   function End_Of_File_File (File : File_Type) return Boolean renames Ada.Text_IO.End_Of_File;
 
    ---------------------------------------------------------------------------
    --  Extended Operations (used by String_Types)
@@ -206,5 +176,27 @@ package Standard_String_Operations is
 
    --  Create a single-character string
    function From_Character (C : Character) return Unbounded_String;
+
+   ---------------------------------------------------------------------------
+   --  UTF-8 Boundary Operations (FUNC-UTF8-003, FUNC-UTF8-008, NFR-UTF8-007)
+   ---------------------------------------------------------------------------
+
+   --  @summary Encode an Unbounded_String (Latin-1 bytes) as a UTF-8 String.
+   --
+   --  @description
+   --  The standard backend stores Latin-1 bytes. This function encodes each
+   --  byte as a UTF-8 scalar using Ada.Strings.UTF_Encoding.Strings.Encode,
+   --  which expands code points 128..255 to two-byte UTF-8 sequences.
+   --  ASCII-only input (0..127) passes through byte-for-byte (FUNC-UTF8-005).
+   --  Surrogates cannot occur in Character (range 0..255), so FUNC-UTF8-007
+   --  is satisfied vacuously. The result is always well-formed UTF-8
+   --  (FUNC-UTF8-006). This function is NOT a rename of To_String (NFR-UTF8-010):
+   --  the output differs from To_Latin_1 for code points 128..255 because
+   --  UTF-8 expands them to multi-byte sequences whereas Latin-1 maps them 1:1.
+   --
+   --  @param Source  The Unbounded_String to encode.
+   --  @return        Well-formed UTF-8 byte sequence as a Standard.String.
+   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, NFR-UTF8-007, NFR-UTF8-010
+   function To_UTF_8 (Source : Unbounded_String) return String;
 
 end Standard_String_Operations;

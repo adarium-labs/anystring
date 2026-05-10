@@ -1,0 +1,58 @@
+[DOCUMENT]
+TITLE: Anystrings Requirements Index
+REQ_PREFIX: VIS-
+
+[GRAMMAR]
+ELEMENTS:
+- TAG: REQUIREMENT
+  FIELDS:
+  - TITLE: UID
+    TYPE: String
+    REQUIRED: True
+  - TITLE: STATUS
+    TYPE: String
+    REQUIRED: False
+  - TITLE: PRIORITY
+    TYPE: String
+    REQUIRED: False
+  - TITLE: TITLE
+    TYPE: String
+    REQUIRED: False
+  - TITLE: STATEMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: COMMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: RELATIONS
+    TYPE: String
+    REQUIRED: False
+
+[SECTION]
+TITLE: About this document
+
+[TEXT]
+This document is the root of the anystrings requirements tree.  It
+provides the UID naming conventions and serves as the entry point for
+all requirement files in this directory.
+
+[TEXT]
+UID scheme:
+
+- **VIS-NNN**       — Vision / scope requirements
+- **FUNC-UTF8-NNN** — UTF-8 generic-API functional requirements
+- **NFR-UTF8-NNN**  — UTF-8 non-functional requirements
+
+All UIDs use zero-padded three-digit ordinals (001, 002, …).  New UID
+prefixes are added here as new feature areas are specified.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Documents
+
+[TEXT]
+- docs/requirements/02-utf8-boundary-api.sdoc — UTF-8 generic API functional requirements
+- docs/requirements/03-utf8-boundary-api-nfr.sdoc — UTF-8 generic API non-functional requirements
+
+[/SECTION]

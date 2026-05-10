@@ -1,0 +1,288 @@
+[DOCUMENT]
+TITLE: UTF-8 Generic API - Non-Functional Requirements
+REQ_PREFIX: NFR-UTF8-
+
+[GRAMMAR]
+ELEMENTS:
+- TAG: REQUIREMENT
+  FIELDS:
+  - TITLE: UID
+    TYPE: String
+    REQUIRED: True
+  - TITLE: STATUS
+    TYPE: String
+    REQUIRED: False
+  - TITLE: PRIORITY
+    TYPE: String
+    REQUIRED: False
+  - TITLE: TITLE
+    TYPE: String
+    REQUIRED: False
+  - TITLE: STATEMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: COMMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: RELATIONS
+    TYPE: String
+    REQUIRED: False
+
+[SECTION]
+TITLE: SPARK Compatibility
+
+[REQUIREMENT]
+UID: NFR-UTF8-001
+STATUS: Approved
+PRIORITY: Must
+TITLE: New UTF-8 formals are declared within SPARK_Mode On region
+STATEMENT: >>>
+The two new formal subprogram declarations (`To_UTF_8`, `From_UTF_8`) and
+the supporting `UTF_8_Decode_Error` enumeration and
+`UTF_8_Decode_Result` discriminated record SHALL be visible to the
+generic parameter list of `src/anystrings.ads`, which is compiled with
+`SPARK_Mode => On`.  The declarations SHALL be syntactically and
+semantically valid under SPARK_Mode On - that is, they SHALL NOT use any
+SPARK-excluded language feature in their profiles (parameter types,
+return type, modes) or in the body of the result type.
+<<<
+COMMENT: >>>
+All formals have profiles involving only `String` (an Ada built-in array
+type acceptable in SPARK), `String_Type` (a private formal type, also
+acceptable), and the two new types from FUNC-UTF8-001 / FUNC-UTF8-002
+which must themselves be SPARK-clean (discriminated record, enumeration -
+both fully supported by SPARK).  No access types, task types, or other
+SPARK-excluded constructs may appear.
+
+GNATprove is expected to accept the declarations without disabling
+SPARK_Mode for the additions.
+<<<
+
+[REQUIREMENT]
+UID: NFR-UTF8-002
+STATUS: Approved
+PRIORITY: Should
+TITLE: Wrapper expression functions for UTF-8 operations should have SPARK contracts
+STATEMENT: >>>
+If the body of `src/anystrings.ads` exposes wrapper expression functions
+for the UTF-8 formals (analogous to `From_Latin_1` / `As_Latin_1`), those
+wrappers SHOULD carry `Pre` and/or `Post` contracts expressible in SPARK.
+
+In particular:
+
+- The `Get_Value` and `Get_Error` accessors of `UTF_8_Decode_Result`
+  SHALL carry the preconditions specified in FUNC-UTF8-002
+  (`Pre => Is_Ok (R)` and `Pre => not Is_Ok (R)` respectively).
+- Any `As_UTF_8` wrapper for `To_UTF_8` MAY carry a length-relation
+  postcondition.
+<<<
+COMMENT: >>>
+SPARK contracts on wrappers and accessors allow GNATprove to reason
+about UTF-8 round-trips and result-extraction in client code without
+needing to inspect backend implementations.
+<<<
+
+[REQUIREMENT]
+UID: NFR-UTF8-003
+STATUS: Approved
+PRIORITY: Must
+TITLE: SPARK_Mode of the package declaration must not be lowered
+STATEMENT: >>>
+The addition of the UTF-8 formals and result/error types SHALL NOT cause
+the `SPARK_Mode` pragma for the `Anystrings` package specification to be
+changed from `On` to `Off` or removed.  If any wrapper body is
+incompatible with SPARK_Mode On, it SHALL be placed in a sub-package or
+in a region guarded by `pragma SPARK_Mode (Off)` analogous to the
+existing environment-operation guard, rather than disabling SPARK_Mode
+for the entire package.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: No-Exception Policy
+
+[REQUIREMENT]
+UID: NFR-UTF8-004
+STATUS: Approved
+PRIORITY: Must
+TITLE: From_UTF_8 is the sole UTF-8 ingestion path and never raises
+STATEMENT: >>>
+The generic signature SHALL provide exactly one UTF-8 ingestion path:
+`From_UTF_8`, which returns `UTF_8_Decode_Result` (FUNC-UTF8-002) and
+SHALL NOT raise any exception under any input.
+
+No "raising variant", no "silent-substitution variant" (e.g. a function
+that silently replaces invalid bytes with U+FFFD without signalling),
+and no "Try_*" Boolean-out variant SHALL be added to the generic
+signature as part of this feature.
+<<<
+COMMENT: >>>
+This enforces the project's Result-pattern philosophy: a single,
+total, non-raising decoder is the entire UTF-8 ingestion contract
+surface.  Callers that prefer to treat errors as exceptions can build
+their own thin raising wrapper outside the generic; but the generic
+itself stays exception-free and SPARK-clean.
+
+Any silent-substitution helper (e.g. "decode with U+FFFD replacement")
+that may be useful in the future is out of scope here and would be
+introduced as a separate roadmap feature.
+<<<
+
+[REQUIREMENT]
+UID: NFR-UTF8-005
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_UTF_8 must not raise on any valid String_Type value
+STATEMENT: >>>
+`To_UTF_8` is a total function.  It SHALL NOT raise any exception for any
+`String_Type` value that a backend can legally construct, including
+values containing surrogate code units (which are handled per
+FUNC-UTF8-007 by U+FFFD substitution).
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: API Parity and Compatibility
+
+[REQUIREMENT]
+UID: NFR-UTF8-006
+STATUS: Approved
+PRIORITY: Must
+TITLE: UTF-8 formals must appear in all four backend string_types.ads files
+STATEMENT: >>>
+After this feature is implemented, the four `string_types.ads` files
+(one per backend) SHALL each re-export or rename the two UTF-8
+operations and the supporting types so that callers using only
+`with String_Types; use String_Types;` can access `To_UTF_8`,
+`From_UTF_8`, `UTF_8_Decode_Result`, `UTF_8_Decode_Error`, `Is_Ok`,
+`Get_Value`, and `Get_Error` without referencing backend-specific
+packages.
+
+The exported signatures SHALL be identical across all four backends.
+<<<
+COMMENT: >>>
+This preserves the project's backend-swap guarantee: code compiled
+against one backend's `String_Types` compiles unchanged against any
+other backend's `String_Types`.
+
+Specifically, the following shall appear (or be visible) in each
+`string_types.ads`:
+
+    type UTF_8_Decode_Error is (...);          -- or renamed/sub-typed
+    type UTF_8_Decode_Result is private;       -- or visible record
+    function To_UTF_8 (Source : String_Type) return String;
+    function From_UTF_8 (Source : String) return UTF_8_Decode_Result;
+    function Is_Ok      (R : UTF_8_Decode_Result) return Boolean;
+    function Get_Value  (R : UTF_8_Decode_Result) return String_Type
+       with Pre => Is_Ok (R);
+    function Get_Error  (R : UTF_8_Decode_Result) return UTF_8_Decode_Error
+       with Pre => not Is_Ok (R);
+<<<
+
+[REQUIREMENT]
+UID: NFR-UTF8-007
+STATUS: Approved
+PRIORITY: Must
+TITLE: UTF-8 API does not introduce new runtime dependencies for standard backend
+STATEMENT: >>>
+The `standard` backend implementation of `To_UTF_8` and `From_UTF_8`
+SHALL NOT introduce any dependency on an external library or crate
+beyond what is already available in the GNAT runtime
+(`Ada.*`, `System.*`).
+<<<
+COMMENT: >>>
+The Latin-1 -> UTF-8 transcoding required by the `standard` backend is
+simple enough to implement with arithmetic on `Character'Pos` values and
+does not require iconv, Interfaces.C, or any third-party crate.
+
+The `uxstring` backend already depends on the `uxstrings` crate and MAY
+use that crate's UTF-8 facilities.  The `wide` and `wide_wide` backends
+MAY use `Ada.Characters.Conversions` or similar GNAT runtime units.
+<<<
+
+[REQUIREMENT]
+UID: NFR-UTF8-008
+STATUS: Approved
+PRIORITY: Should
+TITLE: UTF-8 operations should be tested for cross-backend consistency
+STATEMENT: >>>
+The project's test suite SHOULD include test cases that verify the
+following properties hold identically across all four backends:
+
+1. `To_UTF_8 ("")` returns `""`.
+2. `From_UTF_8 ("")` returns a Result `R` with `Is_Ok (R) = True` and
+   `Get_Value (R)` empty.
+3. The round-trip invariant (FUNC-UTF8-011) for a representative set of
+   surrogate-free strings including ASCII-only, Latin-1 extended, and
+   (where the backend supports it) non-BMP code points.
+4. `From_UTF_8` returns `Is_Ok = False` for at least one canonical
+   invalid byte sequence per error variant of `UTF_8_Decode_Error`
+   (FUNC-UTF8-001), and the reported `Get_Error` matches the expected
+   variant per FUNC-UTF8-010.
+5. `From_UTF_8` does not raise for any input (covered by sampling
+   adversarial inputs).
+<<<
+COMMENT: >>>
+These tests are out of scope for the current requirements phase
+(Phase 1).  This NFR records the expectation so that the Phase 4
+test-writing step (`spec-to-test`) has a clear mandate.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Architecture
+
+[REQUIREMENT]
+UID: NFR-UTF8-009
+STATUS: Approved
+PRIORITY: Must
+TITLE: UTF-8 formals added to the generic parameter list, not the package body
+STATEMENT: >>>
+`To_UTF_8` and `From_UTF_8` SHALL be added as formal subprograms in the
+`generic` parameter list of the `Anystrings` package (i.e. in the
+section before `package Anystrings with SPARK_Mode is`).  They SHALL
+NOT be declared as concrete body-level subprograms inside the package,
+as that would prevent backends from supplying their own implementations.
+
+The supporting `UTF_8_Decode_Error` enumeration and `UTF_8_Decode_Result`
+discriminated record SHALL be declared in a non-generic package or
+sub-package that the generic `with`-clauses, so that the formals can
+reference them.  They SHALL NOT be declared inside the body of
+`Anystrings` (which would make them inaccessible to formals).
+<<<
+COMMENT: >>>
+This is consistent with the pattern used for `To_String_Type`,
+`To_Latin_1`, `Index`, `Slice`, and all other formal subprograms.
+Wrapper expression functions (analogous to `From_Latin_1` / `As_Latin_1`)
+MAY be added to the package body to provide convenient aliases.
+
+Tech-spec (Phase 2) decides the exact home of the new types: a child
+package `Anystrings.UTF_8` or a sibling `Anystrings_UTF_8` are both
+acceptable; the requirement only mandates non-generic, public, and
+reachable from the formals.
+<<<
+
+[REQUIREMENT]
+UID: NFR-UTF8-010
+STATUS: Approved
+PRIORITY: Must
+TITLE: No conflation of To_UTF_8 and To_Latin_1 at the API surface
+STATEMENT: >>>
+The `Anystrings` generic signature SHALL keep `To_UTF_8` and `To_Latin_1`
+as distinct formal subprograms with distinct names.  No backend SHALL
+supply the same function body for both.  For the `standard` backend
+specifically, `To_UTF_8` MUST return a UTF-8 encoded `String` (which
+will differ from the Latin-1 `String` returned by `To_Latin_1` for any
+code point in the range U+0080-U+00FF).
+<<<
+COMMENT: >>>
+This requirement exists to prevent an easy but incorrect shortcut in
+the `standard` backend: reusing `To_Latin_1` as the UTF-8 function.  For
+characters 128-255 the two encodings produce different byte sequences,
+so they cannot be aliased.
+<<<
+
+[/SECTION]

@@ -28,6 +28,8 @@
 
 with Anystrings;
 with Standard_String_Operations;
+with Standard_UTF_8_Results;
+with Standard_UTF_8_Bridge;
 
 package Standard_Strings is new
   Anystrings
@@ -47,6 +49,9 @@ package Standard_Strings is new
      ">="                    => Standard_String_Operations.">=",
      To_String_Type          => Standard_String_Operations.To_Unbounded_String,
      To_Latin_1              => Standard_String_Operations.To_String,
+     UTF_8                   => Standard_UTF_8_Results,
+     To_UTF_8                => Standard_String_Operations.To_UTF_8,
+     From_UTF_8              => Standard_UTF_8_Bridge.From_UTF_8_Standard,
      Environment_Value       => Standard_String_Operations.Environment_Value,
      Environment_Exists      => Standard_String_Operations.Environment_Exists,
      Environment_Set         => Standard_String_Operations.Environment_Set,

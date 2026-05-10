@@ -7,6 +7,8 @@
 
 with Anystrings;
 with Wide_String_Operations;
+with Wide_UTF_8_Results;
+with Wide_UTF_8_Bridge;
 
 package Wide_Strings is new Anystrings
   (String_Type              => Wide_String_Operations.Unbounded_Wide_String,
@@ -25,6 +27,9 @@ package Wide_Strings is new Anystrings
    ">="                     => Wide_String_Operations.">=",
    To_String_Type           => Wide_String_Operations.To_Unbounded_Wide_String,
    To_Latin_1               => Wide_String_Operations.To_String,
+   UTF_8                    => Wide_UTF_8_Results,
+   To_UTF_8                 => Wide_String_Operations.To_UTF_8,
+   From_UTF_8               => Wide_UTF_8_Bridge.From_UTF_8_Wide,
    Environment_Value        => Wide_String_Operations.Environment_Value,
    Environment_Exists       => Wide_String_Operations.Environment_Exists,
    Environment_Set          => Wide_String_Operations.Environment_Set,

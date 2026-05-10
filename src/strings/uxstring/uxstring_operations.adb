@@ -7,6 +7,7 @@
 
 with Ada.Environment_Variables;
 with Ada.Strings;
+with Ada.Strings.Unbounded;
 
 package body UXString_Operations is
 
@@ -141,7 +142,7 @@ package body UXString_Operations is
       Right : String) return UXString
    is
    begin
-      return Left & From_UTF_8 (Right);
+      return Left & UXStrings.From_Latin_1 (Right);
    end Concat_String_Latin_1;
 
    function Concat_Latin_1_String
@@ -149,13 +150,13 @@ package body UXString_Operations is
       Right : UXString) return UXString
    is
    begin
-      return From_UTF_8 (Left) & Right;
+      return UXStrings.From_Latin_1 (Left) & Right;
    end Concat_Latin_1_String;
 
    function Hash (Key : UXString) return Ada.Containers.Hash_Type is
       --  Simple hash using UTF-8 representation
       Result : Ada.Containers.Hash_Type := 0;
-      UTF8   : constant String := To_UTF_8 (Key);
+      UTF8   : constant UXStrings.UTF_8_Character_Array := UXStrings.To_UTF_8 (Key);
    begin
       for I in UTF8'Range loop
          Result := Ada.Containers.Hash_Type (Natural (Result) * 31 + Character'Pos (UTF8 (I)));
@@ -185,7 +186,7 @@ package body UXString_Operations is
       Pattern : String) return Natural
    is
    begin
-      return UXStrings.Index (Source, From_UTF_8 (Pattern));
+      return UXStrings.Index (Source, UXStrings.From_Latin_1 (Pattern));
    end Index_Latin_1;
 
    function To_Lower (Source : UXString) return UXString is
@@ -218,7 +219,7 @@ package body UXString_Operations is
       Prefix : String) return Boolean
    is
    begin
-      return UXString_Operations.Starts_With (Source, From_UTF_8 (Prefix));
+      return UXString_Operations.Starts_With (Source, UXStrings.From_Latin_1 (Prefix));
    end Starts_With_Latin_1;
 
    function Ends_With
@@ -246,5 +247,122 @@ package body UXString_Operations is
    begin
       return UXStrings.From_Unicode (C);
    end From_Character;
+
+   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, NFR-UTF8-007
+   function To_UTF_8 (Source : UXString) return String is
+      use Ada.Strings.Unbounded;
+
+      --  Replacement character U+FFFD (3 bytes: EF BF BD)
+      FFFD : constant String :=
+        Character'Val (16#EF#) & Character'Val (16#BF#) & Character'Val (16#BD#);
+
+      --  Encode a single Latin-1 code point (0..255) as UTF-8.
+      function Encode_Latin_1 (B : Natural) return String is
+      begin
+         if B <= 16#7F# then
+            return String'(1 => Character'Val (B));
+         else
+            --  U+0080..U+00FF: 2-byte UTF-8 sequence.
+            --  High byte = 0xC0 + B/64; Low byte = 0x80 + B mod 64.
+            --  For B in 128..255: B/64 in 2..3, so high byte in 0xC2..0xC3.
+            return String'(Character'Val (16#C0# + (B / 64)),
+                           Character'Val (16#80# + (B mod 64)));
+         end if;
+      end Encode_Latin_1;
+
+      function Is_Cont (C : Character) return Boolean is
+         B : constant Natural := Character'Pos (C);
+      begin
+         return B in 16#80# .. 16#BF#;
+      end Is_Cont;
+
+      --  The internal byte representation from UXStrings (UXS1 stores raw
+      --  bytes as given to From_UTF_8; UXS5 stores validated UTF-8).
+      Raw    : constant String := String (UXStrings.To_UTF_8 (Source));
+      Result : Unbounded_String;
+      I      : Positive;
+      Lead   : Natural;
+      CP     : Natural;
+   begin
+      if Raw'Length = 0 then
+         return "";
+      end if;
+
+      I := Raw'First;
+      while I <= Raw'Last loop
+         Lead := Character'Pos (Raw (I));
+
+         if Lead <= 16#7F# then
+            --  ASCII single byte — always valid UTF-8, pass through.
+            Append (Result, Raw (I));
+            I := I + 1;
+
+         elsif Lead in 16#C2# .. 16#DF# then
+            --  2-byte sequence: valid if followed by one continuation byte.
+            if I + 1 <= Raw'Last and then Is_Cont (Raw (I + 1)) then
+               Append (Result, Raw (I .. I + 1));
+               I := I + 2;
+            else
+               --  Truncated or invalid: treat lead as Latin-1 code point.
+               Append (Result, Encode_Latin_1 (Lead));
+               I := I + 1;
+            end if;
+
+         elsif Lead in 16#E0# .. 16#EF# then
+            --  3-byte sequence: valid if followed by two continuation bytes.
+            if I + 2 <= Raw'Last
+               and then Is_Cont (Raw (I + 1))
+               and then Is_Cont (Raw (I + 2))
+            then
+               CP :=
+                 (Lead mod 16) * 4_096
+                 + (Character'Pos (Raw (I + 1)) mod 64) * 64
+                 + (Character'Pos (Raw (I + 2)) mod 64);
+               if CP in 16#D800# .. 16#DFFF# then
+                  --  Surrogate code point — replace with U+FFFD.
+                  Append (Result, FFFD);
+               else
+                  Append (Result, Raw (I .. I + 2));
+               end if;
+               I := I + 3;
+            else
+               --  Truncated: treat lead as Latin-1 code point.
+               Append (Result, Encode_Latin_1 (Lead));
+               I := I + 1;
+            end if;
+
+         elsif Lead in 16#F0# .. 16#F4# then
+            --  4-byte sequence: valid if followed by three continuation bytes.
+            if I + 3 <= Raw'Last
+               and then Is_Cont (Raw (I + 1))
+               and then Is_Cont (Raw (I + 2))
+               and then Is_Cont (Raw (I + 3))
+            then
+               CP :=
+                 (Lead mod 8) * 262_144
+                 + (Character'Pos (Raw (I + 1)) mod 64) * 4_096
+                 + (Character'Pos (Raw (I + 2)) mod 64) * 64
+                 + (Character'Pos (Raw (I + 3)) mod 64);
+               if CP > 16#10_FFFF# then
+                  Append (Result, FFFD);
+               else
+                  Append (Result, Raw (I .. I + 3));
+               end if;
+               I := I + 4;
+            else
+               Append (Result, Encode_Latin_1 (Lead));
+               I := I + 1;
+            end if;
+
+         else
+            --  0x80..0xBF (bare continuation), 0xC0..0xC1 (always overlong),
+            --  0xF5..0xFF (out-of-range lead): treat as Latin-1 code point.
+            Append (Result, Encode_Latin_1 (Lead));
+            I := I + 1;
+         end if;
+      end loop;
+
+      return To_String (Result);
+   end To_UTF_8;
 
 end UXString_Operations;

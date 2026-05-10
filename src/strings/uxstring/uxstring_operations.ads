@@ -228,4 +228,27 @@ package UXString_Operations is
    --  Create a single-character string
    function From_Character (C : Unicode_Character) return UXString;
 
+   ---------------------------------------------------------------------------
+   --  UTF-8 Boundary Operations (FUNC-UTF8-003, FUNC-UTF8-013)
+   ---------------------------------------------------------------------------
+
+   --  @summary Encode a UXString as a UTF-8 String.
+   --
+   --  @description
+   --  Total function; never raises (NFR-UTF8-005). UXStrings stores data
+   --  internally as UTF-8, so this operation is a direct extraction via
+   --  UXStrings.To_UTF_8 — no surrogate pre-scan or substitution is needed
+   --  because UXString values are always well-formed by construction.
+   --  ASCII-only input passes through byte-for-byte (FUNC-UTF8-005).
+   --  The result is always well-formed UTF-8 (FUNC-UTF8-006).
+   --  No NFC or NFC normalisation is applied; the caller is responsible
+   --  for normalisation before comparison if canonical equivalence is
+   --  required (FUNC-UTF8-013).
+   --
+   --  @param Source  The UXString to encode.
+   --  @return        Well-formed UTF-8 byte sequence as a Standard.String.
+   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-013,
+   --            NFR-UTF8-005
+   function To_UTF_8 (Source : UXString) return String;
+
 end UXString_Operations;

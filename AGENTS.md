@@ -28,6 +28,9 @@ Ada library `anystrings` — a generic string-abstraction crate. One signature p
 | Change build switches / library kind | `anystrings.gpr` (`Compiler.Default_Switches`, `Library_Kind` via `ANYSTRING_LIBRARY_TYPE`, wide env encoding via `ANYSTRING_WIDE_ENV_ENCODING`) |
 | Run/extend the demo | `examples/src/anystrings_examples.adb` |
 | Backend-swap mechanics | `src/strings/AGENTS.md` |
+| Coding standards | `.opencode/ada-style-guide.md` | Ada naming/doc rules |
+| Roadmap state | `.opencode/roadmap.json` | Canonical machine-readable roadmap |
+| Roadmap tooling | `tools/roadmap.ts` | Canonical non-interactive interface for roadmap queries and updates |
 
 ## CODE MAP
 | Symbol | Type | Location | Role |
@@ -46,6 +49,17 @@ The library’s entry point for consumers is **`String_Types`**, not `Anystrings
 - Binder uses `-Es` for symbolic tracebacks.
 - Latin-1 is the canonical interchange encoding at the API edge: every backend implements `To_String_Type (String) -> String_Type` and `To_Latin_1 (String_Type) -> String`. UTF-8 / Unicode-code-point semantics are **backend-specific** (UXString = code points, Standard = bytes).
 - `String_Types` always exposes `"&"`, `"="`, `"<"`, `Length`, `Element`, `Index`, `Slice`, `Trim`, `To_Lower/Upper`, `Starts_With`, `Ends_With`, `Hash`, `Contains`, `Is_Equals_Sign`, `Is_Dash`. Every new backend must rename-export this exact surface.
+
+
+### Workflow Tooling
+- **Roadmap management**: use `tools/roadmap.ts` as the canonical interface for reading and updating `.opencode/roadmap.json`
+- Prefer the script over hand-editing the JSON when changing status, order, dependencies, or `doc_refs`
+- Typical usage:
+  - `"$HOME/.deno/bin/deno" run -A tools/roadmap.ts next`
+  - `"$HOME/.deno/bin/deno" run -A tools/roadmap.ts show HELP-PIPELINE-REDESIGN --pretty`
+  - `"$HOME/.deno/bin/deno" run -A tools/roadmap.ts update HELP-PIPELINE-REDESIGN --add-doc-ref "file:section:line"`
+  - `"$HOME/.deno/bin/deno" run -A tools/roadmap.ts deps`
+- The script is designed for LLM-driven workflows: terse output, stable exit codes, and non-interactive mutations
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - **Do not** `with Anystrings;` from user code — go through `String_Types`.

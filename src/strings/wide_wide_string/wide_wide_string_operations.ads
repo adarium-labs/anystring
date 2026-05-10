@@ -199,6 +199,31 @@ package Wide_Wide_String_Operations is
      (Source : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String;
 
    function From_Character
-     (C : Wide_Wide_Character) return Unbounded_Wide_Wide_String;
+      (C : Wide_Wide_Character) return Unbounded_Wide_Wide_String;
+
+   ---------------------------------------------------------------------------
+   --  UTF-8 Boundary Operations (FUNC-UTF8-003, FUNC-UTF8-007)
+   ---------------------------------------------------------------------------
+
+   --  @summary Encode an Unbounded_Wide_Wide_String as a UTF-8 String.
+   --
+   --  @description
+   --  Total function; never raises (NFR-UTF8-005). Pre-scans Source
+   --  element-by-element:
+   --    - Wide_Wide_Character values with Pos in 16#D800#..16#DFFF#
+   --      (surrogate range) are substituted with U+FFFD (FUNC-UTF8-007).
+   --    - Wide_Wide_Character values with Pos > 16#10FFFF# (beyond Unicode
+   --      scalar range, possible because Wide_Wide_Character spans
+   --      U+0000..U+7FFFFFFF) are also substituted with U+FFFD before
+   --      encoding (FUNC-UTF8-007 extended for symmetry with the wide backend).
+   --  After substitution, encodes using
+   --  Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Encode (UTF_8, no BOM).
+   --  ASCII-only input passes through byte-for-byte (FUNC-UTF8-005).
+   --  The result is always well-formed UTF-8 (FUNC-UTF8-006).
+   --
+   --  @param Source  The Unbounded_Wide_Wide_String to encode.
+   --  @return        Well-formed UTF-8 byte sequence as a Standard.String.
+   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007, NFR-UTF8-005
+   function To_UTF_8 (Source : Unbounded_Wide_Wide_String) return String;
 
 end Wide_Wide_String_Operations;

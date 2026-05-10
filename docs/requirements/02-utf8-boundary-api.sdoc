@@ -1,0 +1,477 @@
+[DOCUMENT]
+TITLE: UTF-8 Generic API — Functional Requirements
+REQ_PREFIX: FUNC-UTF8-
+
+[GRAMMAR]
+ELEMENTS:
+- TAG: REQUIREMENT
+  FIELDS:
+  - TITLE: UID
+    TYPE: String
+    REQUIRED: True
+  - TITLE: STATUS
+    TYPE: String
+    REQUIRED: False
+  - TITLE: PRIORITY
+    TYPE: String
+    REQUIRED: False
+  - TITLE: TITLE
+    TYPE: String
+    REQUIRED: False
+  - TITLE: STATEMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: COMMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: RELATIONS
+    TYPE: String
+    REQUIRED: False
+
+[SECTION]
+TITLE: Context
+
+[TEXT]
+Roadmap feature: **UTF8-BOUNDARY-API** (tier 1, status: next).
+
+This feature adds two formal subprograms to the `Anystrings` generic
+signature (`src/anystrings.ads`) plus a shared, non-generic Result type
+and error enumeration:
+
+- `To_UTF_8 (Source : String_Type) return String`
+- `From_UTF_8 (Source : String) return UTF_8_Decode_Result`
+
+The goal is to establish a canonical UTF-8 interchange boundary so that
+generic clients (e.g. `aclida_style`) can round-trip any `String_Type`
+value through UTF-8 without backend-specific knowledge.
+
+All four bundled backends (`standard`, `wide`, `wide_wide`, `uxstring`)
+MUST provide concrete implementations of these formals.
+
+[TEXT]
+Design decisions captured during Phase 1 review:
+
+1. **Result-pattern over exceptions**: `From_UTF_8` SHALL NOT raise.  It
+   returns a discriminated record (`UTF_8_Decode_Result`) carrying either
+   a converted `String_Type` value or one of a finite set of named error
+   codes.  This keeps the API SPARK-friendly and removes the need for a
+   separate `Try_From_UTF_8` variant.
+2. **Surrogate handling in `To_UTF_8`**: any code point in the surrogate
+   range U+D800-U+DFFF that a backend can legally hold SHALL be encoded
+   as U+FFFD (REPLACEMENT CHARACTER) by `To_UTF_8`.  `To_UTF_8` is total
+   and never raises.
+3. **Round-trip identity**: `From_UTF_8 (To_UTF_8 (S))` SHALL yield a
+   success Result whose value equals `S` for every `String_Type` value
+   `S` representable by the backend AND containing no surrogate code
+   units.  Strings containing surrogates lose them on round-trip
+   (substituted by U+FFFD); this case is documented but does not violate
+   the invariant for the supported domain.
+4. **Inverse round-trip**: `To_UTF_8 (value-of (From_UTF_8 (B)))` is NOT
+   required to equal `B` byte-for-byte; backends MAY normalise (e.g.
+   NFC).  Any normalisation MUST be documented in the backend header.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Distinction from the Latin-1 boundary
+
+[TEXT]
+The existing `To_Latin_1` / `To_String_Type` pair converts between
+`String_Type` and an Ada `String` whose code positions are ISO 8859-1
+(Latin-1) values - a byte-for-byte identity in the `standard` backend.
+
+`To_UTF_8` and `From_UTF_8` operate on an Ada `String` whose bytes
+constitute a **UTF-8 encoded** byte sequence.  The two boundaries are
+semantically distinct:
+
+- A Latin-1 `String` may contain code positions 128-255 as single bytes;
+  those same code points expand to two bytes in UTF-8.
+- An all-ASCII `String` (positions 0-127) is identical in both encodings.
+- Backends that operate natively on Unicode (e.g. `uxstring`) MUST encode
+  their full Unicode range into UTF-8, not truncate to Latin-1.
+
+Implementations MUST NOT conflate the two boundaries.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Shared Result Type and Error Enumeration
+
+[REQUIREMENT]
+UID: FUNC-UTF8-001
+STATUS: Approved
+PRIORITY: Must
+TITLE: Shared UTF-8 decode-error enumeration
+STATEMENT: >>>
+The library SHALL define a non-generic, public enumeration type
+`UTF_8_Decode_Error` enumerating every distinguishable failure category
+of UTF-8 decoding.  At minimum, the enumeration SHALL include:
+
+- `Invalid_Lead_Byte`        - A byte that cannot start any UTF-8 sequence
+  (e.g. 16#80#-16#BF#, 16#C0#-16#C1#, 16#F5#-16#FF#).
+- `Truncated_Sequence`       - A multi-byte sequence is cut short by end
+  of input.
+- `Invalid_Continuation`     - A continuation byte does not satisfy the
+  16#80#-16#BF# range constraint after a valid lead byte.
+- `Overlong_Encoding`        - A code point is encoded with more bytes
+  than required (e.g. U+002F as 16#C0# 16#AF#).
+- `Surrogate_Code_Point`     - A decoded code point falls in the
+  surrogate range U+D800-U+DFFF (forbidden by RFC 3629).
+- `Code_Point_Out_Of_Range`  - A decoded code point is greater than
+  U+10FFFF.
+
+The enumeration is part of the public API and is referenced by the
+result type (FUNC-UTF8-002) and by `From_UTF_8` (FUNC-UTF8-008).
+<<<
+COMMENT: >>>
+Distinct error variants give callers the option to log, recover, or
+report precisely.  The enumeration is closed (no `Other`/`Unknown`
+catch-all) to make exhaustive `case` analysis decidable in SPARK.
+
+The enumeration MUST be declared in a non-generic package - backends
+cannot import a type that is internal to the generic.  Suggested home:
+a new child package such as `Anystrings.UTF_8` or a sibling
+`Anystrings_UTF_8`.  The exact package placement is a tech-spec
+decision (Phase 2); this requirement only mandates that the
+enumeration be reachable from both `src/anystrings.ads` (the generic)
+and every backend `string_types.ads`.
+<<<
+
+[REQUIREMENT]
+UID: FUNC-UTF8-002
+STATUS: Approved
+PRIORITY: Must
+TITLE: Shared UTF-8 decode-result discriminated record
+STATEMENT: >>>
+The library SHALL define a non-generic, public discriminated record type
+parameterised by the user's `String_Type` such that an instance carries
+either a successfully decoded `String_Type` value or one of the
+`UTF_8_Decode_Error` variants from FUNC-UTF8-001.
+
+The shape of this type SHALL satisfy the following invariants regardless
+of the chosen Ada syntax (generic instantiation, formal type, or
+sub-package):
+
+- Exactly one boolean-or-equivalent discriminant indicates success vs.
+  failure.
+- On success the type provides access to a `Value` of type `String_Type`.
+- On failure the type provides access to a `Reason` of type
+  `UTF_8_Decode_Error`.
+- The two cases are mutually exclusive at the type level (no record can
+  carry both).
+
+Public, total accessor functions SHALL be provided:
+
+- `Is_Ok (R) return Boolean`
+- `Get_Value (R) return String_Type`  with `Pre => Is_Ok (R)`
+- `Get_Error (R) return UTF_8_Decode_Error` with `Pre => not Is_Ok (R)`
+
+The exact name of the record type is `UTF_8_Decode_Result`.
+<<<
+COMMENT: >>>
+The discriminated-record shape (rather than a tagged-type hierarchy) is
+chosen for SPARK compatibility and because it sidesteps allocation: a
+result is a stack value.
+
+Because the type is parameterised by `String_Type`, it may need to be a
+formal of a child generic, or its declaration may need to live inside a
+helper generic that is instantiated alongside `Anystrings`.  Tech-spec
+will pick one of these strategies; the requirement here is the
+observable surface (Is_Ok, Get_Value, Get_Error).
+
+The `Pre` contracts on `Get_Value` / `Get_Error` make the type
+SPARK-provable: callers must check `Is_Ok` before extracting a value.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Functional Requirements - To_UTF_8
+
+[REQUIREMENT]
+UID: FUNC-UTF8-003
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_UTF_8 formal subprogram in the generic signature
+STATEMENT: >>>
+The `Anystrings` generic signature SHALL include a formal function
+
+    with function To_UTF_8 (Source : String_Type) return String;
+
+that converts a `String_Type` value to an Ada `String` whose bytes
+constitute a well-formed UTF-8 encoded byte sequence representing the
+same text as `Source`.
+<<<
+COMMENT: >>>
+This is a total function: every `String_Type` value MUST have a defined
+UTF-8 representation.  Backends that use a Unicode-capable internal
+encoding (e.g. UXStrings) encode their full code-point range.  Backends
+that store Latin-1 (the `standard` backend) treat each stored byte as its
+Unicode code-point equivalent and encode it into UTF-8 accordingly
+(code points 0-127 are unchanged; code points 128-255 expand to two UTF-8
+bytes).  Wide and Wide_Wide backends encode their respective
+`Wide_Character` / `Wide_Wide_Character` repertoires.
+
+Implementations MUST NOT produce the same result as `To_Latin_1` for
+strings containing code points above U+007F.
+
+Source file: `src/anystrings.ads`
+All four backend directories must provide a concrete binding.
+<<<
+
+[REQUIREMENT]
+UID: FUNC-UTF8-004
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_UTF_8 on an empty string
+STATEMENT: >>>
+When `Source` is the empty `String_Type` value, `To_UTF_8 (Source)` SHALL
+return an empty `String` (i.e. `""`).
+<<<
+COMMENT: >>>
+Empty-input behaviour MUST be consistent across all backends.
+<<<
+
+[REQUIREMENT]
+UID: FUNC-UTF8-005
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_UTF_8 ASCII fast-path correctness
+STATEMENT: >>>
+For any `String_Type` value whose logical character sequence consists
+exclusively of code points in the range U+0000-U+007F (ASCII), `To_UTF_8`
+SHALL return a `String` equal to the byte-for-byte representation of those
+code points (i.e. single-byte UTF-8 sequences).
+<<<
+COMMENT: >>>
+This requirement asserts that backends do not apply unexpected encoding
+overhead to pure-ASCII input and provides a simple cross-backend
+consistency check.  It does not mandate a specific code path or branch
+optimisation.
+<<<
+
+[REQUIREMENT]
+UID: FUNC-UTF8-006
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_UTF_8 output is always well-formed UTF-8
+STATEMENT: >>>
+The `String` returned by `To_UTF_8` SHALL always constitute a well-formed
+UTF-8 byte sequence as defined by RFC 3629.  No backend implementation
+SHALL produce output that is not valid UTF-8.
+
+Specifically, the output SHALL NOT contain:
+
+- The encoding of any code point in U+D800-U+DFFF (surrogate range).
+- The encoding of any code point greater than U+10FFFF.
+- Overlong encodings.
+<<<
+
+[REQUIREMENT]
+UID: FUNC-UTF8-007
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_UTF_8 substitutes surrogate code points with U+FFFD
+STATEMENT: >>>
+For backends whose internal character type can hold values in the
+surrogate range U+D800-U+DFFF (notably the `wide` and `wide_wide`
+backends), `To_UTF_8` SHALL encode each such code unit as the UTF-8
+encoding of U+FFFD (REPLACEMENT CHARACTER, the three bytes
+16#EF# 16#BF# 16#BD#).
+
+`To_UTF_8` SHALL NOT raise for any reason, including the presence of
+surrogate code units in the input.
+<<<
+COMMENT: >>>
+This makes `To_UTF_8` total under the project's "no exceptions in the
+contract surface" rule.  Substitution with U+FFFD is the standard
+recovery strategy described by the Unicode Standard (Sec 3.9 "Unicode
+Encoding Forms").
+
+Backends whose internal character type cannot represent surrogates
+(e.g. `standard` with `Character` 0..255, `uxstring` which already
+guarantees scalar values) MAY satisfy this requirement vacuously.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Functional Requirements - From_UTF_8
+
+[REQUIREMENT]
+UID: FUNC-UTF8-008
+STATUS: Approved
+PRIORITY: Must
+TITLE: From_UTF_8 formal subprogram in the generic signature
+STATEMENT: >>>
+The `Anystrings` generic signature SHALL include a formal function
+
+    with function From_UTF_8 (Source : String) return UTF_8_Decode_Result;
+
+that converts an Ada `String` whose bytes are intended to constitute a
+UTF-8 encoded byte sequence into a `UTF_8_Decode_Result` value
+(FUNC-UTF8-002).
+
+On well-formed UTF-8 input, the returned value SHALL satisfy
+`Is_Ok (Result) = True` and `Get_Value (Result)` SHALL be the
+corresponding `String_Type` value.
+
+On any input that is not a valid UTF-8 byte sequence per RFC 3629,
+the returned value SHALL satisfy `Is_Ok (Result) = False` and
+`Get_Error (Result)` SHALL be one of the `UTF_8_Decode_Error` variants
+from FUNC-UTF8-001 corresponding to the first detected violation.
+
+`From_UTF_8` SHALL NOT raise any exception under any input.
+<<<
+COMMENT: >>>
+This subsumes both the original raising `From_UTF_8` and the original
+`Try_From_UTF_8` from the first draft.  The Result-pattern variant is the
+single, total, non-raising ingestion path required by the project's
+SPARK-friendly, no-exceptions rule.
+
+The "first detected violation" wording leaves error-detection order
+unspecified; backends MAY scan left-to-right and stop on first error,
+which is the simplest correct strategy.
+
+Source file: `src/anystrings.ads`
+Backend directories: `src/strings/standard/`, `src/strings/wide/`,
+`src/strings/wide_wide/`, `src/strings/uxstring/`
+<<<
+
+[REQUIREMENT]
+UID: FUNC-UTF8-009
+STATUS: Approved
+PRIORITY: Must
+TITLE: From_UTF_8 on an empty string
+STATEMENT: >>>
+When `Source` is an empty `String` (`""`), `From_UTF_8 (Source)` SHALL
+return a Result `R` such that `Is_Ok (R) = True` and `Get_Value (R)` is
+the empty `String_Type` value (equivalent to `Null_String`).
+<<<
+
+[REQUIREMENT]
+UID: FUNC-UTF8-010
+STATUS: Approved
+PRIORITY: Must
+TITLE: From_UTF_8 error mapping for canonical invalid sequences
+STATEMENT: >>>
+`From_UTF_8` SHALL map each canonical class of invalid UTF-8 input to the
+corresponding `UTF_8_Decode_Error` variant:
+
+- A bare continuation byte (16#80#-16#BF# at the start of a sequence)
+  -> `Invalid_Lead_Byte`.
+- A lead byte that announces N continuation bytes, with fewer than N
+  remaining bytes -> `Truncated_Sequence`.
+- A lead byte followed by a byte outside 16#80#-16#BF#
+  -> `Invalid_Continuation`.
+- A 2-byte sequence encoding a code point < U+0080, a 3-byte sequence
+  encoding a code point < U+0800, or a 4-byte sequence encoding a code
+  point < U+10000 -> `Overlong_Encoding`.
+- A sequence whose decoded scalar value is in U+D800-U+DFFF
+  -> `Surrogate_Code_Point`.
+- A sequence whose decoded scalar value is > U+10FFFF
+  -> `Code_Point_Out_Of_Range`.
+
+If a single byte sequence matches more than one category, backends MAY
+report any matching category, but the chosen mapping SHALL be
+deterministic for a given backend.
+<<<
+COMMENT: >>>
+This requirement makes the error variants testable.  The "deterministic
+for a given backend" clause permits backends that piggy-back on an
+external decoder (e.g. UXStrings) to expose whatever ordering that
+decoder uses, so long as it is stable.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Round-Trip Invariant
+
+[REQUIREMENT]
+UID: FUNC-UTF8-011
+STATUS: Approved
+PRIORITY: Must
+TITLE: From_UTF_8 of To_UTF_8 round-trip identity for surrogate-free values
+STATEMENT: >>>
+For every `String_Type` value `S` representable by the backend AND
+containing no code units in the surrogate range U+D800-U+DFFF, the
+following SHALL hold:
+
+    let R := From_UTF_8 (To_UTF_8 (S))
+    Is_Ok (R) = True
+    Get_Value (R) = S
+
+That is, converting any surrogate-free `String_Type` value to UTF-8 and
+back SHALL reproduce the original value without loss, substitution, or
+modification.
+<<<
+COMMENT: >>>
+The round-trip invariant is restricted to surrogate-free inputs because
+FUNC-UTF8-007 mandates surrogate substitution by U+FFFD in `To_UTF_8`,
+which is intentionally lossy for surrogate code units.
+
+The inverse round-trip - `To_UTF_8 (Get_Value (From_UTF_8 (B)))` - is
+defined only for valid UTF-8 byte strings `B` and is NOT required to
+equal `B` byte-for-byte if the backend normalises the representation
+(e.g. NFC normalisation); however, if normalisation is applied it MUST
+be documented in the backend's package header.
+
+This invariant MUST hold for all four bundled backends and for all
+representable surrogate-free `String_Type` values including empty
+strings, ASCII-only strings, and strings containing the full
+non-surrogate code-point range supported by the backend.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Backend Coverage and API Parity
+
+[REQUIREMENT]
+UID: FUNC-UTF8-012
+STATUS: Approved
+PRIORITY: Must
+TITLE: All four bundled backends must implement the UTF-8 formals
+STATEMENT: >>>
+Each of the four bundled backends SHALL provide concrete implementations
+of `To_UTF_8` and `From_UTF_8`:
+
+- `src/strings/standard/`   - Latin-1 / Ada `String` backend
+- `src/strings/wide/`       - `Wide_String` / `Wide_Character` backend
+- `src/strings/wide_wide/`  - `Wide_Wide_String` / `Wide_Wide_Character`
+                              backend
+- `src/strings/uxstring/`   - UXStrings backend
+
+Each backend's implementation SHALL be provided in the backend's
+`*_operations.ads` and `*_operations.adb` files.
+<<<
+COMMENT: >>>
+The UXStrings backend has native UTF-8 support and is expected to have
+the simplest implementation.  The `standard` backend transcodes Latin-1
+to UTF-8 (a straightforward two-byte expansion for code points 128-255).
+The Wide and Wide_Wide backends transcode their respective character
+repertoires to/from UTF-8, applying surrogate substitution per
+FUNC-UTF8-007.
+
+No implementation algorithm is mandated; only the observable behaviour
+specified in FUNC-UTF8-001 through FUNC-UTF8-011 is required.
+<<<
+
+[REQUIREMENT]
+UID: FUNC-UTF8-013
+STATUS: Approved
+PRIORITY: Must
+TITLE: UTF-8 formals must not break existing API parity
+STATEMENT: >>>
+Adding the `To_UTF_8` and `From_UTF_8` formals (and the supporting
+`UTF_8_Decode_Error` / `UTF_8_Decode_Result` types) SHALL NOT change the
+semantics of any existing formal subprogram, SHALL NOT remove any
+existing formal, and SHALL NOT alter the types or parameter modes of any
+existing formal.
+
+All four backend instantiation files (`*_strings.ads`) MUST remain
+compilable with the updated generic after the formals are added.
+<<<
+
+[/SECTION]

@@ -1,0 +1,19 @@
+name = "anystrings_tests"
+description = "AUnit test suite for the anystrings library (UTF-8 boundary API)"
+version = "0.1.0-dev"
+
+authors = ["Heziode"]
+maintainers = ["Heziode <heziode@protonmail.com>"]
+maintainers-logins = ["heziode"]
+licenses = "Apache-2.0 WITH LLVM-exception"
+website = ""
+tags = ["test", "aunit"]
+
+executables = ["anystrings_test_runner"]
+
+[[depends-on]]
+anystrings = "*"
+aunit = "*"
+
+[[pins]]
+anystrings = { path='..' }

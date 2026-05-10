@@ -7,6 +7,8 @@
 
 with Ada.Strings.Wide_Wide_Fixed;
 with Ada.Strings;
+with Ada.Strings.UTF_Encoding;
+with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 with Ada.Environment_Variables;
 with Anystrings_Internal_Wide_Environment_Encoding;
 
@@ -377,5 +379,35 @@ package body Wide_Wide_String_Operations is
       return Ada.Strings.Wide_Wide_Unbounded.To_Unbounded_Wide_Wide_String
         ((1 => C));
    end From_Character;
+
+   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007, NFR-UTF8-007
+   function To_UTF_8 (Source : Unbounded_Wide_Wide_String) return String is
+      WS : constant Wide_Wide_String :=
+        Ada.Strings.Wide_Wide_Unbounded.To_Wide_Wide_String (Source);
+
+      --  U+FFFD replacement character as Wide_Wide_Character
+      Replacement : constant Wide_Wide_Character :=
+        Wide_Wide_Character'Val (16#FFFD#);
+
+      --  Build a sanitised copy with surrogates replaced by U+FFFD.
+      Sanitised : Wide_Wide_String (WS'Range);
+   begin
+      for I in WS'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (WS (I));
+         begin
+            if CP in 16#D800# .. 16#DFFF# then
+               Sanitised (I) := Replacement;
+            else
+               Sanitised (I) := WS (I);
+            end if;
+         end;
+      end loop;
+
+      return Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Encode
+        (Item          => Sanitised,
+         Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8,
+         Output_BOM    => False);
+   end To_UTF_8;
 
 end Wide_Wide_String_Operations;

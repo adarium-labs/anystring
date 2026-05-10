@@ -21,6 +21,7 @@
 --  providing the required formal parameters (types and operations).
 
 with Ada.Containers;
+with Anystrings_UTF_8_Results;
 
 generic
    --  The string type being abstracted
@@ -84,36 +85,50 @@ generic
    with function To_Latin_1 (Source : String_Type) return String;
 
    ---------------------------------------------------------------------------
+   --  UTF-8 Boundary Operations (FUNC-UTF8-003, FUNC-UTF8-008, NFR-UTF8-009)
+   ---------------------------------------------------------------------------
+
+   --  Formal package encapsulating the backend's UTF_8_Decode_Result type and
+   --  its accessors (Is_Ok, Get_Value, Get_Error, Make_Ok, Make_Error).
+   --  Using a formal package guarantees that String_Type, the result record,
+   --  and the accessors are consistent within an instantiation (NFR-UTF8-001).
+   --  @relation FUNC-UTF8-002, FUNC-UTF8-003, FUNC-UTF8-008, NFR-UTF8-009
+   with package UTF_8 is new Anystrings_UTF_8_Results (String_Type => String_Type, Null_String => Null_String);
+
+   --  Backend-specific UTF-8 encoder; total, never raises (FUNC-UTF8-003,
+   --  FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007, NFR-UTF8-005).
+   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007
+   with function To_UTF_8 (Source : String_Type) return String;
+
+   --  Backend-specific UTF-8 decoder; total, never raises (FUNC-UTF8-008,
+   --  FUNC-UTF8-010, NFR-UTF8-004).
+   --  @relation FUNC-UTF8-008, FUNC-UTF8-010, NFR-UTF8-004
+   with function From_UTF_8 (Source : String) return UTF_8.UTF_8_Decode_Result;
+
+   ---------------------------------------------------------------------------
    --  Environment Operations
    ---------------------------------------------------------------------------
 
    --  Returns the value of the environment variable whose name equals Name.
    --  Returns Default if the variable does not exist.
-   with function Environment_Value
-     (Name    : String_Type;
-      Default : String_Type) return String_Type;
+   with function Environment_Value (Name : String_Type; Default : String_Type) return String_Type;
 
    --  Returns True iff an environment variable with that name is set.
-   with function Environment_Exists
-     (Name : String_Type) return Boolean;
+   with function Environment_Exists (Name : String_Type) return Boolean;
 
    --  Sets an environment variable and returns True on success.
-   with function Environment_Set
-     (Name  : String_Type;
-      Value : String_Type) return Boolean;
+   with function Environment_Set (Name : String_Type; Value : String_Type) return Boolean;
 
    --  Clears one environment variable and returns True on success.
-   with function Environment_Clear
-     (Name : String_Type) return Boolean;
+   with function Environment_Clear (Name : String_Type) return Boolean;
 
    --  Clears all environment variables and returns True on success.
    with function Environment_Clear_All return Boolean;
 
    --  Iterates over all environment variables and returns True on success.
-   with function Environment_Iterate
-     (Process : not null access procedure
-        (Name  : String_Type;
-         Value : String_Type)) return Boolean;
+   with
+     function Environment_Iterate
+       (Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean;
 
    ---------------------------------------------------------------------------
    --  Text I/O Operations
@@ -128,47 +143,32 @@ generic
    type File_Type is limited private;
    type File_Mode is private;
 
-   In_File_Mode     : File_Mode;
-   Out_File_Mode    : File_Mode;
+   In_File_Mode : File_Mode;
+   Out_File_Mode : File_Mode;
    Append_File_Mode : File_Mode;
 
-   with procedure Create_File
-     (File : in out File_Type;
-      Mode : File_Mode := Out_File_Mode;
-      Name : String := "");
+   with procedure Create_File (File : in out File_Type; Mode : File_Mode := Out_File_Mode; Name : String := "");
 
-   with procedure Open_File
-     (File : in out File_Type;
-      Mode : File_Mode;
-      Name : String);
+   with procedure Open_File (File : in out File_Type; Mode : File_Mode; Name : String);
 
-   with procedure Close_File
-     (File : in out File_Type);
+   with procedure Close_File (File : in out File_Type);
 
-   with function Is_Open_File
-     (File : File_Type) return Boolean;
+   with function Is_Open_File (File : File_Type) return Boolean;
 
    with function Current_Input_File return File_Type;
    with function Current_Output_File return File_Type;
 
-   with procedure Set_Input_File
-     (File : File_Type);
+   with procedure Set_Input_File (File : File_Type);
 
-   with procedure Set_Output_File
-     (File : File_Type);
+   with procedure Set_Output_File (File : File_Type);
 
-   with procedure Put_File
-     (File : File_Type;
-      Item : String_Type);
+   with procedure Put_File (File : File_Type; Item : String_Type);
 
-   with function Get_Line_File
-     (File : File_Type) return String_Type;
+   with function Get_Line_File (File : File_Type) return String_Type;
 
-   with procedure New_Line_File
-     (File : File_Type);
+   with procedure New_Line_File (File : File_Type);
 
-   with function End_Of_File_File
-     (File : File_Type) return Boolean;
+   with function End_Of_File_File (File : File_Type) return Boolean;
 
    ---------------------------------------------------------------------------
    --  Extended Operations (required by the framework)
@@ -304,44 +304,80 @@ is
    is (To_Latin_1 (Source));
 
    ---------------------------------------------------------------------------
+   --  UTF-8 Boundary Wrappers (SPARK_Mode On)
+   ---------------------------------------------------------------------------
+
+   --  @summary Convert a String_Type to its UTF-8 byte representation.
+   --
+   --  @description
+   --  Total function; never raises. ASCII code units (U+0000..U+007F) pass
+   --  through unchanged (FUNC-UTF8-005). Surrogate code units (if present in
+   --  the backend's representation) are substituted with U+FFFD before
+   --  encoding (FUNC-UTF8-007, NFR-UTF8-005). The result is always
+   --  well-formed UTF-8 (FUNC-UTF8-006).
+   --
+   --  @param Source  The string to encode.
+   --  @return        Well-formed UTF-8 byte sequence as a Standard.String.
+   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007, NFR-UTF8-002
+   function As_UTF_8 (Source : String_Type) return String
+   is (To_UTF_8 (Source));
+
+   --  @summary Decode a UTF-8 byte sequence into a Result.
+   --
+   --  @description
+   --  Total function; never raises. Returns a discriminated
+   --  UTF_8_Decode_Result: Is_Ok = True on success (Get_Value holds the
+   --  decoded String_Type), or Is_Ok = False on error (Get_Error holds
+   --  the failure category per FUNC-UTF8-010). Empty input returns
+   --  Is_Ok = True with an empty string value (FUNC-UTF8-009).
+   --
+   --  @param Source  UTF-8 byte sequence to decode.
+   --  @return        UTF_8_Decode_Result carrying the decoded value or error.
+   --  @relation FUNC-UTF8-008, FUNC-UTF8-009, FUNC-UTF8-010, NFR-UTF8-002, NFR-UTF8-004
+   function Decode_UTF_8 (Source : String) return UTF_8.UTF_8_Decode_Result
+   is (From_UTF_8 (Source));
+
+   --  @summary Convenience predicate: True iff Source is well-formed UTF-8.
+   --
+   --  @description
+   --  Equivalent to UTF_8.Is_Ok (From_UTF_8 (Source)). Useful when the
+   --  caller only needs to check validity without extracting a value.
+   --
+   --  @param Source  UTF-8 byte sequence to validate.
+   --  @return        True when Source is well-formed UTF-8; False otherwise.
+   --  @relation FUNC-UTF8-008, FUNC-UTF8-010, NFR-UTF8-002
+   function UTF_8_Is_Valid (Source : String) return Boolean
+   is (UTF_8.Is_Ok (From_UTF_8 (Source)))
+   with Post => UTF_8_Is_Valid'Result = UTF_8.Is_Ok (From_UTF_8 (Source));
+
+   ---------------------------------------------------------------------------
    --  Environment Operations
    ---------------------------------------------------------------------------
 
    pragma SPARK_Mode (Off);
 
-   type Env_Processor is not null access procedure
-     (Name  : String_Type;
-      Value : String_Type);
+   type Env_Processor is not null access procedure (Name : String_Type; Value : String_Type);
 
-   type Env_Filter is not null access function
-     (Name  : String_Type;
-      Value : String_Type) return Boolean;
+   type Env_Filter is not null access function (Name : String_Type; Value : String_Type) return Boolean;
 
    --  @summary Retrieve an environment variable, empty string if absent.
-   function Get_Env
-     (Name : String_Type) return String_Type
+   function Get_Env (Name : String_Type) return String_Type
    is (Environment_Value (Name, To_String_Type ("")));
 
    --  @summary Retrieve an environment variable with an explicit fallback.
-   function Get_Env
-     (Name    : String_Type;
-      Default : String_Type) return String_Type
+   function Get_Env (Name : String_Type; Default : String_Type) return String_Type
    is (Environment_Value (Name, Default));
 
    --  @summary True iff the environment variable is set.
-   function Env_Exists
-     (Name : String_Type) return Boolean
+   function Env_Exists (Name : String_Type) return Boolean
    is (Environment_Exists (Name));
 
    --  @summary Set an environment variable.
-   function Set_Env
-     (Name  : String_Type;
-      Value : String_Type) return Boolean
+   function Set_Env (Name : String_Type; Value : String_Type) return Boolean
    is (Environment_Set (Name, Value));
 
    --  @summary Clear one environment variable.
-   function Clear_Env
-     (Name : String_Type) return Boolean
+   function Clear_Env (Name : String_Type) return Boolean
    is (Environment_Clear (Name));
 
    --  @summary Clear all environment variables.
@@ -352,84 +388,51 @@ is
    function Iterate_Env (Process : Env_Processor) return Boolean;
 
    --  @summary Iterate over filtered environment variables.
-   function Iterate_Env
-     (Include : Env_Filter;
-      Process : Env_Processor) return Boolean;
+   function Iterate_Env (Include : Env_Filter; Process : Env_Processor) return Boolean;
 
-   In_File : constant File_Mode := In_File_Mode;
-   Out_File : constant File_Mode := Out_File_Mode;
+   In_File     : constant File_Mode := In_File_Mode;
+   Out_File    : constant File_Mode := Out_File_Mode;
    Append_File : constant File_Mode := Append_File_Mode;
 
-   procedure Create
-     (File : in out File_Type;
-      Mode : File_Mode := Out_File;
-      Name : String := "")
-   renames Create_File;
+   procedure Create (File : in out File_Type; Mode : File_Mode := Out_File; Name : String := "") renames Create_File;
 
-   procedure Open
-     (File : in out File_Type;
-      Mode : File_Mode;
-      Name : String)
-   renames Open_File;
+   procedure Open (File : in out File_Type; Mode : File_Mode; Name : String) renames Open_File;
 
-   procedure Close
-     (File : in out File_Type)
-   renames Close_File;
+   procedure Close (File : in out File_Type) renames Close_File;
 
-   function Is_Open
-     (File : File_Type) return Boolean
-   renames Is_Open_File;
+   function Is_Open (File : File_Type) return Boolean renames Is_Open_File;
 
-   function Current_Input return File_Type
-   renames Current_Input_File;
+   function Current_Input return File_Type renames Current_Input_File;
 
-   function Current_Output return File_Type
-   renames Current_Output_File;
+   function Current_Output return File_Type renames Current_Output_File;
 
-   procedure Set_Input
-     (File : File_Type)
-   renames Set_Input_File;
+   procedure Set_Input (File : File_Type) renames Set_Input_File;
 
-   procedure Set_Output
-     (File : File_Type)
-   renames Set_Output_File;
+   procedure Set_Output (File : File_Type) renames Set_Output_File;
 
    procedure Put (Item : String_Type);
 
-   procedure Put
-     (File : File_Type;
-      Item : String_Type)
-   renames Put_File;
+   procedure Put (File : File_Type; Item : String_Type) renames Put_File;
 
-   procedure Put_Line
-     (File : File_Type;
-      Item : String_Type);
+   procedure Put_Line (File : File_Type; Item : String_Type);
 
    procedure Put_Line (Item : String_Type);
 
-   function Get_Line
-     (File : File_Type) return String_Type
-   renames Get_Line_File;
+   function Get_Line (File : File_Type) return String_Type renames Get_Line_File;
 
    function Get_Line return String_Type;
 
-   procedure Get_Line
-     (File : File_Type;
-      Item : out String_Type);
+   procedure Get_Line (File : File_Type; Item : out String_Type);
 
    procedure Get_Line (Item : out String_Type);
 
    procedure New_Line;
 
-   procedure New_Line
-     (File : File_Type)
-   renames New_Line_File;
+   procedure New_Line (File : File_Type) renames New_Line_File;
 
    function End_Of_File return Boolean;
 
-   function End_Of_File
-     (File : File_Type) return Boolean
-   renames End_Of_File_File;
+   function End_Of_File (File : File_Type) return Boolean renames End_Of_File_File;
 
    ---------------------------------------------------------------------------
    --  Extended String Operations

@@ -19,7 +19,10 @@ project Anystrings_Examples is
      & Anystrings_Examples_Config.Build_Profile;
    for Create_Missing_Dirs use "True";
    for Exec_Dir use "bin/" & external ("STRING_TYPE", "standard") & Wide_Env_Output_Suffix;
-   for Main use ("anystrings_examples.adb", "anystrings_env_encoding_regression.adb");
+   for Main use
+     ("anystrings_examples.adb",
+      "anystrings_env_encoding_regression.adb",
+      "anystrings_utf_8_demo.adb");
 
    package Compiler is
       for Default_Switches ("Ada") use Anystrings_Examples_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2012");

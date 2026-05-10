@@ -6,31 +6,26 @@
 -------------------------------------------------------------------------------
 
 with Ada.Strings;
+with Ada.Strings.UTF_Encoding;
+with Ada.Strings.UTF_Encoding.Strings;
 with Ada.Environment_Variables;
 with Ada.Text_IO;
+with Ada.Strings.Fixed;
+with Ada.Characters.Handling;
 
 package body Standard_String_Operations is
 
-   function Environment_Value
-     (Name    : Unbounded_String;
-      Default : Unbounded_String) return Unbounded_String
-   is
+   function Environment_Value (Name : Unbounded_String; Default : Unbounded_String) return Unbounded_String is
    begin
-      return To_Unbounded_String
-        (Ada.Environment_Variables.Value (To_String (Name), To_String (Default)));
+      return To_Unbounded_String (Ada.Environment_Variables.Value (To_String (Name), To_String (Default)));
    end Environment_Value;
 
-   function Environment_Exists
-     (Name : Unbounded_String) return Boolean
-   is
+   function Environment_Exists (Name : Unbounded_String) return Boolean is
    begin
       return Ada.Environment_Variables.Exists (To_String (Name));
    end Environment_Exists;
 
-   function Environment_Set
-     (Name  : Unbounded_String;
-      Value : Unbounded_String) return Boolean
-   is
+   function Environment_Set (Name : Unbounded_String; Value : Unbounded_String) return Boolean is
    begin
       Ada.Environment_Variables.Set (To_String (Name), To_String (Value));
       return True;
@@ -39,9 +34,7 @@ package body Standard_String_Operations is
          return False;
    end Environment_Set;
 
-   function Environment_Clear
-     (Name : Unbounded_String) return Boolean
-   is
+   function Environment_Clear (Name : Unbounded_String) return Boolean is
    begin
       Ada.Environment_Variables.Clear (To_String (Name));
       return True;
@@ -60,15 +53,11 @@ package body Standard_String_Operations is
    end Environment_Clear;
 
    function Environment_Iterate
-     (Process : not null access procedure
-        (Name  : Unbounded_String;
-         Value : Unbounded_String)) return Boolean
+     (Process : not null access procedure (Name : Unbounded_String; Value : Unbounded_String)) return Boolean
    is
       Success : Boolean := True;
 
-      procedure Process_Item
-        (Name, Value : String)
-      is
+      procedure Process_Item (Name, Value : String) is
       begin
          begin
             Process.all (To_Unbounded_String (Name), To_Unbounded_String (Value));
@@ -88,42 +77,27 @@ package body Standard_String_Operations is
       return Success;
    end Environment_Iterate;
 
-   procedure Create_File
-     (File : in out File_Type;
-      Mode : File_Mode := Out_File_Mode;
-      Name : String := "")
-   is
+   procedure Create_File (File : in out File_Type; Mode : File_Mode := Out_File_Mode; Name : String := "") is
    begin
       Ada.Text_IO.Create (File, Mode, Name);
    end Create_File;
 
-   procedure Open_File
-     (File : in out File_Type;
-      Mode : File_Mode;
-      Name : String)
-   is
+   procedure Open_File (File : in out File_Type; Mode : File_Mode; Name : String) is
    begin
       Ada.Text_IO.Open (File, Mode, Name);
    end Open_File;
 
-   procedure Put_File
-     (File : File_Type;
-      Item : Unbounded_String)
-   is
+   procedure Put_File (File : File_Type; Item : Unbounded_String) is
    begin
       Ada.Text_IO.Put (File, To_String (Item));
    end Put_File;
 
-   function Get_Line_File
-     (File : File_Type) return Unbounded_String
-   is
+   function Get_Line_File (File : File_Type) return Unbounded_String is
    begin
       return To_Unbounded_String (Ada.Text_IO.Get_Line (File));
    end Get_Line_File;
 
-   procedure New_Line_File
-     (File : File_Type)
-   is
+   procedure New_Line_File (File : File_Type) is
    begin
       Ada.Text_IO.New_Line (File);
    end New_Line_File;
@@ -203,5 +177,14 @@ package body Standard_String_Operations is
    begin
       return To_Unbounded_String ((1 => C));
    end From_Character;
+
+   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, NFR-UTF8-007, NFR-UTF8-010
+   function To_UTF_8 (Source : Unbounded_String) return String is
+      S : constant String := To_String (Source);
+   begin
+      return
+        Ada.Strings.UTF_Encoding.Strings.Encode
+          (Item => S, Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8, Output_BOM => False);
+   end To_UTF_8;
 
 end Standard_String_Operations;

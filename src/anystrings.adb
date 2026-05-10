@@ -5,17 +5,16 @@
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
-package body Anystrings with SPARK_Mode => Off is
+package body Anystrings
+  with SPARK_Mode => Off
+is
 
    procedure Put (Item : String_Type) is
    begin
       Put_File (Current_Output_File, Item);
    end Put;
 
-   procedure Put_Line
-     (File : File_Type;
-      Item : String_Type)
-   is
+   procedure Put_Line (File : File_Type; Item : String_Type) is
    begin
       Put_File (File, Item);
       New_Line_File (File);
@@ -31,10 +30,7 @@ package body Anystrings with SPARK_Mode => Off is
       return Get_Line_File (Current_Input_File);
    end Get_Line;
 
-   procedure Get_Line
-     (File : File_Type;
-      Item : out String_Type)
-   is
+   procedure Get_Line (File : File_Type; Item : out String_Type) is
    begin
       Item := Get_Line_File (File);
    end Get_Line;
@@ -55,10 +51,7 @@ package body Anystrings with SPARK_Mode => Off is
    end End_Of_File;
 
    function Iterate_Env (Process : Env_Processor) return Boolean is
-      procedure Process_Item
-        (Name  : String_Type;
-         Value : String_Type)
-      is
+      procedure Process_Item (Name : String_Type; Value : String_Type) is
       begin
          Process.all (Name, Value);
       end Process_Item;
@@ -69,14 +62,8 @@ package body Anystrings with SPARK_Mode => Off is
          return False;
    end Iterate_Env;
 
-   function Iterate_Env
-     (Include : Env_Filter;
-      Process : Env_Processor) return Boolean
-   is
-      procedure Process_Item
-        (Name  : String_Type;
-         Value : String_Type)
-      is
+   function Iterate_Env (Include : Env_Filter; Process : Env_Processor) return Boolean is
+      procedure Process_Item (Name : String_Type; Value : String_Type) is
       begin
          if Include.all (Name, Value) then
             Process.all (Name, Value);
