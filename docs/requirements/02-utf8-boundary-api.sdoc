@@ -164,6 +164,7 @@ Public, total accessor functions SHALL be provided:
 
 - `Is_Ok (R) return Boolean`
 - `Get_Value (R) return String_Type`  with `Pre => Is_Ok (R)`
+- `Get_Value_Or (R : UTF_8_Decode_Result; Fallback : String_Type) return String_Type`
 - `Get_Error (R) return UTF_8_Decode_Error` with `Pre => not Is_Ok (R)`
 
 The exact name of the record type is `UTF_8_Decode_Result`.
@@ -177,10 +178,13 @@ Because the type is parameterised by `String_Type`, it may need to be a
 formal of a child generic, or its declaration may need to live inside a
 helper generic that is instantiated alongside `Anystrings`.  Tech-spec
 will pick one of these strategies; the requirement here is the
-observable surface (Is_Ok, Get_Value, Get_Error).
+observable surface (Is_Ok, Get_Value, Get_Value_Or, Get_Error).
 
 The `Pre` contracts on `Get_Value` / `Get_Error` make the type
 SPARK-provable: callers must check `Is_Ok` before extracting a value.
+`Get_Value_Or` is unconditional (no precondition) and therefore does
+not require a prior `Is_Ok` guard, making it safe for use in
+non-SPARK code and in initialisation expressions.
 <<<
 
 [/SECTION]
@@ -472,6 +476,47 @@ existing formal.
 
 All four backend instantiation files (`*_strings.ads`) MUST remain
 compilable with the updated generic after the formals are added.
+<<<
+
+
+[REQUIREMENT]
+UID: FUNC-UTF8-014
+STATUS: Approved
+PRIORITY: Must
+TITLE: Get_Value_Or fallback accessor on UTF_8_Decode_Result
+STATEMENT: >>>
+The `UTF_8_Decode_Result` type SHALL expose an additional unconditional
+accessor function:
+
+    function Get_Value_Or
+      (R        : UTF_8_Decode_Result;
+       Fallback : String_Type) return String_Type;
+
+The function SHALL observe the following semantics:
+
+- If `Is_Ok (R)` is `True`, it SHALL return the same value as
+  `Get_Value (R)` (i.e. the successfully decoded `String_Type`).
+- If `Is_Ok (R)` is `False`, it SHALL return `Fallback` unchanged.
+
+`Get_Value_Or` SHALL NOT have a precondition, SHALL NOT raise any
+exception, and SHALL be a pure expression function with no side effects.
+<<<
+COMMENT: >>>
+This accessor provides a concise, guard-free way to supply a default
+value when a UTF-8 decode may legitimately fail (e.g. best-effort
+decoding of external input where a substitution value is acceptable).
+It is equivalent to the common pattern:
+
+    if Is_Ok (R) then Get_Value (R) else Fallback end if;
+
+but avoids forcing every call-site to expand that conditional.
+
+The absence of a precondition means `Get_Value_Or` is safe in contexts
+where SPARK proof of an `Is_Ok` guard is not available or desired.
+Callers that need to distinguish the error reason should still use
+`Is_Ok` + `Get_Error`.
+
+RELATIONS: FUNC-UTF8-002
 <<<
 
 [/SECTION]
