@@ -35,6 +35,7 @@
 --    NFR-UTF8-005   To_UTF_8 is total (never raises)
 --    NFR-UTF8-006   Identical UTF-8 surface from every backend's String_Types
 --    NFR-UTF8-010   To_UTF_8 and To_Latin_1 are distinct for code points > U+007F
+--    FUNC-UTF8-014  Get_Value_Or fallback accessor (no precondition, never raises)
 
 with Ada.Text_IO;
 with String_Types; use String_Types;
@@ -388,6 +389,71 @@ begin
          Ada.Text_IO.Put_Line
            ("  (Wide / Wide_Wide backends would exercise this path at runtime.)");
       end if;
+      Ada.Text_IO.New_Line;
+   end;
+
+   ---------------------------------------------------------------------------
+   --  Section 6: Get_Value_Or — unconditional fallback accessor
+   --  @relation FUNC-UTF8-014, NFR-UTF8-002
+   --
+   --  Get_Value_Or (R, Fallback) returns Get_Value (R) on success, or
+   --  Fallback unchanged on failure.  No precondition — never raises.
+   --  Useful in initialisation expressions and non-SPARK call-sites where
+   --  an Is_Ok guard is impractical.
+   ---------------------------------------------------------------------------
+   Ada.Text_IO.Put_Line ("---- Section: Get_Value_Or (FUNC-UTF8-014) ----");
+   Ada.Text_IO.New_Line;
+
+   --  6a. Success path: Get_Value_Or returns the decoded value, ignoring Fallback
+   declare
+      --  Well-formed UTF-8 sequence for é (U+00E9)
+      E_Acute_Utf8 : constant String :=
+        String'(Character'Val (16#C3#), Character'Val (16#A9#));
+      Fallback     : constant String_Type := To_String_Type ("<unknown>");
+      Result       : constant UTF_8_Decode_Result := From_UTF_8 (E_Acute_Utf8);
+      Value        : constant String_Type := Get_Value_Or (Result, Fallback);
+   begin
+      Ada.Text_IO.Put_Line ("  [FUNC-UTF8-014] Success path (well-formed é):");
+      Ada.Text_IO.Put_Line
+        ("  Is_Ok = " & Boolean'Image (Is_Ok (Result)) & "  (expected TRUE)");
+      Put_Hex ("Get_Value_Or result (Latin-1)", To_Latin_1 (Value));
+      Ada.Text_IO.Put_Line
+        ("  Result equals Get_Value: "
+         & Boolean'Image (Value = Get_Value (Result)));
+      Ada.Text_IO.New_Line;
+   end;
+
+   --  6b. Failure path: Get_Value_Or returns Fallback unchanged
+   declare
+      Bad_Bytes : constant String := String'(1 => Character'Val (16#80#));
+      Fallback  : constant String_Type := To_String_Type ("<decode-error>");
+      Result    : constant UTF_8_Decode_Result := From_UTF_8 (Bad_Bytes);
+      Value     : constant String_Type := Get_Value_Or (Result, Fallback);
+   begin
+      Ada.Text_IO.Put_Line ("  [FUNC-UTF8-014] Failure path (bare continuation byte):");
+      Ada.Text_IO.Put_Line
+        ("  Is_Ok = " & Boolean'Image (Is_Ok (Result)) & "  (expected FALSE)");
+      Ada.Text_IO.Put_Line
+        ("  Get_Error = " & UTF_8_Decode_Error'Image (Get_Error (Result)));
+      Ada.Text_IO.Put_Line
+        ("  Get_Value_Or result = fallback: "
+         & Boolean'Image (Value = Fallback));
+      Ada.Text_IO.New_Line;
+   end;
+
+   --  6c. Initialisation expression idiom — usable in declarations
+   --  (demonstrates NFR-UTF8-002: expression function usable without a guard)
+   declare
+      Raw_Input : constant String :=
+        String'(Character'Val (16#C3#), Character'Val (16#A9#));  --  é in UTF-8
+      Decoded   : constant String_Type :=
+        Get_Value_Or (From_UTF_8 (Raw_Input), Empty_String);
+   begin
+      Ada.Text_IO.Put_Line
+        ("  [NFR-UTF8-002] Inline initialisation (Get_Value_Or in declaration):");
+      Ada.Text_IO.Put_Line
+        ("  Decoded length ="
+         & Natural'Image (Length (Decoded)) & "  (expected 1 byte for standard backend)");
       Ada.Text_IO.New_Line;
    end;
 
