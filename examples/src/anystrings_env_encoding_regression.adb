@@ -47,8 +47,6 @@ procedure Anystrings_Env_Encoding_Regression is
 
    Env_Name   : constant String_Type := To_String_Type (Name_Text);
    Env_Value  : constant String_Type := To_String_Type (Value_Text);
-   High_Value : constant String_Type :=
-     To_String_Type ("wide-") & From_Character (Character_Type'Val (16#20AC#));
 
    procedure Cleanup
      (Policy   : Anystrings_Examples_Support.Wide_Env_Encoding_Kind;
@@ -106,12 +104,28 @@ begin
          "Clear_Env left raw entry behind");
 
       if Policy = Anystrings_Examples_Support.Latin_1 then
-         Anystrings_Examples_Support.Assert
-           (not Set_Env (Env_Name, High_Value),
-            "latin_1 policy should reject values outside Latin-1");
-         Anystrings_Examples_Support.Assert
-           (Get_Env (Env_Name, Empty_String) = Empty_String,
-            "Failed latin_1 Set_Env should not create a value");
+         declare
+            Euro_Code_Point : Natural := 16#20AC#;
+            pragma Volatile (Euro_Code_Point);
+         begin
+            if Character_Type'Pos (Character_Type'Last) >= Euro_Code_Point then
+               declare
+                  High_Value : constant String_Type :=
+                    To_String_Type ("wide-")
+                    & From_Character (Character_Type'Val (Euro_Code_Point));
+               begin
+                  Anystrings_Examples_Support.Assert
+                    (not Set_Env (Env_Name, High_Value),
+                     "latin_1 policy should reject values outside Latin-1");
+                  Anystrings_Examples_Support.Assert
+                    (Get_Env (Env_Name, Empty_String) = Empty_String,
+                     "Failed latin_1 Set_Env should not create a value");
+               end;
+            else
+               Put_Line
+                 ("SKIP latin_1 rejection probe: active Character_Type cannot represent U+20AC");
+            end if;
+         end;
       end if;
 
       Put_Line
