@@ -82,17 +82,39 @@ package Anystrings_UTF_8_Results with SPARK_Mode is
    with Pre => Is_Ok (R);
 
    --  @summary Extract the failure category; requires not Is_Ok (R).
-   --
-   --  @description
-   --  Raises Constraint_Error at run time (or is verified statically by
-   --  SPARK) if called when Is_Ok (R) = True.
-   --
-   --  @param R  A failed decode result.
-   --  @return   The UTF_8_Decode_Error variant describing the failure.
-   --  @relation FUNC-UTF8-002, NFR-UTF8-002
+--
+--  @description
+--  Raises Constraint_Error at run time (or is verified statically by
+--  SPARK) if called when Is_Ok (R) = True.
+--
+--  @param R  A failed decode result.
+--  @return   The UTF_8_Decode_Error variant describing the failure.
+--  @relation FUNC-UTF8-002, NFR-UTF8-002
    function Get_Error (R : UTF_8_Decode_Result) return Anystrings_UTF_8.UTF_8_Decode_Error
    is (R.Reason)
    with Pre => not Is_Ok (R);
+
+   --  @summary
+   --  Extract the decoded value, or return Fallback unchanged on failure.
+   --
+   --  @description
+   --  Unconditional accessor (FUNC-UTF8-014): no precondition, never raises,
+   --  pure expression. Equivalent to
+   --  `(if Is_Ok (R) then Get_Value (R) else Fallback)` but usable in
+   --  initialisation expressions and non-SPARK call-sites where proving an
+   --  `Is_Ok` guard is impractical.
+   --
+   --  @param R        The decode result to query.
+   --  @param Fallback The value returned when Is_Ok (R) = False.
+   --  @return         Get_Value (R) on success; Fallback on failure.
+   --  @relation FUNC-UTF8-014, NFR-UTF8-002
+   function Get_Value_Or
+     (R        : UTF_8_Decode_Result;
+      Fallback : String_Type) return String_Type
+   is (if R.Is_Ok then R.Value else Fallback)
+   with Post =>
+     (if Is_Ok (R) then Get_Value_Or'Result = Get_Value (R)
+      else Get_Value_Or'Result = Fallback);
 
    --  @summary Construct a successful Result carrying Value.
    --

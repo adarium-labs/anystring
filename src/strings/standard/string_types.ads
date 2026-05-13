@@ -176,6 +176,12 @@ package String_Types is
 
    function Get_Value (R : UTF_8_Decode_Result) return String_Type renames Standard_UTF_8_Results.Get_Value;
 
+   --  @relation FUNC-UTF8-014, NFR-UTF8-002
+   function Get_Value_Or
+     (R        : UTF_8_Decode_Result;
+      Fallback : String_Type) return String_Type
+     renames Standard_UTF_8_Results.Get_Value_Or;
+
    function Get_Error (R : UTF_8_Decode_Result) return UTF_8_Decode_Error renames Standard_UTF_8_Results.Get_Error;
 
    function As_UTF_8 (Source : String_Type) return String renames Standard_Strings.As_UTF_8;
