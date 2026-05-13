@@ -9,7 +9,7 @@
 --  AUnit test runner for the anystrings UTF-8 boundary API test suite.
 --
 --  @description
---  Registers all eight UTF-8 test suites and runs them via the AUnit
+--  Registers all nine UTF-8 test suites and runs them via the AUnit
 --  framework. Exits with status code 1 on any test failure so that CI
 --  pipelines and the run_all_backends.sh script can detect failures.
 --
@@ -35,6 +35,7 @@ with UTF8_Round_Trip_Test;
 with UTF8_Error_Mapping_Test;
 with UTF8_Non_Raising_Test;
 with UTF8_Wrapper_Sanity_Test;
+with UTF8_Get_Value_Or_Test;
 
 procedure Anystrings_Test_Runner is
 
@@ -51,6 +52,7 @@ procedure Anystrings_Test_Runner is
       S.Add_Test (new UTF8_Error_Mapping_Test.Test_Case);
       S.Add_Test (new UTF8_Non_Raising_Test.Test_Case);
       S.Add_Test (new UTF8_Wrapper_Sanity_Test.Test_Case);
+      S.Add_Test (new UTF8_Get_Value_Or_Test.Test_Case);
       return S;
    end Suite;
 
