@@ -20,7 +20,7 @@ project Anystrings is
    --    STRING_TYPE=custom STRING_PATH=/path/to/my/strings alr build
 
    type String_Type_Choice is
-     ("standard", "wide_string", "wide_wide_string", "uxstring", "custom");
+     ("standard", "wide_string", "wide_wide_string", "uxstring", "vss", "custom");
    String_Type : String_Type_Choice :=
      external ("STRING_TYPE", "standard");
 
@@ -38,6 +38,8 @@ project Anystrings is
          String_Source_Dirs := ("src/strings/wide_wide_string");
       when "uxstring" =>
          String_Source_Dirs := ("src/strings/uxstring");
+      when "vss" =>
+         String_Source_Dirs := ("src/strings/vss");
       when "custom" =>
          String_Source_Dirs := (external ("STRING_PATH", ""));
    end case;

@@ -1,0 +1,432 @@
+-------------------------------------------------------------------------------
+--  VSS_Operations - Operations for VSS.Strings.Virtual_String
+--
+--  Copyright (c) 2025
+--  SPDX-License-Identifier: Apache-2.0
+-------------------------------------------------------------------------------
+
+with Ada.Environment_Variables;
+with Ada.Strings.Wide_Wide_Fixed;
+with VSS.Characters;
+with VSS.Strings.Conversions;
+with VSS.Transformers.Casing;
+
+package body VSS_Operations is
+
+   --  Replacement character used by To_String for code points outside
+   --  Latin-1 range.
+   Latin_1_Substitute : constant Character := '?';
+
+   --  U+FFFD REPLACEMENT CHARACTER, used when an input Wide_Wide_Character
+   --  is not a valid Unicode scalar value (surrogate or > U+10FFFF).
+   FFFD_Code_Point : constant := 16#FFFD#;
+
+   ---------------------------------------------------------------------------
+   --  Internal helpers
+   ---------------------------------------------------------------------------
+
+   --  Coerce an arbitrary Wide_Wide_Character into a valid
+   --  VSS.Characters.Virtual_Character. Surrogates (U+D800..U+DFFF) and
+   --  values above U+10FFFF are replaced with U+FFFD so that 'Val never
+   --  trips the Virtual_Character Static_Predicate.
+   function To_Valid_Virtual_Character
+     (C : Wide_Wide_Character) return VSS.Characters.Virtual_Character
+   is
+      CP : constant Natural := Wide_Wide_Character'Pos (C);
+   begin
+      if CP > 16#10_FFFF# or else CP in 16#D800# .. 16#DFFF# then
+         return VSS.Characters.Virtual_Character'Val (FFFD_Code_Point);
+      else
+         return VSS.Characters.Virtual_Character'Val (CP);
+      end if;
+   end To_Valid_Virtual_Character;
+
+   --  Convert Latin-1 String to Wide_Wide_String (each byte -> code point).
+   function Latin_1_To_WWS (Source : String) return Wide_Wide_String is
+      Result : Wide_Wide_String (Source'Range);
+   begin
+      for I in Source'Range loop
+         Result (I) := Wide_Wide_Character'Val (Character'Pos (Source (I)));
+      end loop;
+      return Result;
+   end Latin_1_To_WWS;
+
+   --  Convert Wide_Wide_String to Latin-1 String, substituting '?' for
+   --  code points > U+00FF.
+   function WWS_To_Latin_1 (Source : Wide_Wide_String) return String is
+      Result : String (Source'Range);
+   begin
+      for I in Source'Range loop
+         if Wide_Wide_Character'Pos (Source (I)) > 255 then
+            Result (I) := Latin_1_Substitute;
+         else
+            Result (I) :=
+              Character'Val (Wide_Wide_Character'Pos (Source (I)));
+         end if;
+      end loop;
+      return Result;
+   end WWS_To_Latin_1;
+
+   ---------------------------------------------------------------------------
+   --  Core Operations
+   ---------------------------------------------------------------------------
+
+   function Length (Source : Virtual_String) return Natural is
+   begin
+      return Natural (VSS.Strings.Character_Length (Source));
+   end Length;
+
+   function Is_Empty (Source : Virtual_String) return Boolean is
+   begin
+      return VSS.Strings.Is_Empty (Source);
+   end Is_Empty;
+
+   function Element
+     (Source : Virtual_String;
+      Index  : Positive) return Wide_Wide_Character
+   is
+      WS : constant Wide_Wide_String :=
+        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+   begin
+      return WS (WS'First + Index - 1);
+   end Element;
+
+   function Concat_Strings
+     (Left  : Virtual_String;
+      Right : Virtual_String) return Virtual_String
+   is
+   begin
+      return VSS.Strings."&" (Left, Right);
+   end Concat_Strings;
+
+   function Concat_String_Character
+     (Left  : Virtual_String;
+      Right : Wide_Wide_Character) return Virtual_String
+   is
+   begin
+      return VSS.Strings."&" (Left, To_Valid_Virtual_Character (Right));
+   end Concat_String_Character;
+
+   function Concat_Character_String
+     (Left  : Wide_Wide_Character;
+      Right : Virtual_String) return Virtual_String
+   is
+   begin
+      return VSS.Strings."&" (To_Valid_Virtual_Character (Left), Right);
+   end Concat_Character_String;
+
+   function Concat_String_Latin_1
+     (Left  : Virtual_String;
+      Right : String) return Virtual_String
+   is
+   begin
+      return VSS.Strings."&" (Left, To_Virtual_String (Right));
+   end Concat_String_Latin_1;
+
+   function Concat_Latin_1_String
+     (Left  : String;
+      Right : Virtual_String) return Virtual_String
+   is
+   begin
+      return VSS.Strings."&" (To_Virtual_String (Left), Right);
+   end Concat_Latin_1_String;
+
+   ---------------------------------------------------------------------------
+   --  Comparison Operations
+   ---------------------------------------------------------------------------
+
+   function "=" (Left, Right : Virtual_String) return Boolean is
+   begin
+      return VSS.Strings."=" (Left, Right);
+   end "=";
+
+   function "<" (Left, Right : Virtual_String) return Boolean is
+   begin
+      return VSS.Strings."<" (Left, Right);
+   end "<";
+
+   function "<=" (Left, Right : Virtual_String) return Boolean is
+   begin
+      return VSS.Strings."<=" (Left, Right);
+   end "<=";
+
+   function ">" (Left, Right : Virtual_String) return Boolean is
+   begin
+      return VSS.Strings.">" (Left, Right);
+   end ">";
+
+   function ">=" (Left, Right : Virtual_String) return Boolean is
+   begin
+      return VSS.Strings.">=" (Left, Right);
+   end ">=";
+
+   ---------------------------------------------------------------------------
+   --  Conversion Operations
+   ---------------------------------------------------------------------------
+
+   function To_Virtual_String (Source : String) return Virtual_String is
+   begin
+      return VSS.Strings.To_Virtual_String (Latin_1_To_WWS (Source));
+   end To_Virtual_String;
+
+   function To_String (Source : Virtual_String) return String is
+   begin
+      return WWS_To_Latin_1
+        (VSS.Strings.Conversions.To_Wide_Wide_String (Source));
+   end To_String;
+
+   ---------------------------------------------------------------------------
+   --  Environment Operations
+   ---------------------------------------------------------------------------
+
+   --  Encode a Virtual_String as a UTF-8 String for use as an OS env name
+   --  or value.
+   function To_UTF_8_String (Source : Virtual_String) return String is
+   begin
+      return VSS.Strings.Conversions.To_UTF_8_String (Source);
+   end To_UTF_8_String;
+
+   --  Decode an OS env name/value (assumed UTF-8) into a Virtual_String.
+   --  Returns Null_Virtual_String if the input is not valid UTF-8.
+   function From_UTF_8_String (Source : String) return Virtual_String is
+   begin
+      return VSS.Strings.Conversions.To_Virtual_String (Source);
+   exception
+      when others =>
+         return Null_Virtual_String;
+   end From_UTF_8_String;
+
+   function Environment_Value
+     (Name    : Virtual_String;
+      Default : Virtual_String) return Virtual_String
+   is
+      Encoded_Name : constant String := To_UTF_8_String (Name);
+   begin
+      if Ada.Environment_Variables.Exists (Encoded_Name) then
+         return From_UTF_8_String
+           (Ada.Environment_Variables.Value (Encoded_Name));
+      else
+         return Default;
+      end if;
+   exception
+      when others =>
+         return Default;
+   end Environment_Value;
+
+   function Environment_Exists (Name : Virtual_String) return Boolean is
+   begin
+      return Ada.Environment_Variables.Exists (To_UTF_8_String (Name));
+   exception
+      when others =>
+         return False;
+   end Environment_Exists;
+
+   function Environment_Set
+     (Name  : Virtual_String;
+      Value : Virtual_String) return Boolean
+   is
+   begin
+      Ada.Environment_Variables.Set
+        (To_UTF_8_String (Name), To_UTF_8_String (Value));
+      return True;
+   exception
+      when others =>
+         return False;
+   end Environment_Set;
+
+   function Environment_Clear (Name : Virtual_String) return Boolean is
+   begin
+      Ada.Environment_Variables.Clear (To_UTF_8_String (Name));
+      return True;
+   exception
+      when others =>
+         return False;
+   end Environment_Clear;
+
+   function Environment_Clear return Boolean is
+   begin
+      Ada.Environment_Variables.Clear;
+      return True;
+   exception
+      when others =>
+         return False;
+   end Environment_Clear;
+
+   function Environment_Iterate
+     (Process : not null access procedure
+        (Name  : Virtual_String;
+         Value : Virtual_String)) return Boolean
+   is
+      Success : Boolean := True;
+
+      procedure Process_Item (Name, Value : String) is
+      begin
+         begin
+            Process.all
+              (From_UTF_8_String (Name), From_UTF_8_String (Value));
+         exception
+            when others =>
+               Success := False;
+         end;
+      end Process_Item;
+   begin
+      begin
+         Ada.Environment_Variables.Iterate (Process_Item'Access);
+      exception
+         when others =>
+            Success := False;
+      end;
+
+      return Success;
+   end Environment_Iterate;
+
+   ---------------------------------------------------------------------------
+   --  Text I/O Operations
+   ---------------------------------------------------------------------------
+
+   procedure Create_File
+     (File : in out File_Type;
+      Mode : File_Mode := Out_File_Mode;
+      Name : String := "")
+   is
+   begin
+      Ada.Text_IO.Create (File, Mode, Name);
+   end Create_File;
+
+   procedure Open_File
+     (File : in out File_Type;
+      Mode : File_Mode;
+      Name : String)
+   is
+   begin
+      Ada.Text_IO.Open (File, Mode, Name);
+   end Open_File;
+
+   procedure Put_File (File : File_Type; Item : Virtual_String) is
+   begin
+      Ada.Text_IO.Put (File, To_UTF_8_String (Item));
+   end Put_File;
+
+   function Get_Line_File (File : File_Type) return Virtual_String is
+   begin
+      return From_UTF_8_String (Ada.Text_IO.Get_Line (File));
+   end Get_Line_File;
+
+   procedure New_Line_File (File : File_Type) is
+   begin
+      Ada.Text_IO.New_Line (File);
+   end New_Line_File;
+
+   ---------------------------------------------------------------------------
+   --  Extended Operations
+   ---------------------------------------------------------------------------
+
+   function Hash (Key : Virtual_String) return Ada.Containers.Hash_Type is
+      Full : constant VSS.Strings.Hash_Type := VSS.Strings.Hash (Key);
+   begin
+      --  VSS.Strings.Hash_Type is mod 2**64. Truncate to Ada.Containers.Hash_Type
+      --  (typically mod 2**32) via the universal 'Mod attribute.
+      return Ada.Containers.Hash_Type'Mod (Full);
+   end Hash;
+
+   function Slice
+     (Source : Virtual_String;
+      Low    : Positive;
+      High   : Natural) return Virtual_String
+   is
+      WS  : constant Wide_Wide_String :=
+        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+      Len : constant Natural := WS'Length;
+   begin
+      if Low > Len or else Low > High then
+         return Null_Virtual_String;
+      end if;
+
+      declare
+         Hi : constant Natural := Natural'Min (High, Len);
+      begin
+         return VSS.Strings.To_Virtual_String
+           (WS (WS'First + Low - 1 .. WS'First + Hi - 1));
+      end;
+   end Slice;
+
+   function Index
+     (Source  : Virtual_String;
+      Pattern : Virtual_String) return Natural
+   is
+      WS_Src : constant Wide_Wide_String :=
+        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+      WS_Pat : constant Wide_Wide_String :=
+        VSS.Strings.Conversions.To_Wide_Wide_String (Pattern);
+      Pos    : constant Natural :=
+        Ada.Strings.Wide_Wide_Fixed.Index (WS_Src, WS_Pat);
+   begin
+      if Pos = 0 then
+         return 0;
+      else
+         --  Translate to 1-based index relative to start of Source.
+         return Pos - WS_Src'First + 1;
+      end if;
+   end Index;
+
+   function Index_Latin_1
+     (Source  : Virtual_String;
+      Pattern : String) return Natural
+   is
+   begin
+      return Index (Source, To_Virtual_String (Pattern));
+   end Index_Latin_1;
+
+   function To_Lower (Source : Virtual_String) return Virtual_String is
+   begin
+      return VSS.Transformers.Casing.To_Lowercase.Transform (Source);
+   end To_Lower;
+
+   function To_Upper (Source : Virtual_String) return Virtual_String is
+   begin
+      return VSS.Transformers.Casing.To_Uppercase.Transform (Source);
+   end To_Upper;
+
+   function Starts_With
+     (Source : Virtual_String;
+      Prefix : Virtual_String) return Boolean
+   is
+   begin
+      return VSS.Strings.Starts_With (Source, Prefix);
+   end Starts_With;
+
+   function Starts_With_Latin_1
+     (Source : Virtual_String;
+      Prefix : String) return Boolean
+   is
+   begin
+      return Starts_With (Source, To_Virtual_String (Prefix));
+   end Starts_With_Latin_1;
+
+   function Ends_With
+     (Source : Virtual_String;
+      Suffix : Virtual_String) return Boolean
+   is
+   begin
+      return VSS.Strings.Ends_With (Source, Suffix);
+   end Ends_With;
+
+   function Trim (Source : Virtual_String) return Virtual_String is
+      WS : constant Wide_Wide_String :=
+        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+   begin
+      return VSS.Strings.To_Virtual_String
+        (Ada.Strings.Wide_Wide_Fixed.Trim (WS, Ada.Strings.Both));
+   end Trim;
+
+   function From_Character (C : Wide_Wide_Character) return Virtual_String is
+   begin
+      return VSS.Characters.To_Virtual_String (To_Valid_Virtual_Character (C));
+   end From_Character;
+
+   function To_UTF_8 (Source : Virtual_String) return String is
+   begin
+      return VSS.Strings.Conversions.To_UTF_8_String (Source);
+   end To_UTF_8;
+
+end VSS_Operations;

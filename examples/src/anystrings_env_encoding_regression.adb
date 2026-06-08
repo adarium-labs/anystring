@@ -121,16 +121,16 @@ begin
                     (Get_Env (Env_Name, Empty_String) = Empty_String,
                      "Failed latin_1 Set_Env should not create a value");
                end;
-            else
-               Put_Line
-                 ("SKIP latin_1 rejection probe: active Character_Type cannot represent U+20AC");
-            end if;
-         end;
-      end if;
+             else
+                Ada.Text_IO.Put_Line
+                  ("SKIP latin_1 rejection probe: active Character_Type cannot represent U+20AC");
+             end if;
+          end;
+       end if;
 
-      Put_Line
-        ("PASS anystrings_env_encoding_regression policy="
-         & Anystrings_Examples_Support.Selected_Wide_Env_Encoding (Policy));
+       Ada.Text_IO.Put_Line
+         ("PASS anystrings_env_encoding_regression policy="
+          & Anystrings_Examples_Support.Selected_Wide_Env_Encoding (Policy));
    exception
       when others =>
          Cleanup (Detect_Policy, True);

@@ -32,6 +32,7 @@ STRING_TYPE=custom STRING_PATH=/path/to/my/strings alr build
 | `uxstring` | ✅ Ready | Full Unicode support, requires `uxstrings` dependency |
 | `wide_string` | ✅ Ready | Uses `Wide_Character` and builds as a selectable variant |
 | `wide_wide_string` | ✅ Ready | Uses `Wide_Wide_Character` and builds as a selectable variant |
+| `vss` | ✅ Ready | Full Unicode via VSS `Virtual_String`, requires `vss_text` dependency |
 | `custom` | ✅ Ready | Specify path via `STRING_PATH` |
 
 For `wide_string` and `wide_wide_string`, environment operations are selected at build time through

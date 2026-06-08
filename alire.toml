@@ -12,5 +12,8 @@ tags = ["string", "abstraction", "vss", "uxstrings"]
 [[depends-on]]
 uxstrings = "~0.9"
 
+[[depends-on]]
+vss_text = "~26"
+
 [environment]
 UXS_VARIANT.set = "UXS1"

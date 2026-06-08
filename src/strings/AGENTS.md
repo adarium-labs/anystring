@@ -1,6 +1,6 @@
 # src/strings — Backend Implementations
 
-Four interchangeable instantiations of the `Anystrings` generic. Exactly **one** is included in the build, selected by `STRING_TYPE` in the parent GPR. See root `AGENTS.md` for build commands and the contract location.
+Five interchangeable instantiations of the `Anystrings` generic. Exactly **one** is included in the build, selected by `STRING_TYPE` in the parent GPR. See root `AGENTS.md` for build commands and the contract location.
 
 ## STRUCTURE
 ```
@@ -9,7 +9,8 @@ strings/
 ├── standard/                  # Ada.Strings.Unbounded.Unbounded_String  (default)
 ├── wide_string/               # Ada.Strings.Wide_Unbounded
 ├── wide_wide_string/          # Ada.Strings.Wide_Wide_Unbounded
-└── uxstring/                  # UXStrings.UXString (external crate)
+├── uxstring/                  # UXStrings.UXString (external crate)
+└── vss/                       # VSS.Strings.Virtual_String (external crate vss_text)
 ```
 
 ## THE 3-FILE PATTERN (every backend must follow)

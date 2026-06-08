@@ -2,7 +2,7 @@ with "config/anystrings_examples_config.gpr";
 project Anystrings_Examples is
 
    type String_Type_Choice is
-     ("standard", "wide_string", "wide_wide_string", "uxstring", "custom");
+     ("standard", "wide_string", "wide_wide_string", "uxstring", "vss", "custom");
    String_Type : String_Type_Choice := external ("STRING_TYPE", "standard");
 
    Wide_Env_Output_Suffix := "";
