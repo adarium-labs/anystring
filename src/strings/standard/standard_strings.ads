@@ -87,4 +87,16 @@ package Standard_Strings is new
      Trim                    => Standard_String_Operations.Trim,
      From_Character          => Standard_String_Operations.From_Character,
      Concat_String_Latin_1   => Standard_String_Operations.Concat_String_Latin_1,
-     Concat_Latin_1_String   => Standard_String_Operations.Concat_Latin_1_String);
+     Concat_Latin_1_String   => Standard_String_Operations.Concat_Latin_1_String,
+     Is_Alphanumeric         => Standard_String_Operations.Char_Is_Alphanumeric,
+     Is_Control              => Standard_String_Operations.Char_Is_Control,
+     Is_Digit                => Standard_String_Operations.Char_Is_Digit,
+     Is_Graphic              => Standard_String_Operations.Char_Is_Graphic,
+     Is_Hex_Digit            => Standard_String_Operations.Char_Is_Hex_Digit,
+     Is_Letter               => Standard_String_Operations.Char_Is_Letter,
+     Is_Line_Terminator      => Standard_String_Operations.Char_Is_Line_Terminator,
+     Is_Lower                => Standard_String_Operations.Char_Is_Lower,
+     Is_Upper                => Standard_String_Operations.Char_Is_Upper,
+     Is_Whitespace           => Standard_String_Operations.Char_Is_Whitespace,
+     Char_To_Lower           => Standard_String_Operations.Char_To_Lower,
+     Char_To_Upper           => Standard_String_Operations.Char_To_Upper);

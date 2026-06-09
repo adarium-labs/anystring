@@ -336,4 +336,48 @@ package String_Types is
    function Is_Dash (C : Character_Type) return Boolean
    is (Wide_Wide_Character'Pos (C) = Character'Pos ('-'));
 
+   ---------------------------------------------------------------------------
+   --  Character Classification & Case Mapping
+   ---------------------------------------------------------------------------
+   --  Unicode-aware via Ada.Wide_Wide_Characters.Handling (guarded against
+   --  surrogates and code points > U+10FFFF). Is_Whitespace includes
+   --  ASCII + Unicode Space_Separator. Is_Line_Terminator covers LF, CR,
+   --  NEL (U+0085), LS (U+2028), PS (U+2029).
+
+   function Is_Alphanumeric (C : Character_Type) return Boolean
+     renames VSS_Operations.Char_Is_Alphanumeric;
+
+   function Is_Control (C : Character_Type) return Boolean
+     renames VSS_Operations.Char_Is_Control;
+
+   function Is_Digit (C : Character_Type) return Boolean
+     renames VSS_Operations.Char_Is_Digit;
+
+   function Is_Graphic (C : Character_Type) return Boolean
+     renames VSS_Operations.Char_Is_Graphic;
+
+   function Is_Hex_Digit (C : Character_Type) return Boolean
+     renames VSS_Operations.Char_Is_Hex_Digit;
+
+   function Is_Letter (C : Character_Type) return Boolean
+     renames VSS_Operations.Char_Is_Letter;
+
+   function Is_Line_Terminator (C : Character_Type) return Boolean
+     renames VSS_Operations.Char_Is_Line_Terminator;
+
+   function Is_Lower (C : Character_Type) return Boolean
+     renames VSS_Operations.Char_Is_Lower;
+
+   function Is_Upper (C : Character_Type) return Boolean
+     renames VSS_Operations.Char_Is_Upper;
+
+   function Is_Whitespace (C : Character_Type) return Boolean
+     renames VSS_Operations.Char_Is_Whitespace;
+
+   function To_Lower (C : Character_Type) return Character_Type
+     renames VSS_Operations.Char_To_Lower;
+
+   function To_Upper (C : Character_Type) return Character_Type
+     renames VSS_Operations.Char_To_Upper;
+
 end String_Types;

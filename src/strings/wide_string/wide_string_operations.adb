@@ -10,6 +10,7 @@ with Ada.Strings;
 with Ada.Strings.UTF_Encoding;
 with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Environment_Variables;
+with Ada.Wide_Characters.Handling;
 with Anystrings_Internal_Wide_Environment_Encoding;
 
 package body Wide_String_Operations is
@@ -389,5 +390,75 @@ package body Wide_String_Operations is
          Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8,
          Output_BOM    => False);
    end To_UTF_8;
+
+   ---------------------------------------------------------------------------
+   --  Character Classification & Case Mapping
+   ---------------------------------------------------------------------------
+
+   function Char_Is_Alphanumeric (C : Wide_Character) return Boolean is
+   begin
+      return Ada.Wide_Characters.Handling.Is_Alphanumeric (C);
+   end Char_Is_Alphanumeric;
+
+   function Char_Is_Control (C : Wide_Character) return Boolean is
+   begin
+      return Ada.Wide_Characters.Handling.Is_Control (C);
+   end Char_Is_Control;
+
+   function Char_Is_Digit (C : Wide_Character) return Boolean is
+   begin
+      return Ada.Wide_Characters.Handling.Is_Digit (C);
+   end Char_Is_Digit;
+
+   function Char_Is_Graphic (C : Wide_Character) return Boolean is
+   begin
+      --  Ada.Wide_Characters.Handling has no Is_Graphic; approximate as
+      --  "not a control character".
+      return not Ada.Wide_Characters.Handling.Is_Control (C);
+   end Char_Is_Graphic;
+
+   function Char_Is_Hex_Digit (C : Wide_Character) return Boolean is
+   begin
+      return Ada.Wide_Characters.Handling.Is_Hexadecimal_Digit (C);
+   end Char_Is_Hex_Digit;
+
+   function Char_Is_Letter (C : Wide_Character) return Boolean is
+   begin
+      return Ada.Wide_Characters.Handling.Is_Letter (C);
+   end Char_Is_Letter;
+
+   function Char_Is_Line_Terminator (C : Wide_Character) return Boolean is
+      P : constant Natural := Wide_Character'Pos (C);
+   begin
+      --  wide_string is non-Unicode by contract: LF (0x0A), CR (0x0D) only.
+      return P = 16#0A# or else P = 16#0D#;
+   end Char_Is_Line_Terminator;
+
+   function Char_Is_Lower (C : Wide_Character) return Boolean is
+   begin
+      return Ada.Wide_Characters.Handling.Is_Lower (C);
+   end Char_Is_Lower;
+
+   function Char_Is_Upper (C : Wide_Character) return Boolean is
+   begin
+      return Ada.Wide_Characters.Handling.Is_Upper (C);
+   end Char_Is_Upper;
+
+   function Char_Is_Whitespace (C : Wide_Character) return Boolean is
+      P : constant Natural := Wide_Character'Pos (C);
+   begin
+      --  wide_string contract: ASCII whitespace SP/HT/LF/VT/FF/CR.
+      return P in 16#09# .. 16#0D# or else P = 16#20#;
+   end Char_Is_Whitespace;
+
+   function Char_To_Lower (C : Wide_Character) return Wide_Character is
+   begin
+      return Ada.Wide_Characters.Handling.To_Lower (C);
+   end Char_To_Lower;
+
+   function Char_To_Upper (C : Wide_Character) return Wide_Character is
+   begin
+      return Ada.Wide_Characters.Handling.To_Upper (C);
+   end Char_To_Upper;
 
 end Wide_String_Operations;

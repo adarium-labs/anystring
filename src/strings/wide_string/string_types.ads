@@ -336,4 +336,48 @@ package String_Types is
    function Is_Dash (C : Character_Type) return Boolean
    is (C = '-');
 
+   ---------------------------------------------------------------------------
+   --  Character Classification & Case Mapping
+   ---------------------------------------------------------------------------
+   --  Backed by Ada.Wide_Characters.Handling. Is_Graphic is approximated
+   --  as "not Is_Control" (no native Wide equivalent). Is_Whitespace is
+   --  ASCII-only (SP/HT/LF/VT/FF/CR). Is_Line_Terminator covers LF/CR
+   --  only; LS/PS/NEL are reserved for Unicode-aware backends.
+
+   function Is_Alphanumeric (C : Character_Type) return Boolean
+     renames Wide_String_Operations.Char_Is_Alphanumeric;
+
+   function Is_Control (C : Character_Type) return Boolean
+     renames Wide_String_Operations.Char_Is_Control;
+
+   function Is_Digit (C : Character_Type) return Boolean
+     renames Wide_String_Operations.Char_Is_Digit;
+
+   function Is_Graphic (C : Character_Type) return Boolean
+     renames Wide_String_Operations.Char_Is_Graphic;
+
+   function Is_Hex_Digit (C : Character_Type) return Boolean
+     renames Wide_String_Operations.Char_Is_Hex_Digit;
+
+   function Is_Letter (C : Character_Type) return Boolean
+     renames Wide_String_Operations.Char_Is_Letter;
+
+   function Is_Line_Terminator (C : Character_Type) return Boolean
+     renames Wide_String_Operations.Char_Is_Line_Terminator;
+
+   function Is_Lower (C : Character_Type) return Boolean
+     renames Wide_String_Operations.Char_Is_Lower;
+
+   function Is_Upper (C : Character_Type) return Boolean
+     renames Wide_String_Operations.Char_Is_Upper;
+
+   function Is_Whitespace (C : Character_Type) return Boolean
+     renames Wide_String_Operations.Char_Is_Whitespace;
+
+   function To_Lower (C : Character_Type) return Character_Type
+     renames Wide_String_Operations.Char_To_Lower;
+
+   function To_Upper (C : Character_Type) return Character_Type
+     renames Wide_String_Operations.Char_To_Upper;
+
 end String_Types;

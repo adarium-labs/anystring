@@ -199,4 +199,46 @@ package Standard_String_Operations is
    --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, NFR-UTF8-007, NFR-UTF8-010
    function To_UTF_8 (Source : Unbounded_String) return String;
 
+   ---------------------------------------------------------------------------
+   --  Character Classification & Case Mapping
+   ---------------------------------------------------------------------------
+   --  Delegates to Ada.Characters.Handling. Length/Element on this backend
+   --  count bytes (Latin-1), so these predicates classify Latin-1 code
+   --  points only — code points > U+00FF are not representable here.
+
+   function Char_Is_Alphanumeric (C : Character) return Boolean
+   renames Ada.Characters.Handling.Is_Alphanumeric;
+
+   function Char_Is_Control (C : Character) return Boolean
+   renames Ada.Characters.Handling.Is_Control;
+
+   function Char_Is_Digit (C : Character) return Boolean
+   renames Ada.Characters.Handling.Is_Digit;
+
+   function Char_Is_Graphic (C : Character) return Boolean
+   renames Ada.Characters.Handling.Is_Graphic;
+
+   function Char_Is_Hex_Digit (C : Character) return Boolean
+   renames Ada.Characters.Handling.Is_Hexadecimal_Digit;
+
+   function Char_Is_Letter (C : Character) return Boolean
+   renames Ada.Characters.Handling.Is_Letter;
+
+   function Char_Is_Line_Terminator (C : Character) return Boolean;
+
+   function Char_Is_Lower (C : Character) return Boolean
+   renames Ada.Characters.Handling.Is_Lower;
+
+   function Char_Is_Upper (C : Character) return Boolean
+   renames Ada.Characters.Handling.Is_Upper;
+
+   --  ASCII whitespace: SP, HT, LF, VT, FF, CR.
+   function Char_Is_Whitespace (C : Character) return Boolean;
+
+   function Char_To_Lower (C : Character) return Character
+   renames Ada.Characters.Handling.To_Lower;
+
+   function Char_To_Upper (C : Character) return Character
+   renames Ada.Characters.Handling.To_Upper;
+
 end Standard_String_Operations;

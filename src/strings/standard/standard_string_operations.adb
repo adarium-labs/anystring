@@ -187,4 +187,18 @@ package body Standard_String_Operations is
           (Item => S, Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8, Output_BOM => False);
    end To_UTF_8;
 
+   function Char_Is_Line_Terminator (C : Character) return Boolean is
+      P : constant Natural := Character'Pos (C);
+   begin
+      --  LF (0x0A) and CR (0x0D). Latin-1 cannot represent LS/PS/NEL above.
+      return P = 16#0A# or else P = 16#0D#;
+   end Char_Is_Line_Terminator;
+
+   function Char_Is_Whitespace (C : Character) return Boolean is
+      P : constant Natural := Character'Pos (C);
+   begin
+      --  HT (0x09), LF (0x0A), VT (0x0B), FF (0x0C), CR (0x0D), SP (0x20).
+      return P in 16#09# .. 16#0D# or else P = 16#20#;
+   end Char_Is_Whitespace;
+
 end Standard_String_Operations;

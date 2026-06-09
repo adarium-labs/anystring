@@ -226,4 +226,40 @@ package Wide_Wide_String_Operations is
    --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007, NFR-UTF8-005
    function To_UTF_8 (Source : Unbounded_Wide_Wide_String) return String;
 
+   ---------------------------------------------------------------------------
+   --  Character Classification & Case Mapping
+   ---------------------------------------------------------------------------
+   --  Delegates to Ada.Wide_Wide_Characters.Handling. Is_Graphic is not
+   --  provided natively; approximated as "not Is_Control". This backend
+   --  is Unicode-aware: Is_Whitespace includes ASCII + Unicode space
+   --  separators; Is_Line_Terminator covers LF, CR, NEL (U+0085),
+   --  LS (U+2028), PS (U+2029).
+   --  Wide_Wide_Character values outside U+0000..U+10FFFF or in the
+   --  surrogate range U+D800..U+DFFF fall back to safe defaults
+   --  (classifiers return False, To_Lower/To_Upper return the input).
+
+   function Char_Is_Alphanumeric (C : Wide_Wide_Character) return Boolean;
+
+   function Char_Is_Control (C : Wide_Wide_Character) return Boolean;
+
+   function Char_Is_Digit (C : Wide_Wide_Character) return Boolean;
+
+   function Char_Is_Graphic (C : Wide_Wide_Character) return Boolean;
+
+   function Char_Is_Hex_Digit (C : Wide_Wide_Character) return Boolean;
+
+   function Char_Is_Letter (C : Wide_Wide_Character) return Boolean;
+
+   function Char_Is_Line_Terminator (C : Wide_Wide_Character) return Boolean;
+
+   function Char_Is_Lower (C : Wide_Wide_Character) return Boolean;
+
+   function Char_Is_Upper (C : Wide_Wide_Character) return Boolean;
+
+   function Char_Is_Whitespace (C : Wide_Wide_Character) return Boolean;
+
+   function Char_To_Lower (C : Wide_Wide_Character) return Wide_Wide_Character;
+
+   function Char_To_Upper (C : Wide_Wide_Character) return Wide_Wide_Character;
+
 end Wide_Wide_String_Operations;

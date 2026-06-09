@@ -36,6 +36,7 @@ with UTF8_Error_Mapping_Test;
 with UTF8_Non_Raising_Test;
 with UTF8_Wrapper_Sanity_Test;
 with UTF8_Get_Value_Or_Test;
+with Char_Classification_Test;
 
 procedure Anystrings_Test_Runner is
 
@@ -53,6 +54,7 @@ procedure Anystrings_Test_Runner is
       S.Add_Test (new UTF8_Non_Raising_Test.Test_Case);
       S.Add_Test (new UTF8_Wrapper_Sanity_Test.Test_Case);
       S.Add_Test (new UTF8_Get_Value_Or_Test.Test_Case);
+      S.Add_Test (new Char_Classification_Test.Test_Case);
       return S;
    end Suite;
 

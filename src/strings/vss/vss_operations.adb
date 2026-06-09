@@ -7,11 +7,22 @@
 
 with Ada.Environment_Variables;
 with Ada.Strings.Wide_Wide_Fixed;
+with Ada.Wide_Wide_Characters.Handling;
 with VSS.Characters;
 with VSS.Strings.Conversions;
 with VSS.Transformers.Casing;
 
 package body VSS_Operations is
+
+   --  True iff C is a valid Unicode scalar value (U+0000..U+10FFFF and
+   --  not a surrogate). Ada.Wide_Wide_Characters.Handling raises
+   --  Constraint_Error on non-Unicode arguments, so all classifier
+   --  wrappers guard against that.
+   function Is_Unicode_Scalar (C : Wide_Wide_Character) return Boolean is
+      P : constant Natural := Wide_Wide_Character'Pos (C);
+   begin
+      return P <= 16#10_FFFF# and then P not in 16#D800# .. 16#DFFF#;
+   end Is_Unicode_Scalar;
 
    --  Replacement character used by To_String for code points outside
    --  Latin-1 range.
@@ -428,5 +439,114 @@ package body VSS_Operations is
    begin
       return VSS.Strings.Conversions.To_UTF_8_String (Source);
    end To_UTF_8;
+
+   ---------------------------------------------------------------------------
+   --  Character Classification & Case Mapping
+   ---------------------------------------------------------------------------
+
+   function Char_Is_Alphanumeric (C : Wide_Wide_Character) return Boolean is
+   begin
+      if not Is_Unicode_Scalar (C) then
+         return False;
+      end if;
+      return Ada.Wide_Wide_Characters.Handling.Is_Alphanumeric (C);
+   end Char_Is_Alphanumeric;
+
+   function Char_Is_Control (C : Wide_Wide_Character) return Boolean is
+   begin
+      if not Is_Unicode_Scalar (C) then
+         return False;
+      end if;
+      return Ada.Wide_Wide_Characters.Handling.Is_Control (C);
+   end Char_Is_Control;
+
+   function Char_Is_Digit (C : Wide_Wide_Character) return Boolean is
+   begin
+      if not Is_Unicode_Scalar (C) then
+         return False;
+      end if;
+      return Ada.Wide_Wide_Characters.Handling.Is_Digit (C);
+   end Char_Is_Digit;
+
+   function Char_Is_Graphic (C : Wide_Wide_Character) return Boolean is
+   begin
+      if not Is_Unicode_Scalar (C) then
+         return False;
+      end if;
+      return not Ada.Wide_Wide_Characters.Handling.Is_Control (C);
+   end Char_Is_Graphic;
+
+   function Char_Is_Hex_Digit (C : Wide_Wide_Character) return Boolean is
+   begin
+      if not Is_Unicode_Scalar (C) then
+         return False;
+      end if;
+      return Ada.Wide_Wide_Characters.Handling.Is_Hexadecimal_Digit (C);
+   end Char_Is_Hex_Digit;
+
+   function Char_Is_Letter (C : Wide_Wide_Character) return Boolean is
+   begin
+      if not Is_Unicode_Scalar (C) then
+         return False;
+      end if;
+      return Ada.Wide_Wide_Characters.Handling.Is_Letter (C);
+   end Char_Is_Letter;
+
+   function Char_Is_Line_Terminator (C : Wide_Wide_Character) return Boolean
+   is
+      P : constant Natural := Wide_Wide_Character'Pos (C);
+   begin
+      return P = 16#0A#
+        or else P = 16#0D#
+        or else P = 16#85#
+        or else P = 16#2028#
+        or else P = 16#2029#;
+   end Char_Is_Line_Terminator;
+
+   function Char_Is_Lower (C : Wide_Wide_Character) return Boolean is
+   begin
+      if not Is_Unicode_Scalar (C) then
+         return False;
+      end if;
+      return Ada.Wide_Wide_Characters.Handling.Is_Lower (C);
+   end Char_Is_Lower;
+
+   function Char_Is_Upper (C : Wide_Wide_Character) return Boolean is
+   begin
+      if not Is_Unicode_Scalar (C) then
+         return False;
+      end if;
+      return Ada.Wide_Wide_Characters.Handling.Is_Upper (C);
+   end Char_Is_Upper;
+
+   function Char_Is_Whitespace (C : Wide_Wide_Character) return Boolean is
+      P : constant Natural := Wide_Wide_Character'Pos (C);
+   begin
+      if P in 16#09# .. 16#0D# or else P = 16#20# then
+         return True;
+      end if;
+      if not Is_Unicode_Scalar (C) then
+         return False;
+      end if;
+      return Ada.Wide_Wide_Characters.Handling.Is_Space (C);
+   end Char_Is_Whitespace;
+
+   function Char_To_Lower (C : Wide_Wide_Character) return Wide_Wide_Character
+   is
+   begin
+      if not Is_Unicode_Scalar (C) then
+         return C;
+      end if;
+      return Ada.Wide_Wide_Characters.Handling.To_Lower (C);
+   end Char_To_Lower;
+
+   function Char_To_Upper (C : Wide_Wide_Character) return Wide_Wide_Character
+   is
+   begin
+      if not Is_Unicode_Scalar (C) then
+         return C;
+      end if;
+      return Ada.Wide_Wide_Characters.Handling.To_Upper (C);
+   end Char_To_Upper;
 
 end VSS_Operations;

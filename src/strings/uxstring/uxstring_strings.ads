@@ -73,4 +73,16 @@ package UXString_Strings is new Anystrings
    Trim                     => UXString_Operations.Trim,
    From_Character           => UXString_Operations.From_Character,
    Concat_String_Latin_1    => UXString_Operations.Concat_String_Latin_1,
-   Concat_Latin_1_String    => UXString_Operations.Concat_Latin_1_String);
+   Concat_Latin_1_String    => UXString_Operations.Concat_Latin_1_String,
+   Is_Alphanumeric          => UXString_Operations.Char_Is_Alphanumeric,
+   Is_Control               => UXString_Operations.Char_Is_Control,
+   Is_Digit                 => UXString_Operations.Char_Is_Digit,
+   Is_Graphic               => UXString_Operations.Char_Is_Graphic,
+   Is_Hex_Digit             => UXString_Operations.Char_Is_Hex_Digit,
+   Is_Letter                => UXString_Operations.Char_Is_Letter,
+   Is_Line_Terminator       => UXString_Operations.Char_Is_Line_Terminator,
+   Is_Lower                 => UXString_Operations.Char_Is_Lower,
+   Is_Upper                 => UXString_Operations.Char_Is_Upper,
+   Is_Whitespace            => UXString_Operations.Char_Is_Whitespace,
+   Char_To_Lower            => UXString_Operations.Char_To_Lower,
+   Char_To_Upper            => UXString_Operations.Char_To_Upper);

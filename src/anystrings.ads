@@ -213,6 +213,33 @@ generic
    --  Concatenation of Latin-1 String and String_Type
    with function Concat_Latin_1_String (Left : String; Right : String_Type) return String_Type;
 
+   ---------------------------------------------------------------------------
+   --  Character Classification (FUNC-CHAR-CLASS-001..012)
+   ---------------------------------------------------------------------------
+
+   --  Classification predicates. Each backend dispatches to the most
+   --  Unicode-aware classifier its character type allows. See
+   --  src/strings/AGENTS.md for backend-specific semantics caveats.
+
+   with function Is_Alphanumeric (C : Character_Type) return Boolean;
+   with function Is_Control (C : Character_Type) return Boolean;
+   with function Is_Digit (C : Character_Type) return Boolean;
+   with function Is_Graphic (C : Character_Type) return Boolean;
+   with function Is_Hex_Digit (C : Character_Type) return Boolean;
+   with function Is_Letter (C : Character_Type) return Boolean;
+   with function Is_Line_Terminator (C : Character_Type) return Boolean;
+   with function Is_Lower (C : Character_Type) return Boolean;
+   with function Is_Upper (C : Character_Type) return Boolean;
+   with function Is_Whitespace (C : Character_Type) return Boolean;
+
+   --  Character-level case mapping. The string-level To_Lower / To_Upper
+   --  formals above are untouched. These formals use distinct names
+   --  (Char_To_Lower / Char_To_Upper) so named instantiations remain
+   --  unambiguous; the user-facing API in String_Types still exposes them
+   --  as overloads of To_Lower / To_Upper on Character_Type.
+   with function Char_To_Lower (C : Character_Type) return Character_Type;
+   with function Char_To_Upper (C : Character_Type) return Character_Type;
+
 package Anystrings with SPARK_Mode
 is
 
@@ -506,5 +533,13 @@ is
    --  Check if a character is a dash/hyphen
    function Is_Dash (C : Character_Type) return Boolean
    is (Character_Type'Pos (C) = Character'Pos ('-'));
+
+   --  Character classification and case-mapping predicates are exposed as
+   --  generic formal subprograms (Is_Alphanumeric, Is_Control, Is_Digit,
+   --  Is_Graphic, Is_Hex_Digit, Is_Letter, Is_Line_Terminator, Is_Lower,
+   --  Is_Upper, Is_Whitespace, Char_To_Lower, Char_To_Upper). Consumers
+   --  call them directly through the chosen instantiation; String_Types
+   --  re-exports them under user-facing names (To_Lower / To_Upper
+   --  overload on Character_Type, Is_* unchanged).
 
 end Anystrings;

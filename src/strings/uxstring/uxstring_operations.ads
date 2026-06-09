@@ -251,4 +251,38 @@ package UXString_Operations is
    --            NFR-UTF8-005
    function To_UTF_8 (Source : UXString) return String;
 
+   ---------------------------------------------------------------------------
+   --  Character Classification & Case Mapping
+   ---------------------------------------------------------------------------
+   --  Unicode_Character is a Wide_Wide_Character subtype, so we delegate
+   --  to Ada.Wide_Wide_Characters.Handling. Unicode-aware: Is_Whitespace
+   --  includes ASCII + Unicode Space_Separator; Is_Line_Terminator covers
+   --  LF, CR, NEL, LS, PS. Non-scalar code points (surrogates,
+   --  > U+10FFFF) cannot occur in a Unicode_Character by construction,
+   --  but the implementation still guards against the upper range.
+
+   function Char_Is_Alphanumeric (C : Unicode_Character) return Boolean;
+
+   function Char_Is_Control (C : Unicode_Character) return Boolean;
+
+   function Char_Is_Digit (C : Unicode_Character) return Boolean;
+
+   function Char_Is_Graphic (C : Unicode_Character) return Boolean;
+
+   function Char_Is_Hex_Digit (C : Unicode_Character) return Boolean;
+
+   function Char_Is_Letter (C : Unicode_Character) return Boolean;
+
+   function Char_Is_Line_Terminator (C : Unicode_Character) return Boolean;
+
+   function Char_Is_Lower (C : Unicode_Character) return Boolean;
+
+   function Char_Is_Upper (C : Unicode_Character) return Boolean;
+
+   function Char_Is_Whitespace (C : Unicode_Character) return Boolean;
+
+   function Char_To_Lower (C : Unicode_Character) return Unicode_Character;
+
+   function Char_To_Upper (C : Unicode_Character) return Unicode_Character;
+
 end UXString_Operations;

@@ -16,11 +16,30 @@ strings/
 ## THE 3-FILE PATTERN (every backend must follow)
 | File | Role | Must export |
 |------|------|-------------|
-| `<v>_operations.ads/adb` | concrete impls of every formal subprogram of `Anystrings` | the underlying `<v>_String` type, `Null_<v>_String`, all 30+ ops |
-| `<v>_strings.ads` | `package <V>_Strings is new Anystrings (...);` | nothing else; pure instantiation |
-| `string_types.ads` | user-facing facade; **package name is identical across all four dirs** | `String_Type`, `Character_Type`, `Empty_String`, all renames + `"&"` overloads |
+| `<v>_operations.ads/adb` | concrete impls of every formal subprogram of `Anystrings` | the underlying `<v>_String` type, `Null_<v>_String`, all 40+ ops including the 12 character-classification primitives (`Char_Is_Alphanumeric`, `Char_Is_Control`, `Char_Is_Digit`, `Char_Is_Graphic`, `Char_Is_Hex_Digit`, `Char_Is_Letter`, `Char_Is_Line_Terminator`, `Char_Is_Lower`, `Char_Is_Upper`, `Char_Is_Whitespace`, `Char_To_Lower`, `Char_To_Upper`) |
+| `<v>_strings.ads` | `package <V>_Strings is new Anystrings (...);` | nothing else; pure instantiation. The character predicates must be wired through the formal names `Is_Alphanumeric`, `Is_Control`, `Is_Digit`, `Is_Graphic`, `Is_Hex_Digit`, `Is_Letter`, `Is_Line_Terminator`, `Is_Lower`, `Is_Upper`, `Is_Whitespace`, `Char_To_Lower`, `Char_To_Upper` — note that the character-level `Char_To_Lower`/`Char_To_Upper` formals are deliberately named distinctly from the existing string-level `To_Lower`/`To_Upper` to keep named instantiation unambiguous |
+| `string_types.ads` | user-facing facade; **package name is identical across all four dirs** | `String_Type`, `Character_Type`, `Empty_String`, all renames + `"&"` overloads. Re-exports character predicates under their unadorned names (`Is_Digit`, `Is_Letter`, …) and overloads `To_Lower`/`To_Upper` on `Character_Type` |
 
 The package name collision on `string_types.ads` is intentional — it's how directory swap selects a backend without consumer-side changes.
+
+### Character classification & case-mapping semantics
+
+The 12 character-level primitives have backend-specific behaviour because each backend's `Character_Type` has a different range:
+
+| Backend | `Character_Type` | Predicate source | `Is_Whitespace` | `Is_Line_Terminator` |
+|---------|------------------|------------------|-----------------|----------------------|
+| `standard` | `Character` (0..255) | `Ada.Characters.Handling` | ASCII SP/HT/LF/VT/FF/CR | LF, CR only |
+| `wide_string` | `Wide_Character` (0..U+FFFF) | `Ada.Wide_Characters.Handling` | ASCII SP/HT/LF/VT/FF/CR | LF, CR only |
+| `wide_wide_string` | `Wide_Wide_Character` (0..U+7FFFFFFF) | `Ada.Wide_Wide_Characters.Handling`, guarded against surrogates / non-scalar | ASCII + Unicode `Space_Separator` (via `Is_Space`) | LF, CR, NEL (U+0085), LS (U+2028), PS (U+2029) |
+| `uxstring` | `Unicode_Character` (subtype of `Wide_Wide_Character`) | `Ada.Wide_Wide_Characters.Handling`, guarded | same as `wide_wide_string` | same as `wide_wide_string` |
+| `vss` | `Wide_Wide_Character` | `Ada.Wide_Wide_Characters.Handling`, guarded | same as `wide_wide_string` | same as `wide_wide_string` |
+
+Notes:
+
+- `Is_Graphic` is not provided by `Ada.Wide_Characters.Handling` or `Ada.Wide_Wide_Characters.Handling`; the wide / wide_wide / uxstring / vss backends approximate it as `not Is_Control`.
+- All wide and wide_wide based backends guard against code points outside U+0000..U+10FFFF and the UTF-16 surrogate range U+D800..U+DFFF. Classifiers return `False` for these; `Char_To_Lower` / `Char_To_Upper` return the input unchanged. This is required because `Ada.Wide_Wide_Characters.Handling` raises `Constraint_Error` on non-scalar arguments.
+- `standard` cannot classify code points > U+00FF (e.g. Arabic-Indic digits, Greek capitals); attempting to construct such a `Character` value raises `Constraint_Error` at construction time.
+- `wide_string` *can* classify Unicode code points in the BMP via `Ada.Wide_Characters.Handling`, but is treated as ASCII-only for `Is_Whitespace` and `Is_Line_Terminator` by contract, for symmetry with `standard`.
 
 ## WHERE TO LOOK
 | Task | Location |

@@ -74,4 +74,16 @@ package VSS_Strings is new Anystrings
    Trim                     => VSS_Operations.Trim,
    From_Character           => VSS_Operations.From_Character,
    Concat_String_Latin_1    => VSS_Operations.Concat_String_Latin_1,
-   Concat_Latin_1_String    => VSS_Operations.Concat_Latin_1_String);
+   Concat_Latin_1_String    => VSS_Operations.Concat_Latin_1_String,
+   Is_Alphanumeric          => VSS_Operations.Char_Is_Alphanumeric,
+   Is_Control               => VSS_Operations.Char_Is_Control,
+   Is_Digit                 => VSS_Operations.Char_Is_Digit,
+   Is_Graphic               => VSS_Operations.Char_Is_Graphic,
+   Is_Hex_Digit             => VSS_Operations.Char_Is_Hex_Digit,
+   Is_Letter                => VSS_Operations.Char_Is_Letter,
+   Is_Line_Terminator       => VSS_Operations.Char_Is_Line_Terminator,
+   Is_Lower                 => VSS_Operations.Char_Is_Lower,
+   Is_Upper                 => VSS_Operations.Char_Is_Upper,
+   Is_Whitespace            => VSS_Operations.Char_Is_Whitespace,
+   Char_To_Lower            => VSS_Operations.Char_To_Lower,
+   Char_To_Upper            => VSS_Operations.Char_To_Upper);

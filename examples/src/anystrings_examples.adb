@@ -44,6 +44,33 @@ begin
               Anystrings_Examples_Support.Print_Env'Access)));
    Ada.Text_IO.Put_Line
      ("Clear result: " & Boolean'Image (Clear_Env (Env_Name)));
+
+   --  Character classification & case mapping demo. These predicates work
+   --  on every backend; non-ASCII coverage depends on Character_Type's
+   --  range (see src/strings/AGENTS.md).
+   declare
+      A_Lower : constant Character_Type := Character_Type'Val (Character'Pos ('a'));
+      A_Upper : constant Character_Type := Character_Type'Val (Character'Pos ('A'));
+      Digit_5 : constant Character_Type := Character_Type'Val (Character'Pos ('5'));
+      Space   : constant Character_Type := Character_Type'Val (Character'Pos (' '));
+   begin
+      Ada.Text_IO.Put_Line
+        ("Is_Letter ('a'):       " & Boolean'Image (Is_Letter (A_Lower)));
+      Ada.Text_IO.Put_Line
+        ("Is_Digit ('5'):        " & Boolean'Image (Is_Digit (Digit_5)));
+      Ada.Text_IO.Put_Line
+        ("Is_Upper ('A'):        " & Boolean'Image (Is_Upper (A_Upper)));
+      Ada.Text_IO.Put_Line
+        ("Is_Whitespace (' '):   " & Boolean'Image (Is_Whitespace (Space)));
+      Ada.Text_IO.Put_Line
+        ("Is_Alphanumeric ('a'): " & Boolean'Image (Is_Alphanumeric (A_Lower)));
+      Anystrings_Examples_Support.Assert
+        (To_Upper (A_Lower) = A_Upper,
+         "Character-level To_Upper ('a') should equal 'A'");
+      Anystrings_Examples_Support.Assert
+        (To_Lower (A_Upper) = A_Lower,
+         "Character-level To_Lower ('A') should equal 'a'");
+   end;
 exception
    when others =>
       if String_Types.Is_Open (File_Handle) then

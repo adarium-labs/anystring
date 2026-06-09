@@ -65,4 +65,16 @@ package Wide_Strings is new Anystrings
    Trim                     => Wide_String_Operations.Trim,
    From_Character           => Wide_String_Operations.From_Character,
    Concat_String_Latin_1    => Wide_String_Operations.Concat_String_Latin_1,
-   Concat_Latin_1_String    => Wide_String_Operations.Concat_Latin_1_String);
+   Concat_Latin_1_String    => Wide_String_Operations.Concat_Latin_1_String,
+   Is_Alphanumeric          => Wide_String_Operations.Char_Is_Alphanumeric,
+   Is_Control               => Wide_String_Operations.Char_Is_Control,
+   Is_Digit                 => Wide_String_Operations.Char_Is_Digit,
+   Is_Graphic               => Wide_String_Operations.Char_Is_Graphic,
+   Is_Hex_Digit             => Wide_String_Operations.Char_Is_Hex_Digit,
+   Is_Letter                => Wide_String_Operations.Char_Is_Letter,
+   Is_Line_Terminator       => Wide_String_Operations.Char_Is_Line_Terminator,
+   Is_Lower                 => Wide_String_Operations.Char_Is_Lower,
+   Is_Upper                 => Wide_String_Operations.Char_Is_Upper,
+   Is_Whitespace            => Wide_String_Operations.Char_Is_Whitespace,
+   Char_To_Lower            => Wide_String_Operations.Char_To_Lower,
+   Char_To_Upper            => Wide_String_Operations.Char_To_Upper);
