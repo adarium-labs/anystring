@@ -65,6 +65,8 @@ package UXString_Strings is new Anystrings
    Slice                    => UXString_Operations.Slice,
    Index                    => UXString_Operations.Index,
    Index_Latin_1            => UXString_Operations.Index_Latin_1,
+   Index_From               => UXString_Operations.Index_From,
+   Index_Reverse            => UXString_Operations.Index_Reverse,
    To_Lower                 => UXString_Operations.To_Lower,
    To_Upper                 => UXString_Operations.To_Upper,
    Starts_With              => UXString_Operations.Starts_With,

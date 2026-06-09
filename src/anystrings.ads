@@ -186,6 +186,18 @@ generic
    --  Index with Latin-1 pattern
    with function Index_Latin_1 (Source : String_Type; Pattern : String) return Natural;
 
+   --  Search starting at an arbitrary position (matches Ada.Strings.Fixed.Index
+   --  with From parameter). Total: returns 0 if Pattern is empty, not found,
+   --  or Starting_At > Length (Source).
+   with function Index_From
+     (Source      : String_Type;
+      Pattern     : String_Type;
+      Starting_At : Positive) return Natural;
+
+   --  Search backwards from end of Source. Total: returns 0 if Pattern is
+   --  empty, longer than Source, or not found.
+   with function Index_Reverse (Source : String_Type; Pattern : String_Type) return Natural;
+
    --  Case conversion
    with function To_Lower (Source : String_Type) return String_Type;
    with function To_Upper (Source : String_Type) return String_Type;
@@ -481,6 +493,17 @@ is
    function Find_Index_Latin_1 (Source : String_Type; Pattern : String) return Natural
    is (Index_Latin_1 (Source, Pattern));
 
+   --  Search starting at an arbitrary position; returns 0 if not found.
+   function Find_Index_From
+     (Source      : String_Type;
+      Pattern     : String_Type;
+      Starting_At : Positive) return Natural
+   is (Index_From (Source, Pattern, Starting_At));
+
+   --  Search backwards from end of source; returns 0 if not found.
+   function Find_Index_Reverse (Source : String_Type; Pattern : String_Type) return Natural
+   is (Index_Reverse (Source, Pattern));
+
    --  Check if Source contains Pattern
    function Contains (Source : String_Type; Pattern : String_Type) return Boolean
    is (Index (Source, Pattern) > 0);
@@ -541,5 +564,26 @@ is
    --  call them directly through the chosen instantiation; String_Types
    --  re-exports them under user-facing names (To_Lower / To_Upper
    --  overload on Character_Type, Is_* unchanged).
+
+   ---------------------------------------------------------------------------
+   --  Substitution and Padding Operations
+   ---------------------------------------------------------------------------
+
+   --  @summary Substitute every non-overlapping occurrence of Pattern with By.
+   --
+   --  @description
+   --  Total function; never raises. Returns Source unchanged when Pattern is
+   --  empty (avoids infinite loop) or longer than Source. Returns Source
+   --  unchanged when Pattern is not found.
+   function Replace
+     (Source  : String_Type;
+      Pattern : String_Type;
+      By      : String_Type) return String_Type;
+
+   --  @summary Truncate or right-pad Source to exactly Count characters.
+   function Head (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type;
+
+   --  @summary Truncate-from-left or left-pad Source to exactly Count characters.
+   function Tail (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type;
 
 end Anystrings;

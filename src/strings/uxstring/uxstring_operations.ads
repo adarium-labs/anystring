@@ -205,6 +205,15 @@ package UXString_Operations is
      (Source  : UXString;
       Pattern : String) return Natural;
 
+   function Index_From
+     (Source      : UXString;
+      Pattern     : UXString;
+      Starting_At : Positive) return Natural;
+
+   function Index_Reverse
+     (Source  : UXString;
+      Pattern : UXString) return Natural;
+
    --  Case conversion
    function To_Lower (Source : UXString) return UXString;
    function To_Upper (Source : UXString) return UXString;

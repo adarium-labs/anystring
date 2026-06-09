@@ -388,6 +388,57 @@ package body VSS_Operations is
       return Index (Source, To_Virtual_String (Pattern));
    end Index_Latin_1;
 
+   function Index_From
+     (Source      : Virtual_String;
+      Pattern     : Virtual_String;
+      Starting_At : Positive) return Natural
+   is
+      WS_Src : constant Wide_Wide_String :=
+        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+      WS_Pat : constant Wide_Wide_String :=
+        VSS.Strings.Conversions.To_Wide_Wide_String (Pattern);
+   begin
+      if WS_Pat'Length = 0 or else Starting_At > WS_Src'Length then
+         return 0;
+      end if;
+      declare
+         From_Abs : constant Positive := WS_Src'First + Starting_At - 1;
+         Pos      : constant Natural :=
+           Ada.Strings.Wide_Wide_Fixed.Index (WS_Src, WS_Pat, From_Abs);
+      begin
+         if Pos = 0 then
+            return 0;
+         else
+            return Pos - WS_Src'First + 1;
+         end if;
+      end;
+   end Index_From;
+
+   function Index_Reverse
+     (Source  : Virtual_String;
+      Pattern : Virtual_String) return Natural
+   is
+      WS_Src : constant Wide_Wide_String :=
+        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+      WS_Pat : constant Wide_Wide_String :=
+        VSS.Strings.Conversions.To_Wide_Wide_String (Pattern);
+   begin
+      if WS_Pat'Length = 0 or else WS_Pat'Length > WS_Src'Length then
+         return 0;
+      end if;
+      declare
+         Pos : constant Natural :=
+           Ada.Strings.Wide_Wide_Fixed.Index
+             (WS_Src, WS_Pat, Going => Ada.Strings.Backward);
+      begin
+         if Pos = 0 then
+            return 0;
+         else
+            return Pos - WS_Src'First + 1;
+         end if;
+      end;
+   end Index_Reverse;
+
    function To_Lower (Source : Virtual_String) return Virtual_String is
    begin
       return VSS.Transformers.Casing.To_Lowercase.Transform (Source);

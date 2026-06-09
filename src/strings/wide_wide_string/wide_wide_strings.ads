@@ -62,6 +62,8 @@ package Wide_Wide_Strings is new Anystrings
    Slice                    => Wide_Wide_String_Operations.Slice,
    Index                    => Wide_Wide_String_Operations.Index,
    Index_Latin_1            => Wide_Wide_String_Operations.Index_Latin_1,
+   Index_From               => Wide_Wide_String_Operations.Index_From,
+   Index_Reverse            => Wide_Wide_String_Operations.Index_Reverse,
    To_Lower                 => Wide_Wide_String_Operations.To_Lower,
    To_Upper                 => Wide_Wide_String_Operations.To_Upper,
    Starts_With              => Wide_Wide_String_Operations.Starts_With,

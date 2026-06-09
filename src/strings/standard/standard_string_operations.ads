@@ -160,6 +160,13 @@ package Standard_String_Operations is
 
    function Index_Latin_1 (Source : Unbounded_String; Pattern : String) return Natural;
 
+   function Index_From
+     (Source      : Unbounded_String;
+      Pattern     : Unbounded_String;
+      Starting_At : Positive) return Natural;
+
+   function Index_Reverse (Source : Unbounded_String; Pattern : Unbounded_String) return Natural;
+
    --  Case conversion
    function To_Lower (Source : Unbounded_String) return Unbounded_String;
    function To_Upper (Source : Unbounded_String) return Unbounded_String;

@@ -200,6 +200,46 @@ package String_Types is
    function Index (Source : String_Type; Pattern : String) return Natural
    renames Standard_String_Operations.Index_Latin_1;
 
+   function Index_From
+     (Source      : String_Type;
+      Pattern     : String_Type;
+      Starting_At : Positive) return Natural
+   renames Standard_String_Operations.Index_From;
+
+   function Index_From
+     (Source      : String_Type;
+      Pattern     : String;
+      Starting_At : Positive) return Natural
+   is (Standard_String_Operations.Index_From
+         (Source, Standard_String_Operations.To_Unbounded_String (Pattern), Starting_At));
+
+   function Index_Reverse (Source : String_Type; Pattern : String_Type) return Natural
+   renames Standard_String_Operations.Index_Reverse;
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String_Type;
+      By      : String_Type) return String_Type
+   renames Standard_Strings.Replace;
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String;
+      By      : String_Type) return String_Type
+   is (Standard_Strings.Replace (Source, Standard_String_Operations.To_Unbounded_String (Pattern), By));
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String_Type;
+      By      : String) return String_Type
+   is (Standard_Strings.Replace (Source, Pattern, Standard_String_Operations.To_Unbounded_String (By)));
+
+   function Head (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
+   renames Standard_Strings.Head;
+
+   function Tail (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
+   renames Standard_Strings.Tail;
+
    function To_Lower (Source : String_Type) return String_Type renames Standard_String_Operations.To_Lower;
 
    function To_Upper (Source : String_Type) return String_Type renames Standard_String_Operations.To_Upper;

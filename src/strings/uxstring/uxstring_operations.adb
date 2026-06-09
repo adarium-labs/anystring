@@ -200,6 +200,50 @@ package body UXString_Operations is
       return UXStrings.Index (Source, UXStrings.From_Latin_1 (Pattern));
    end Index_Latin_1;
 
+   function Index_From
+     (Source      : UXString;
+      Pattern     : UXString;
+      Starting_At : Positive) return Natural
+   is
+      S_Len : constant Natural := Length (Source);
+      P_Len : constant Natural := Length (Pattern);
+      Sub_Pos : Natural;
+   begin
+      if P_Len = 0 or else Starting_At > S_Len then
+         return 0;
+      end if;
+      --  Slice from Starting_At to end of Source, then offset back.
+      Sub_Pos := UXStrings.Index (Slice (Source, Starting_At, S_Len), Pattern);
+      if Sub_Pos = 0 then
+         return 0;
+      else
+         return Sub_Pos + Starting_At - 1;
+      end if;
+   end Index_From;
+
+   function Index_Reverse
+     (Source  : UXString;
+      Pattern : UXString) return Natural
+   is
+      S_Len : constant Natural := Length (Source);
+      P_Len : constant Natural := Length (Pattern);
+      Last  : Natural := 0;
+      Pos   : Natural;
+      Start : Positive := 1;
+   begin
+      if P_Len = 0 or else P_Len > S_Len then
+         return 0;
+      end if;
+      loop
+         Pos := Index_From (Source, Pattern, Start);
+         exit when Pos = 0;
+         Last := Pos;
+         exit when Pos >= S_Len;
+         Start := Pos + 1;
+      end loop;
+      return Last;
+   end Index_Reverse;
+
    function To_Lower (Source : UXString) return UXString is
    begin
       return UXStrings.To_Lower (Source);

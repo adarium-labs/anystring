@@ -115,6 +115,30 @@ package body Standard_String_Operations is
       return Ada.Strings.Fixed.Index (S, Pattern);
    end Index_Latin_1;
 
+   function Index_From
+     (Source      : Unbounded_String;
+      Pattern     : Unbounded_String;
+      Starting_At : Positive) return Natural
+   is
+      S : constant String := To_String (Source);
+      P : constant String := To_String (Pattern);
+   begin
+      if P'Length = 0 or else Starting_At > S'Length then
+         return 0;
+      end if;
+      return Ada.Strings.Fixed.Index (S, P, Starting_At);
+   end Index_From;
+
+   function Index_Reverse (Source : Unbounded_String; Pattern : Unbounded_String) return Natural is
+      S : constant String := To_String (Source);
+      P : constant String := To_String (Pattern);
+   begin
+      if P'Length = 0 or else P'Length > S'Length then
+         return 0;
+      end if;
+      return Ada.Strings.Fixed.Index (S, P, Going => Ada.Strings.Backward);
+   end Index_Reverse;
+
    function To_Lower (Source : Unbounded_String) return Unbounded_String is
       S : constant String := To_String (Source);
    begin

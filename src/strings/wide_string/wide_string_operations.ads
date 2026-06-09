@@ -190,7 +190,16 @@ package Wide_String_Operations is
 
    function Index_Latin_1
      (Source  : Unbounded_Wide_String;
-      Pattern : String) return Natural;
+       Pattern : String) return Natural;
+
+   function Index_From
+     (Source      : Unbounded_Wide_String;
+      Pattern     : Unbounded_Wide_String;
+      Starting_At : Positive) return Natural;
+
+   function Index_Reverse
+     (Source  : Unbounded_Wide_String;
+      Pattern : Unbounded_Wide_String) return Natural;
 
    function To_Lower (Source : Unbounded_Wide_String) return Unbounded_Wide_String;
    function To_Upper (Source : Unbounded_Wide_String) return Unbounded_Wide_String;

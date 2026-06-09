@@ -177,6 +177,15 @@ package Wide_Wide_String_Operations is
      (Source  : Unbounded_Wide_Wide_String;
       Pattern : String) return Natural;
 
+   function Index_From
+     (Source      : Unbounded_Wide_Wide_String;
+      Pattern     : Unbounded_Wide_Wide_String;
+      Starting_At : Positive) return Natural;
+
+   function Index_Reverse
+     (Source  : Unbounded_Wide_Wide_String;
+      Pattern : Unbounded_Wide_Wide_String) return Natural;
+
    function To_Lower
      (Source : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String;
 

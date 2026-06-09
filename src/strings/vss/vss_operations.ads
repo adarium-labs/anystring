@@ -193,6 +193,15 @@ package VSS_Operations is
      (Source  : Virtual_String;
       Pattern : String) return Natural;
 
+   function Index_From
+     (Source      : Virtual_String;
+      Pattern     : Virtual_String;
+      Starting_At : Positive) return Natural;
+
+   function Index_Reverse
+     (Source  : Virtual_String;
+      Pattern : Virtual_String) return Natural;
+
    function To_Lower (Source : Virtual_String) return Virtual_String;
    function To_Upper (Source : Virtual_String) return Virtual_String;
 

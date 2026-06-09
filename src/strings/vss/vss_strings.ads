@@ -66,6 +66,8 @@ package VSS_Strings is new Anystrings
    Slice                    => VSS_Operations.Slice,
    Index                    => VSS_Operations.Index,
    Index_Latin_1            => VSS_Operations.Index_Latin_1,
+   Index_From               => VSS_Operations.Index_From,
+   Index_Reverse            => VSS_Operations.Index_Reverse,
    To_Lower                 => VSS_Operations.To_Lower,
    To_Upper                 => VSS_Operations.To_Upper,
    Starts_With              => VSS_Operations.Starts_With,

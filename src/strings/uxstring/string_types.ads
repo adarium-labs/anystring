@@ -308,6 +308,46 @@ package String_Types is
       Pattern : String) return Natural
      renames UXString_Operations.Index_Latin_1;
 
+   function Index_From
+     (Source      : String_Type;
+      Pattern     : String_Type;
+      Starting_At : Positive) return Natural
+     renames UXString_Operations.Index_From;
+
+   function Index_From
+     (Source      : String_Type;
+      Pattern     : String;
+      Starting_At : Positive) return Natural
+   is (UXString_Operations.Index_From
+         (Source, UXString_Operations.To_UXString (Pattern), Starting_At));
+
+   function Index_Reverse (Source : String_Type; Pattern : String_Type) return Natural
+     renames UXString_Operations.Index_Reverse;
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String_Type;
+      By      : String_Type) return String_Type
+     renames UXString_Strings.Replace;
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String;
+      By      : String_Type) return String_Type
+   is (UXString_Strings.Replace (Source, UXString_Operations.To_UXString (Pattern), By));
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String_Type;
+      By      : String) return String_Type
+   is (UXString_Strings.Replace (Source, Pattern, UXString_Operations.To_UXString (By)));
+
+   function Head (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
+     renames UXString_Strings.Head;
+
+   function Tail (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
+     renames UXString_Strings.Tail;
+
    function To_Lower (Source : String_Type) return String_Type
      renames UXString_Operations.To_Lower;
 

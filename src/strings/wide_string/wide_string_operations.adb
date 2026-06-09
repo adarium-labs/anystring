@@ -274,6 +274,35 @@ package body Wide_String_Operations is
       return Index (Source, To_Unbounded_Wide_String (Pattern));
    end Index_Latin_1;
 
+   function Index_From
+     (Source      : Unbounded_Wide_String;
+      Pattern     : Unbounded_Wide_String;
+      Starting_At : Positive) return Natural
+   is
+      use Ada.Strings.Wide_Unbounded;
+      S : constant Wide_String := To_Wide_String (Source);
+      P : constant Wide_String := To_Wide_String (Pattern);
+   begin
+      if P'Length = 0 or else Starting_At > S'Length then
+         return 0;
+      end if;
+      return Ada.Strings.Wide_Fixed.Index (S, P, Starting_At);
+   end Index_From;
+
+   function Index_Reverse
+     (Source  : Unbounded_Wide_String;
+      Pattern : Unbounded_Wide_String) return Natural
+   is
+      use Ada.Strings.Wide_Unbounded;
+      S : constant Wide_String := To_Wide_String (Source);
+      P : constant Wide_String := To_Wide_String (Pattern);
+   begin
+      if P'Length = 0 or else P'Length > S'Length then
+         return 0;
+      end if;
+      return Ada.Strings.Wide_Fixed.Index (S, P, Going => Ada.Strings.Backward);
+   end Index_Reverse;
+
    function To_Lower (Source : Unbounded_Wide_String) return Unbounded_Wide_String
    is
       use Ada.Strings.Wide_Unbounded;

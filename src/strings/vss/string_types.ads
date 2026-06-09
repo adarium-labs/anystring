@@ -303,6 +303,46 @@ package String_Types is
       Pattern : String) return Natural
      renames VSS_Operations.Index_Latin_1;
 
+   function Index_From
+     (Source      : String_Type;
+      Pattern     : String_Type;
+      Starting_At : Positive) return Natural
+     renames VSS_Operations.Index_From;
+
+   function Index_From
+     (Source      : String_Type;
+      Pattern     : String;
+      Starting_At : Positive) return Natural
+   is (VSS_Operations.Index_From
+         (Source, VSS_Operations.To_Virtual_String (Pattern), Starting_At));
+
+   function Index_Reverse (Source : String_Type; Pattern : String_Type) return Natural
+     renames VSS_Operations.Index_Reverse;
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String_Type;
+      By      : String_Type) return String_Type
+     renames VSS_Strings.Replace;
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String;
+      By      : String_Type) return String_Type
+   is (VSS_Strings.Replace (Source, VSS_Operations.To_Virtual_String (Pattern), By));
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String_Type;
+      By      : String) return String_Type
+   is (VSS_Strings.Replace (Source, Pattern, VSS_Operations.To_Virtual_String (By)));
+
+   function Head (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
+     renames VSS_Strings.Head;
+
+   function Tail (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
+     renames VSS_Strings.Tail;
+
    function To_Lower (Source : String_Type) return String_Type
      renames VSS_Operations.To_Lower;
 

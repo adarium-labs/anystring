@@ -79,6 +79,8 @@ package Standard_Strings is new
      Slice                   => Standard_String_Operations.Slice,
      Index                   => Standard_String_Operations.Index,
      Index_Latin_1           => Standard_String_Operations.Index_Latin_1,
+     Index_From              => Standard_String_Operations.Index_From,
+     Index_Reverse           => Standard_String_Operations.Index_Reverse,
      To_Lower                => Standard_String_Operations.To_Lower,
      To_Upper                => Standard_String_Operations.To_Upper,
      Starts_With             => Standard_String_Operations.Starts_With,

@@ -300,6 +300,48 @@ package String_Types is
       Pattern : String) return Natural
      renames Wide_Wide_String_Operations.Index_Latin_1;
 
+   function Index_From
+     (Source      : String_Type;
+      Pattern     : String_Type;
+      Starting_At : Positive) return Natural
+     renames Wide_Wide_String_Operations.Index_From;
+
+   function Index_From
+     (Source      : String_Type;
+      Pattern     : String;
+      Starting_At : Positive) return Natural
+   is (Wide_Wide_String_Operations.Index_From
+         (Source, Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String (Pattern), Starting_At));
+
+   function Index_Reverse (Source : String_Type; Pattern : String_Type) return Natural
+     renames Wide_Wide_String_Operations.Index_Reverse;
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String_Type;
+      By      : String_Type) return String_Type
+     renames Wide_Wide_Strings.Replace;
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String;
+      By      : String_Type) return String_Type
+   is (Wide_Wide_Strings.Replace
+         (Source, Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String (Pattern), By));
+
+   function Replace
+     (Source  : String_Type;
+      Pattern : String_Type;
+      By      : String) return String_Type
+   is (Wide_Wide_Strings.Replace
+         (Source, Pattern, Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String (By)));
+
+   function Head (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
+     renames Wide_Wide_Strings.Head;
+
+   function Tail (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
+     renames Wide_Wide_Strings.Tail;
+
    function To_Lower (Source : String_Type) return String_Type
      renames Wide_Wide_String_Operations.To_Lower;
 
