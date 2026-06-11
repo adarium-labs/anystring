@@ -1,0 +1,293 @@
+[DOCUMENT]
+TITLE: Library-wide UTF-8 / Latin-1 Conversion Semantics — Non-Functional Requirements
+REQ_PREFIX: NFR-CONV-
+
+[GRAMMAR]
+ELEMENTS:
+- TAG: REQUIREMENT
+  FIELDS:
+  - TITLE: UID
+    TYPE: String
+    REQUIRED: True
+  - TITLE: STATUS
+    TYPE: String
+    REQUIRED: False
+  - TITLE: PRIORITY
+    TYPE: String
+    REQUIRED: False
+  - TITLE: TITLE
+    TYPE: String
+    REQUIRED: False
+  - TITLE: STATEMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: COMMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: RELATIONS
+    TYPE: String
+    REQUIRED: False
+
+[SECTION]
+TITLE: SPARK Compatibility
+
+[REQUIREMENT]
+UID: NFR-CONV-001
+STATUS: Approved
+PRIORITY: Must
+TITLE: SPARK_Mode On preserved on the generic signature package
+STATEMENT: >>>
+The implementation of FUNC-CONV-001..011 SHALL NOT cause the
+``SPARK_Mode`` pragma on ``src/anystrings.ads`` (the generic signature
+package) to be changed from ``On`` to ``Off`` or removed.
+
+If any new wrapper body is incompatible with SPARK_Mode On, it SHALL be
+placed under a ``pragma SPARK_Mode (Off)`` region analogous to the
+existing environment- and I/O-operation guards in ``src/anystrings.ads``,
+rather than disabling SPARK_Mode for the whole package.
+<<<
+COMMENT: >>>
+The conversion-semantics changes touch primarily the per-backend
+operations bodies (which are not SPARK-clean today; see the root
+AGENTS.md "backends are not (yet) all SPARK-clean" note) and the
+generic signature package (which IS SPARK-clean and must stay so).
+
+The new ``Latin_1_Conv_Result`` record and its accessors are
+SPARK-friendly (plain record, no access types, no tasks).  The new
+``To_Latin_1_If_Possible`` formal subprogram CAN be added to the generic
+signature under SPARK_Mode On without lowering the pragma.
+<<<
+RELATIONS: NFR-UTF8-001, NFR-UTF8-003
+
+[REQUIREMENT]
+UID: NFR-CONV-002
+STATUS: Approved
+PRIORITY: Must
+TITLE: Latin_1_Conv_Result type is SPARK-clean
+STATEMENT: >>>
+The non-generic public type ``Latin_1_Conv_Result`` (FUNC-CONV-008) and
+its accessor functions SHALL be declared in a package whose declarative
+region is SPARK-clean.  The type SHALL use only:
+
+- ``Ada.Strings.Unbounded.Unbounded_String`` (SPARK-clean private type),
+- ``Natural`` (SPARK-clean),
+- an ordinary enumeration (``Latin_1_Conv_Status``).
+
+The type SHALL NOT use access types, tagged-type extensions, or task
+types.
+<<<
+COMMENT: >>>
+This mirrors the constraints already imposed on ``UTF_8_Decode_Result``
+by NFR-UTF8-001 and NFR-UTF8-002.
+
+GNATprove is expected to accept the declarations without disabling
+SPARK_Mode for the new package.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Backward Compatibility
+
+[REQUIREMENT]
+UID: NFR-CONV-003
+STATUS: Approved
+PRIORITY: Must
+TITLE: Existing public signatures unchanged
+STATEMENT: >>>
+The implementation of FUNC-CONV-001..011 SHALL NOT change the public
+signatures (profile, parameter modes, return type) of any of:
+
+- ``To_String_Type (Source : Standard.String) return String_Type``
+- ``To_Latin_1 (Source : String_Type) return Standard.String``
+- ``To_UTF_8 (Source : String_Type) return Standard.String``
+- ``From_UTF_8 (Source : Standard.String) return UTF_8_Decode_Result``
+
+on any of the five backends' ``String_Types`` facades or on the
+``Anystrings`` generic signature package's formal subprogram list.
+
+Only the implementation bodies of ``Standard_String_Operations.To_UTF_8``,
+``Standard_String_Operations.To_String`` (the body backing
+``To_Latin_1``), and ``UXString_Operations.To_UTF_8`` change.
+<<<
+COMMENT: >>>
+This guarantees that callers who only use ``To_Latin_1`` and ``To_UTF_8``
+without relying on backend-specific semantics for code points
+> U+00FF (the population whose semantics actually change on the
+``standard`` backend) recompile without source edits.
+
+Callers who relied on the prior ``standard.To_Latin_1 = byte-identity``
+contract for UTF-8 input will observe a behaviour change: the function
+now decodes UTF-8 then transliterates to Latin-1.  This is the
+intentional bug fix described in FUNC-CONV-011 / NFR-CONV-007.
+<<<
+
+[REQUIREMENT]
+UID: NFR-CONV-004
+STATUS: Approved
+PRIORITY: Must
+TITLE: The 70 existing cmdline-test assertions pass unchanged
+STATEMENT: >>>
+After the conversion-semantics changes, the 70 existing AUnit
+assertions in the cmdline test suite (``tests/src/cmdline_test.adb``)
+SHALL pass on every backend without any source edit to those
+assertions.
+
+New AUnit assertions covering the conversion semantics (FUNC-CONV-005,
+FUNC-CONV-007, FUNC-CONV-008, FUNC-CONV-009) MAY be added to a new
+fixture file, but the existing 70 assertions SHALL NOT be modified.
+<<<
+COMMENT: >>>
+This is a hard project constraint (recorded in the work-plan §7).  The
+cmdline tests use ASCII argv only and so are not affected by the
+Latin-1-vs-UTF-8 distinction.  If a regression in one of the existing
+assertions is observed it indicates a deeper bug in the implementation
+that must be corrected before declaring this work-plan complete.
+<<<
+RELATIONS: FUNC-CMDLINE-001, FUNC-CMDLINE-002, FUNC-CMDLINE-004
+
+[/SECTION]
+
+[SECTION]
+TITLE: Architecture
+
+[REQUIREMENT]
+UID: NFR-CONV-005
+STATUS: Approved
+PRIORITY: Must
+TITLE: New conversion types live in a non-generic public package
+STATEMENT: >>>
+The ``Latin_1_Conv_Status`` enumeration and ``Latin_1_Conv_Result``
+record (FUNC-CONV-008) and their accessor functions SHALL be declared
+in a non-generic, public package — suggested name ``Anystrings_Conv`` —
+parallel to ``Anystrings_UTF_8_Results``.
+
+The new package SHALL be reachable from ``src/anystrings.ads`` (the
+generic signature) and from every backend's ``string_types.ads``.
+
+The types SHALL NOT be declared inside the body of ``Anystrings`` or
+inside any backend-specific package (which would make them inaccessible
+to other backends or to the generic).
+<<<
+COMMENT: >>>
+This mirrors the placement rule for ``UTF_8_Decode_Error`` and
+``UTF_8_Decode_Result`` (NFR-UTF8-009).
+
+Unlike ``UTF_8_Decode_Result``, ``Latin_1_Conv_Result`` is **not**
+generic in ``String_Type``: it always carries a Latin-1
+``Unbounded_String`` regardless of which backend produced it.  So a
+single non-generic package suffices; no formal-package wrapper is
+needed.
+<<<
+
+[REQUIREMENT]
+UID: NFR-CONV-006
+STATUS: Approved
+PRIORITY: Should
+TITLE: Cross-backend conversion tests
+STATEMENT: >>>
+The project's test suite SHOULD include test cases that verify the
+following properties hold identically across all five backends:
+
+1. ``To_UTF_8 ("")`` returns ``""`` (the empty ``Standard.String``).
+2. ``To_Latin_1 ("")`` returns ``""``.
+3. ``To_Latin_1_If_Possible ("")`` returns ``(Status => Ok,
+   Replaced_Count => 0, Value => Null_Unbounded_String)``.
+4. For each backend that can represent the input,
+   ``To_UTF_8 (Single_Character_String (V))`` returns the canonical
+   UTF-8 encoding of V, for V ∈ a fixed corpus covering ASCII, Latin-1
+   supplement, BMP non-Latin-1, and supplementary plane.
+5. ``To_Latin_1 (S)`` for ``S`` containing only code points in
+   U+0000..U+00FF returns the corresponding Latin-1 bytes; for ``S``
+   containing code points > U+00FF, the byte at that position is
+   ``'?'``.
+6. ``To_Latin_1_If_Possible`` reports the correct ``Replaced_Count``
+   and ``Status``.
+<<<
+COMMENT: >>>
+These tests are written in Phase 4 of the work-plan as a single AUnit
+fixture file under ``tests/src/`` that compiles against every backend.
+The fixture file skips a test case on a given backend when the test's
+code point is unrepresentable in that backend's ``Character_Type``
+(e.g. supplementary plane code points on the ``wide_string`` backend).
+
+Cases that the backend cannot represent at all (e.g. attempting to
+construct a Wide_Character value at U+10000 on ``wide_string``) raise
+``Constraint_Error`` at construction and are excluded from the test
+matrix rather than asserting Constraint_Error explicitly.
+<<<
+
+[REQUIREMENT]
+UID: NFR-CONV-007
+STATUS: Approved
+PRIORITY: Must
+TITLE: No new runtime dependencies for the standard backend
+STATEMENT: >>>
+The ``standard`` backend's implementation of FUNC-CONV-001..009 SHALL
+NOT introduce any dependency on an external library or crate beyond
+what is already available in the GNAT runtime (``Ada.*``,
+``System.*``).
+
+Specifically:
+
+- ``standard_string_operations.To_UTF_8`` may be implemented as a single
+  call to ``Ada.Strings.Unbounded.To_String`` (FUNC-CONV-003).
+- ``standard_string_operations.To_Latin_1`` may rely on
+  ``Ada.Strings.UTF_Encoding.Strings.Decode`` for the UTF-8 → Latin-1
+  transcoding step, with a fallback to ``'?'`` substitution for code
+  points > U+00FF (FUNC-CONV-006).
+- The new ``standard_string_operations.To_Latin_1_If_Possible`` may use
+  the same Ada runtime units.
+<<<
+COMMENT: >>>
+The decoded Latin-1 representation step requires walking the UTF-8
+input one code point at a time when we need to count replacements
+(FUNC-CONV-009).  This walk can be hand-rolled or built on top of the
+existing ``Anystrings_UTF_8_Validate`` package; in either case, no new
+external dependency.
+
+The ``uxstring`` backend continues to depend on the ``uxstrings`` crate
+(unchanged).  The ``vss`` backend continues to depend on ``vss_text``
+(unchanged).
+<<<
+RELATIONS: NFR-UTF8-007
+
+[/SECTION]
+
+[SECTION]
+TITLE: Versioning
+
+[REQUIREMENT]
+UID: NFR-CONV-008
+STATUS: Approved
+PRIORITY: Must
+TITLE: Behaviour change on standard.To_UTF_8 is a semver bump documented in CHANGELOG
+STATEMENT: >>>
+The behaviour change on ``Standard_String_Operations.To_UTF_8`` and
+``Standard_String_Operations.To_String`` (the body backing
+``To_Latin_1``) SHALL be:
+
+- Implemented in-place (no hard rename, no deprecation shim).
+- Treated as a minor semver bump on the crate version recorded in
+  ``alire.toml``.
+- Documented in a ``CHANGELOG.md`` entry describing both the user-facing
+  behaviour change and the rationale (restoring the FUNC-UTF8-006
+  contract violated by the prior implementation for UTF-8 input).
+
+A ``CHANGELOG.md`` file SHALL be created at the repository root if it
+does not already exist.
+<<<
+COMMENT: >>>
+The §6.4 design decision adopted "B" (semver bump + changelog) over "A"
+(hard rename / deprecate).  The reasoning is recorded in
+``docs/tech-specs/conv-semantics.md`` (Phase 2 deliverable): the prior
+behaviour was a bug, not a contract.  Renaming a buggy function to
+preserve its bugginess would add long-term API surface for the wrong
+behaviour.
+
+The amendment to FUNC-UTF8-003's comment (FUNC-CONV-011) is the canonical
+record of which existing comment is superseded.
+<<<
+RELATIONS: FUNC-CONV-011
+
+[/SECTION]

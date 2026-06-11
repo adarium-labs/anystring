@@ -38,15 +38,25 @@ package body UTF8_Latin1_Supplement_Test is
    end Register_Tests;
 
    --------------------------------------------------------------------------
-   --  Helper: build String_Type containing the Latin-1 character at code-
-   --  position Pos (0..255) using the backend-neutral To_String_Type path.
-   --  For the standard backend this is a single byte; for wide/wide_wide
-   --  backends To_String_Type interprets the byte as its Latin-1 code point.
+   --  Helper: build String_Type containing the Unicode code point Pos
+   --  (0..255) by encoding Pos as UTF-8 and ingesting it via From_UTF_8.
+   --  Backend-agnostic: works identically on standard (UTF-8 storage per
+   --  FUNC-CONV-001), wide_string, wide_wide_string, uxstring, vss.
    function Latin1_Char (Pos : Natural) return String_Type is
-      S : String (1 .. 1);
+      UTF8 : String (1 .. 2);
+      Len  : Natural;
+      R    : UTF_8_Decode_Result;
    begin
-      S (1) := Character'Val (Pos);
-      return To_String_Type (S);
+      if Pos <= 16#7F# then
+         UTF8 (1) := Character'Val (Pos);
+         Len := 1;
+      else
+         UTF8 (1) := Character'Val (16#C0# + Pos / 64);
+         UTF8 (2) := Character'Val (16#80# + (Pos mod 64));
+         Len := 2;
+      end if;
+      R := From_UTF_8 (UTF8 (1 .. Len));
+      return Get_Value (R);
    end Latin1_Char;
 
    --------------------------------------------------------------------------

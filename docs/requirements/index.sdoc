@@ -39,10 +39,12 @@ all requirement files in this directory.
 [TEXT]
 UID scheme:
 
-- **VIS-NNN**       — Vision / scope requirements
-- **FUNC-UTF8-NNN** — UTF-8 generic-API functional requirements
-- **NFR-UTF8-NNN**       — UTF-8 non-functional requirements
+- **VIS-NNN**           — Vision / scope requirements
+- **FUNC-UTF8-NNN**     — UTF-8 generic-API functional requirements
+- **NFR-UTF8-NNN**      — UTF-8 non-functional requirements
 - **FUNC-CMDLINE-NNN**  — Command-line access functional requirements
+- **FUNC-CONV-NNN**     — Library-wide conversion semantics functional requirements
+- **NFR-CONV-NNN**      — Library-wide conversion semantics non-functional requirements
 
 All UIDs use zero-padded three-digit ordinals (001, 002, …).  New UID
 prefixes are added here as new feature areas are specified.
@@ -56,5 +58,7 @@ TITLE: Documents
 - docs/requirements/02-utf8-boundary-api.sdoc — UTF-8 generic API functional requirements
 - docs/requirements/03-utf8-boundary-api-nfr.sdoc — UTF-8 generic API non-functional requirements
 - docs/requirements/04-cmdline.sdoc — Command-line access functional requirements
+- docs/requirements/05-conversion-semantics.sdoc — Library-wide UTF-8 / Latin-1 conversion semantics functional requirements
+- docs/requirements/06-conversion-semantics-nfr.sdoc — Library-wide UTF-8 / Latin-1 conversion semantics non-functional requirements
 
 [/SECTION]

@@ -12,6 +12,7 @@
 with Ada.Containers;
 with Ada.Wide_Text_IO;
 with Ada.Strings.Wide_Unbounded;
+with Anystrings_Conv;
 
 package Wide_String_Operations is
 
@@ -89,7 +90,17 @@ package Wide_String_Operations is
 
    function To_Unbounded_Wide_String (Source : String) return Unbounded_Wide_String;
 
+   --  Latin-1 egress: emit one byte per Wide_Character code point.  Code
+   --  points greater than U+00FF are replaced by '?' (16#3F#) per
+   --  FUNC-CONV-006.  Total; never raises.
    function To_String (Source : Unbounded_Wide_String) return String;
+
+   --  Latin-1 egress with loss detection.  Same transliteration as
+   --  To_String, but the returned record reports whether any code point
+   --  was replaced by '?' and how many.
+   --  @relation FUNC-CONV-008, FUNC-CONV-009
+   function To_Latin_1_If_Possible
+     (Source : Unbounded_Wide_String) return Anystrings_Conv.Latin_1_Conv_Result;
 
    ---------------------------------------------------------------------------
    --  Environment Operations

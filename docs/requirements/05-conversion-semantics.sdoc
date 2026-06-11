@@ -1,0 +1,521 @@
+[DOCUMENT]
+TITLE: Library-wide UTF-8 / Latin-1 Conversion Semantics — Functional Requirements
+REQ_PREFIX: FUNC-CONV-
+
+[GRAMMAR]
+ELEMENTS:
+- TAG: REQUIREMENT
+  FIELDS:
+  - TITLE: UID
+    TYPE: String
+    REQUIRED: True
+  - TITLE: STATUS
+    TYPE: String
+    REQUIRED: False
+  - TITLE: PRIORITY
+    TYPE: String
+    REQUIRED: False
+  - TITLE: TITLE
+    TYPE: String
+    REQUIRED: False
+  - TITLE: STATEMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: COMMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: RELATIONS
+    TYPE: String
+    REQUIRED: False
+
+[SECTION]
+TITLE: Context
+
+[TEXT]
+Feature: **CONV-SEMANTICS** — lock down the cross-backend contract for the
+three conversion primitives at the API edge of anystrings.
+
+The library exposes three formal conversion subprograms through every
+backend's ``String_Types`` facade:
+
+- ``To_String_Type (Source : Standard.String) return String_Type`` — the
+  ingestion path.
+- ``To_Latin_1 (Source : String_Type) return Standard.String`` — the egress
+  path that promises Latin-1.
+- ``To_UTF_8 (Source : String_Type) return Standard.String`` — the egress
+  path that promises UTF-8.
+
+The FUNC-UTF8 requirement family (FUNC-UTF8-003, FUNC-UTF8-005,
+FUNC-UTF8-006) already mandates that ``To_UTF_8`` returns a *"well-formed
+UTF-8 byte sequence"* on every backend.  However, the implementation on the
+``standard`` backend violates that contract when the underlying storage
+holds already-UTF-8 bytes: each stored byte is interpreted as a Latin-1
+code point and re-encoded into UTF-8, producing double-encoded mojibake
+(``c3 a9`` becomes ``c3 83 c2 a9``).  This bug is masked at the
+``String_Types`` boundary today by the convoluted demo expression
+``To_Latin_1 (Get_Value_Or (From_UTF_8 (To_Latin_1 (Argument (I))),
+Argument (I)))``, which round-trips through ``From_UTF_8`` to absorb the
+mojibake — but it surfaces immediately the moment a caller invokes
+``To_UTF_8`` directly.
+
+This requirement family resolves the contract:
+
+1. The ``standard`` backend's storage convention is UTF-8 (consistent with
+   how the Ada.Command_Line bridge already stores argv bytes per
+   FUNC-CMDLINE-008, and consistent with the project convention that the
+   file charset is UTF-8).
+2. ``To_UTF_8`` on ``standard`` becomes byte-identity.
+3. ``To_Latin_1`` on ``standard`` decodes UTF-8 then transliterates each
+   code point to Latin-1, replacing code points greater than U+00FF with
+   the single byte ``'?'`` (16#3F#).
+4. ``To_UTF_8`` on ``uxstring`` uses the UXStrings library's native
+   ``To_UTF_8`` entry point directly (no byte-level rescan).
+5. A new variant ``To_Latin_1_If_Possible`` returning a
+   ``Latin_1_Conv_Result`` discriminator (Ok | Lossy) is added on every
+   backend so callers can detect data loss.
+
+All five bundled backends (``standard``, ``wide_string``,
+``wide_wide_string``, ``uxstring``, ``vss``) MUST expose an identical
+public surface for the three conversion primitives plus the new
+``Latin_1_Conv_Result`` and ``To_Latin_1_If_Possible``, mirroring
+NFR-UTF8-006 and FUNC-CMDLINE-009.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Storage Encoding Conventions
+
+[REQUIREMENT]
+UID: FUNC-CONV-001
+STATUS: Approved
+PRIORITY: Must
+TITLE: Standard backend storage convention is UTF-8
+STATEMENT: >>>
+The ``standard`` backend SHALL treat the bytes held in its underlying
+``Ada.Strings.Unbounded.Unbounded_String`` as a well-formed UTF-8 byte
+sequence representing a sequence of Unicode code points.
+
+Specifically:
+
+- ``To_String_Type (Source : Standard.String) return String_Type`` on the
+  ``standard`` backend is byte-identity; the caller is responsible for
+  passing a well-formed UTF-8 byte sequence.
+- String literals embedded in the library's own source code SHALL be
+  assumed to be UTF-8, consistent with the project convention that the
+  file charset is UTF-8 (recorded in the root AGENTS.md).
+- All other ``string_types.ads`` primitives that consume or produce a
+  ``String_Type`` on ``standard`` interpret the stored bytes as UTF-8.
+<<<
+COMMENT: >>>
+This codifies the storage convention that the Ada.Command_Line bridge
+(FUNC-CMDLINE-008) and the wide / wide_wide / uxstring / vss backends
+already follow implicitly: ingestion treats ``Standard.String`` as UTF-8.
+
+The prior implicit convention on the ``standard`` backend — that stored
+bytes were Latin-1 — is superseded by this requirement.  See FUNC-CONV-011
+for the explicit amendment to FUNC-UTF8-003's comment.
+
+Length and Element on the ``standard`` backend continue to operate on
+**bytes** (not code points).  That semantic is unchanged by this
+requirement; see the root AGENTS.md anti-pattern note ("Do not assume
+Length counts characters").  Backends with code-point semantics
+(``uxstring``, ``vss``) and code-unit semantics (``wide_string``,
+``wide_wide_string``) are unaffected by FUNC-CONV-001.
+<<<
+RELATIONS: FUNC-CMDLINE-008, FUNC-UTF8-003
+
+[REQUIREMENT]
+UID: FUNC-CONV-002
+STATUS: Approved
+PRIORITY: Must
+TITLE: Wide / Wide_Wide / UXString / VSS storage conventions are unchanged
+STATEMENT: >>>
+The ``wide_string``, ``wide_wide_string``, ``uxstring``, and ``vss``
+backends SHALL continue to store the input character sequence in their
+native character model unchanged from the current behaviour:
+
+- ``wide_string`` stores ``Wide_Character`` slots (16-bit code units in
+  U+0000..U+FFFF).
+- ``wide_wide_string`` stores ``Wide_Wide_Character`` slots (32-bit, with
+  non-scalar values guarded against per ``src/strings/AGENTS.md``).
+- ``uxstring`` stores Unicode scalar code points (UXStrings's native
+  model).
+- ``vss`` stores a VSS ``Virtual_String`` (UTF-8 internally).
+<<<
+COMMENT: >>>
+This requirement exists to make the per-backend storage convention
+explicit.  Together with FUNC-CONV-001 it captures the full storage
+matrix, which is the foundation that the conversion semantics in
+FUNC-CONV-003..009 rest on.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: To_UTF_8
+
+[REQUIREMENT]
+UID: FUNC-CONV-003
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_UTF_8 on the standard backend is byte-identity
+STATEMENT: >>>
+On the ``standard`` backend, the formal subprogram
+``To_UTF_8 (Source : String_Type) return Standard.String`` SHALL return
+the bytes held in the underlying ``Unbounded_String`` unchanged, with no
+encoding conversion applied.
+
+That is, ``To_UTF_8 (S)`` on ``standard`` SHALL be observationally
+equivalent to ``Ada.Strings.Unbounded.To_String (S)``.
+<<<
+COMMENT: >>>
+The well-formedness of the output is delegated to the storage convention
+(FUNC-CONV-001): callers who store malformed UTF-8 will get malformed
+UTF-8 back.  Callers who use the project's normal ingestion paths (the
+``Ada.Command_Line`` bridge, ``From_UTF_8``, or UTF-8 string literals)
+always store well-formed UTF-8 and so always receive well-formed UTF-8
+from ``To_UTF_8``.
+
+This requirement does not change the public signature, only the body of
+``Standard_String_Operations.To_UTF_8`` and the doc comment in
+``standard_string_operations.ads``.
+
+This requirement restores the contract in FUNC-UTF8-006 ("To_UTF_8 output
+is always well-formed UTF-8") that was being violated for UTF-8 input on
+the ``standard`` backend by the prior
+``Ada.Strings.UTF_Encoding.Strings.Encode``-based implementation.
+<<<
+RELATIONS: FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-CONV-001
+
+[REQUIREMENT]
+UID: FUNC-CONV-004
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_UTF_8 on the uxstring backend uses UXStrings native UTF-8 emission
+STATEMENT: >>>
+On the ``uxstring`` backend, the formal subprogram
+``To_UTF_8 (Source : String_Type) return Standard.String`` SHALL produce
+its result by calling the UXStrings library's native UTF-8 emission entry
+point — ``UXStrings.To_UTF_8`` — and casting the resulting
+``UXStrings.UTF_8_Character_Array`` to ``Standard.String``.
+
+The implementation SHALL NOT perform a secondary byte-level scan that
+reinterprets non-ASCII multi-byte sequences as Latin-1 code points.
+UXStrings already guarantees that ``To_UTF_8`` returns a well-formed
+UTF-8 byte sequence for any Unicode scalar value held in a ``UXString``
+(FUNC-UTF8-006).
+<<<
+COMMENT: >>>
+The current implementation in ``UXString_Operations.To_UTF_8`` contains a
+defensive byte-level rescan that was originally added to substitute
+U+FFFD for surrogate code units (FUNC-UTF8-007).  UXStrings does not
+admit surrogate code units in a constructed ``UXString``, so the rescan
+is unnecessary — but more importantly, the rescan's fallback branches
+treat lone or truncated multi-byte leads as Latin-1 code points and
+re-encode them, which is the same bug pattern as the ``standard`` backend
+was exhibiting under the prior contract.
+
+The new implementation collapses the body to a single line:
+
+    return Standard.String (UXStrings.To_UTF_8 (Source));
+
+``UXStrings.UTF_8_Character_Array`` is an array of ``Character`` (verified
+at construction to share the same component type as ``Standard.String``),
+so the conversion is sound.
+<<<
+RELATIONS: FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007
+
+[REQUIREMENT]
+UID: FUNC-CONV-005
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_UTF_8 is byte-stable across all five backends for any Unicode scalar
+STATEMENT: >>>
+For every Unicode scalar value V (i.e. every code point in
+U+0000..U+10FFFF excluding U+D800..U+DFFF) representable by a backend,
+the byte sequence returned by ``To_UTF_8`` for a single-character
+``String_Type`` containing V SHALL be the canonical (shortest,
+non-overlong) UTF-8 encoding of V as defined by RFC 3629:
+
+- U+0000..U+007F: 1 byte.
+- U+0080..U+07FF: 2 bytes.
+- U+0800..U+FFFF (excluding U+D800..U+DFFF): 3 bytes.
+- U+10000..U+10FFFF: 4 bytes.
+
+The output SHALL be byte-identical regardless of which backend produced
+the ``String_Type`` value, modulo backends that cannot represent the
+full code-point range (e.g. ``wide_string`` cannot represent code points
+> U+FFFF).
+<<<
+COMMENT: >>>
+This makes the cross-backend invariance of ``To_UTF_8`` testable.  The
+Phase 4 AUnit fixture asserts this property for a fixed corpus covering
+all four UTF-8 byte-length classes:
+
+- ASCII ("Hello"),
+- Latin-1 supplement ("é" U+00E9, "ñ" U+00F1),
+- BMP non-Latin-1 ("☃" U+2603, "日" U+65E5),
+- supplementary plane ("𝄞" U+1D11E, "🜂" U+1F702).
+
+Backends whose ``Character_Type`` cannot represent a given test code
+point skip that case (a fact the fixture surfaces explicitly rather than
+masking).
+<<<
+RELATIONS: FUNC-UTF8-005, FUNC-UTF8-006, NFR-CONV-006
+
+[/SECTION]
+
+[SECTION]
+TITLE: To_Latin_1
+
+[REQUIREMENT]
+UID: FUNC-CONV-006
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_Latin_1 is total and replaces code points greater than U+00FF with '?'
+STATEMENT: >>>
+On every backend, the formal subprogram
+``To_Latin_1 (Source : String_Type) return Standard.String`` SHALL be
+total: it SHALL NOT raise any exception for any ``String_Type`` value the
+backend can legally construct.
+
+For every Unicode scalar code point V held in ``Source``:
+
+- If V is in U+0000..U+00FF, ``To_Latin_1`` SHALL emit the single byte
+  ``Character'Val (V)``.
+- If V is in U+0100..U+10FFFF, ``To_Latin_1`` SHALL emit the single byte
+  ``'?'`` (16#3F#) as the replacement code point.
+
+On the ``standard`` backend, this means ``To_Latin_1`` SHALL first decode
+the stored UTF-8 byte sequence (per FUNC-CONV-001) and apply the rule
+above to each decoded code point.
+<<<
+COMMENT: >>>
+The "replace with '?'" rule is the same convention already used in the
+``wide_string`` backend's ``To_String_From_Wide`` helper.  It is a
+long-standing transcoding convention and is the same default that
+``iconv`` uses with the ``//TRANSLIT`` modifier disabled.  The choice
+over "raise ``Constraint_Error``" is dictated by the existing contract
+that this function is total (a constraint inherited from how the cmdline
+bridge and the wide-text I/O paths already use it across backends).
+
+Callers who need to distinguish a clean conversion from a lossy one
+SHALL use the new variant ``To_Latin_1_If_Possible`` (FUNC-CONV-009).
+
+This requirement does not change the signature of ``To_Latin_1`` on any
+backend.  On the ``standard`` backend it changes the implementation body
+from byte-identity to UTF-8 decode + Latin-1 transliteration.
+<<<
+RELATIONS: FUNC-UTF8-013
+
+[REQUIREMENT]
+UID: FUNC-CONV-007
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_Latin_1 ASCII fast-path is byte-identity
+STATEMENT: >>>
+For any ``String_Type`` value whose logical code-point sequence consists
+exclusively of code points in U+0000..U+007F, ``To_Latin_1`` SHALL return
+a byte sequence equal to the canonical ASCII representation of those
+code points.
+
+Combined with FUNC-CONV-005, this means: for any ASCII-only input,
+
+    To_Latin_1 (Source) = To_UTF_8 (Source)
+
+byte-for-byte, on every backend.
+<<<
+COMMENT: >>>
+This is a corollary of FUNC-CONV-005 and FUNC-CONV-006 but is captured
+separately so that it can be tested in isolation without exercising the
+multi-byte paths.  The Phase 4 fixture uses this as the simplest sanity
+check before running the larger corpus.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Latin_1_Conv_Result and To_Latin_1_If_Possible
+
+[REQUIREMENT]
+UID: FUNC-CONV-008
+STATUS: Approved
+PRIORITY: Must
+TITLE: Latin_1_Conv_Result discriminated record
+STATEMENT: >>>
+The library SHALL define a non-generic, public record type carrying the
+outcome of a lossy-detection Latin-1 conversion:
+
+    type Latin_1_Conv_Status is (Ok, Lossy);
+
+    type Latin_1_Conv_Result is record
+       Status         : Latin_1_Conv_Status;
+       Value          : Ada.Strings.Unbounded.Unbounded_String;
+       Replaced_Count : Natural;
+    end record;
+
+The semantics of the fields are:
+
+- ``Status = Ok`` means every code point in the source had a Latin-1
+  representation and ``Replaced_Count = 0``.
+- ``Status = Lossy`` means at least one code point was replaced with
+  ``'?'`` (16#3F#) and ``Replaced_Count`` equals the number of replaced
+  code points.
+- ``Value`` holds the Latin-1 bytes in either case (with ``'?'``
+  substitutions in the Lossy case), wrapped in ``Unbounded_String`` so
+  the record type is concrete and free of unconstrained-array issues.
+
+Total accessor functions SHALL be provided:
+
+- ``Is_Ok (R : Latin_1_Conv_Result) return Boolean``
+- ``Get_Value (R : Latin_1_Conv_Result) return Standard.String``
+- ``Get_Replaced_Count (R : Latin_1_Conv_Result) return Natural``
+
+The type and accessors SHALL be reachable from every backend's
+``String_Types`` via re-export (``subtype`` + ``renames``).
+<<<
+COMMENT: >>>
+The record uses ``Unbounded_String`` for ``Value`` rather than ``String``
+because Ada record types cannot hold unconstrained-array components.
+
+The discriminator is a simple two-value enumeration (Ok | Lossy) rather
+than the three-variant Conv_Result that the initial design discussion
+considered.  The third variant ("Error") is unnecessary for
+``To_Latin_1_If_Possible``: every Unicode scalar value has a defined
+behaviour under the replacement rule (FUNC-CONV-006), so the operation
+never errs — it can only be lossy or lossless.
+
+Suggested home for the type: a new non-generic package
+``Anystrings_Conv`` parallel to ``Anystrings_UTF_8_Results``.  Each
+backend's ``string_types.ads`` re-exports the type and accessors via
+``subtype`` and ``renames``.
+<<<
+
+[REQUIREMENT]
+UID: FUNC-CONV-009
+STATUS: Approved
+PRIORITY: Must
+TITLE: To_Latin_1_If_Possible API
+STATEMENT: >>>
+The library SHALL define a public function on every backend's
+``String_Types``:
+
+    function To_Latin_1_If_Possible
+      (Source : String_Type) return Latin_1_Conv_Result;
+
+The function SHALL be total (NFR-CONV-003) and SHALL satisfy:
+
+- For every code point V in ``Source`` that lies in U+0000..U+00FF,
+  ``Value`` contains the byte ``Character'Val (V)`` at the corresponding
+  position.
+- For every code point V in ``Source`` that lies in U+0100..U+10FFFF,
+  ``Value`` contains the byte ``'?'`` (16#3F#) at the corresponding
+  position, and ``Replaced_Count`` is incremented by one.
+- ``Status = Ok`` if and only if ``Replaced_Count = 0``.
+
+For ASCII-only input,
+``Get_Value (To_Latin_1_If_Possible (Source))`` SHALL be observationally
+equal to ``To_UTF_8 (Source)`` (which by FUNC-CONV-007 is byte-identity
+for ASCII).
+<<<
+COMMENT: >>>
+This is the lossy-detection counterpart to ``To_Latin_1``.  Callers that
+need to detect data loss use ``To_Latin_1_If_Possible``; callers that
+just want the bytes use ``To_Latin_1`` (which silently replaces, per
+FUNC-CONV-006).
+
+The function name follows the suffix-style naming convention adopted for
+new conversion variants (per §6.3 design decision).
+<<<
+RELATIONS: FUNC-CONV-006, FUNC-CONV-008
+
+[/SECTION]
+
+[SECTION]
+TITLE: Backend Coverage and API Parity
+
+[REQUIREMENT]
+UID: FUNC-CONV-010
+STATUS: Approved
+PRIORITY: Must
+TITLE: All five backends expose identical conversion-semantics signatures
+STATEMENT: >>>
+The conversion-semantics API SHALL be accessible uniformly from
+``with String_Types;`` for each of the five bundled backends:
+
+- ``src/strings/standard/``
+- ``src/strings/wide_string/``
+- ``src/strings/wide_wide_string/``
+- ``src/strings/uxstring/``
+- ``src/strings/vss/``
+
+The public signatures for the following SHALL be identical across all
+five backends such that user code written against one backend compiles
+unchanged against any other:
+
+- ``To_String_Type (Source : Standard.String) return String_Type``
+  (existing, signature unchanged).
+- ``To_Latin_1 (Source : String_Type) return Standard.String``
+  (existing, signature unchanged, semantics codified in FUNC-CONV-006).
+- ``To_UTF_8 (Source : String_Type) return Standard.String``
+  (existing, signature unchanged, semantics codified in FUNC-CONV-003,
+  FUNC-CONV-004, FUNC-CONV-005).
+- ``To_Latin_1_If_Possible (Source : String_Type) return Latin_1_Conv_Result``
+  (new, FUNC-CONV-009).
+- ``Latin_1_Conv_Status``, ``Latin_1_Conv_Result``, ``Is_Ok``,
+  ``Get_Value``, ``Get_Replaced_Count`` (new types and accessors,
+  FUNC-CONV-008).
+<<<
+COMMENT: >>>
+This is the conversion-semantics analogue of NFR-UTF8-006 and
+FUNC-CMDLINE-009.  The same backend-swap guarantee applies: code
+compiled against one backend's ``String_Types`` compiles unchanged
+against any other.
+
+The Phase 4 test fixture SHALL be a single source file that compiles
+against all five backends without modification, using only the
+``String_Types`` facade.
+<<<
+RELATIONS: FUNC-CONV-006, FUNC-CONV-008, FUNC-CONV-009, NFR-UTF8-006, FUNC-CMDLINE-009
+
+[/SECTION]
+
+[SECTION]
+TITLE: Amendment to FUNC-UTF8-003
+
+[REQUIREMENT]
+UID: FUNC-CONV-011
+STATUS: Approved
+PRIORITY: Must
+TITLE: FUNC-UTF8-003 comment about standard-backend storage is superseded
+STATEMENT: >>>
+The comment attached to FUNC-UTF8-003 that reads
+
+    "Backends that store Latin-1 (the standard backend) treat each
+     stored byte as its Unicode code-point equivalent and encode it
+     into UTF-8 accordingly (code points 0-127 are unchanged; code
+     points 128-255 expand to two UTF-8 bytes)."
+
+is HEREBY SUPERSEDED by FUNC-CONV-001 and FUNC-CONV-003.  The ``standard``
+backend's storage convention is UTF-8, not Latin-1.
+
+The normative requirement of FUNC-UTF8-003 itself — that ``To_UTF_8``
+produces well-formed UTF-8 — is unaffected by this amendment.  FUNC-CONV-001
+and FUNC-CONV-003 only strengthen the backend-side implementation
+strategy: instead of Latin-1-byte → UTF-8 transcoding, the ``standard``
+backend's ``To_UTF_8`` is now byte-identity over UTF-8 storage.
+<<<
+COMMENT: >>>
+This amendment is recorded in the requirements layer (here) rather than
+by editing 02-utf8-boundary-api.sdoc directly, mirroring the §11
+amendment style used in the cmdline tech-spec (docs/tech-specs/cmdline-access.md).
+
+The behaviour change on ``Standard_String_Operations.To_UTF_8`` is
+described in the conv-semantics tech-spec as a bug fix restoring the
+FUNC-UTF8-006 contract that the prior implementation violated for UTF-8
+input.  It is documented in the project changelog as a version bump
+(§6.4 design decision: semver bump + changelog, not hard rename).
+<<<
+RELATIONS: FUNC-UTF8-003, FUNC-UTF8-006, FUNC-CONV-001, FUNC-CONV-003
+
+[/SECTION]

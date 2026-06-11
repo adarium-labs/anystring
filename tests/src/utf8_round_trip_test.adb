@@ -83,14 +83,17 @@ package body UTF8_Round_Trip_Test is
      (T : in out AUnit.Test_Cases.Test_Case'Class)
    is
       pragma Unreferenced (T);
-      --  "éàü" — three Latin-1 supplement code points
-      E_Acute  : constant String (1 .. 1) := (1 => Character'Val (16#E9#));
-      A_Grave  : constant String (1 .. 1) := (1 => Character'Val (16#E0#));
-      U_Umlaut : constant String (1 .. 1) := (1 => Character'Val (16#FC#));
-      Source   : constant String_Type :=
-        Concat (Concat (To_String_Type (E_Acute),
-                        To_String_Type (A_Grave)),
-                To_String_Type (U_Umlaut));
+      --  "éàü" — three Latin-1 supplement code points, ingested via their
+      --  UTF-8 encoding (backend-agnostic per FUNC-CONV-001..003):
+      --    U+00E9 = 0xC3 0xA9
+      --    U+00E0 = 0xC3 0xA0
+      --    U+00FC = 0xC3 0xBC
+      UTF8_Input : constant String :=
+        Character'Val (16#C3#) & Character'Val (16#A9#)
+        & Character'Val (16#C3#) & Character'Val (16#A0#)
+        & Character'Val (16#C3#) & Character'Val (16#BC#);
+      Decode_R : constant UTF_8_Decode_Result := From_UTF_8 (UTF8_Input);
+      Source   : constant String_Type := Get_Value (Decode_R);
    begin
       Assert_Round_Trip (Source, "Latin-1 supplement: U+00E9 U+00E0 U+00FC");
    end Test_Round_Trip_Latin1_Supplement;

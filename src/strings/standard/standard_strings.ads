@@ -48,7 +48,7 @@ package Standard_Strings is new
      ">"                     => Standard_String_Operations.">",
      ">="                    => Standard_String_Operations.">=",
      To_String_Type          => Standard_String_Operations.To_Unbounded_String,
-     To_Latin_1              => Standard_String_Operations.To_String,
+     To_Latin_1              => Standard_String_Operations.To_Latin_1,
      UTF_8                   => Standard_UTF_8_Results,
      To_UTF_8                => Standard_String_Operations.To_UTF_8,
      From_UTF_8              => Standard_UTF_8_Bridge.From_UTF_8_Standard,

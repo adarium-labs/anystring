@@ -18,6 +18,7 @@ with Standard_String_Operations;
 with Standard_UTF_8_Results;
 with Standard_UTF_8_Bridge;
 with Anystrings_UTF_8;
+with Anystrings_Conv;
 with Standard_Command_Line;
 
 package String_Types is
@@ -148,7 +149,28 @@ package String_Types is
 
    function To_String_Type (Source : String) return String_Type renames Standard_String_Operations.To_Unbounded_String;
 
-   function To_Latin_1 (Source : String_Type) return String renames Standard_String_Operations.To_String;
+   function To_Latin_1 (Source : String_Type) return String renames Standard_String_Operations.To_Latin_1;
+
+   --  ----- Lossy-detection Latin-1 conversion (FUNC-CONV-008..010) -----
+
+   --  @relation FUNC-CONV-008, FUNC-CONV-009, FUNC-CONV-010, NFR-CONV-005
+   subtype Latin_1_Conv_Status is Anystrings_Conv.Latin_1_Conv_Status;
+   subtype Latin_1_Conv_Result is Anystrings_Conv.Latin_1_Conv_Result;
+
+   --  Re-export enumeration literals so they are directly visible to
+   --  callers via "use String_Types" (a subtype alone does not do this).
+   Ok    : constant Latin_1_Conv_Status := Anystrings_Conv.Ok;
+   Lossy : constant Latin_1_Conv_Status := Anystrings_Conv.Lossy;
+
+   function "=" (Left, Right : Latin_1_Conv_Status) return Boolean renames Anystrings_Conv."=";
+
+   function Is_Ok (R : Latin_1_Conv_Result) return Boolean renames Anystrings_Conv.Is_Ok;
+   function Get_Value (R : Latin_1_Conv_Result) return String renames Anystrings_Conv.Get_Value;
+   function Get_Replaced_Count (R : Latin_1_Conv_Result) return Natural
+     renames Anystrings_Conv.Get_Replaced_Count;
+
+   function To_Latin_1_If_Possible (Source : String_Type) return Latin_1_Conv_Result
+     renames Standard_String_Operations.To_Latin_1_If_Possible;
 
    --  ----- UTF-8 boundary (FUNC-UTF8-001..013, NFR-UTF8-006) -----
 

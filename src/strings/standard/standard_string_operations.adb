@@ -6,14 +6,102 @@
 -------------------------------------------------------------------------------
 
 with Ada.Strings;
-with Ada.Strings.UTF_Encoding;
-with Ada.Strings.UTF_Encoding.Strings;
 with Ada.Environment_Variables;
-with Ada.Text_IO;
 with Ada.Strings.Fixed;
-with Ada.Characters.Handling;
 
 package body Standard_String_Operations is
+
+   --  Walk one UTF-8 code-point sequence starting at Buf (Start), decoding
+   --  the leading 1..4 bytes per RFC 3629 and reporting:
+   --
+   --    Code_Point — the decoded scalar value.  On malformed input the
+   --                 helper returns U+FFFD (16#FFFD#) as a deterministic
+   --                 replacement (FUNC-CONV-006: To_Latin_1 is total).
+   --    Step       — the number of source bytes consumed (1 for ASCII,
+   --                 2..4 for multi-byte sequences, 1 for resynchronisation
+   --                 on malformed input).
+   --
+   --  This helper is local to the body because both To_Latin_1 and
+   --  To_Latin_1_If_Possible need to consume exactly the same byte-walking
+   --  semantics, and the only difference between them is whether a
+   --  replacement is counted.
+   procedure Decode_One_UTF_8_Code_Point
+     (Buf        : String;
+      Start      : Natural;
+      Code_Point : out Natural;
+      Step       : out Natural);
+
+   procedure Decode_One_UTF_8_Code_Point
+     (Buf        : String;
+      Start      : Natural;
+      Code_Point : out Natural;
+      Step       : out Natural)
+   is
+      function Is_Cont (C : Character) return Boolean
+      is (Character'Pos (C) in 16#80# .. 16#BF#);
+
+      Lead : constant Natural := Character'Pos (Buf (Start));
+   begin
+      --  Default for malformed input: U+FFFD, single-byte resync.
+      Code_Point := 16#FFFD#;
+      Step       := 1;
+
+      if Lead <= 16#7F# then
+         --  1-byte ASCII.
+         Code_Point := Lead;
+         Step       := 1;
+
+      elsif Lead in 16#C2# .. 16#DF#
+        and then Start + 1 <= Buf'Last
+        and then Is_Cont (Buf (Start + 1))
+      then
+         --  2-byte sequence: 110xxxxx 10xxxxxx — encodes U+0080..U+07FF.
+         Code_Point :=
+           (Lead mod 32) * 64
+           + (Character'Pos (Buf (Start + 1)) mod 64);
+         Step       := 2;
+
+      elsif Lead in 16#E0# .. 16#EF#
+        and then Start + 2 <= Buf'Last
+        and then Is_Cont (Buf (Start + 1))
+        and then Is_Cont (Buf (Start + 2))
+      then
+         --  3-byte sequence: 1110xxxx 10xxxxxx 10xxxxxx
+         --  — encodes U+0800..U+FFFF (with surrogates U+D800..U+DFFF
+         --  treated as replacement).
+         Code_Point :=
+           (Lead mod 16) * 4_096
+           + (Character'Pos (Buf (Start + 1)) mod 64) * 64
+           + (Character'Pos (Buf (Start + 2)) mod 64);
+         Step       := 3;
+         if Code_Point in 16#D800# .. 16#DFFF# then
+            Code_Point := 16#FFFD#;
+         end if;
+
+      elsif Lead in 16#F0# .. 16#F4#
+        and then Start + 3 <= Buf'Last
+        and then Is_Cont (Buf (Start + 1))
+        and then Is_Cont (Buf (Start + 2))
+        and then Is_Cont (Buf (Start + 3))
+      then
+         --  4-byte sequence: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+         --  — encodes U+10000..U+10FFFF.
+         Code_Point :=
+           (Lead mod 8) * 262_144
+           + (Character'Pos (Buf (Start + 1)) mod 64) * 4_096
+           + (Character'Pos (Buf (Start + 2)) mod 64) * 64
+           + (Character'Pos (Buf (Start + 3)) mod 64);
+         Step       := 4;
+         if Code_Point > 16#10_FFFF# then
+            Code_Point := 16#FFFD#;
+         end if;
+      end if;
+      --  Any other lead byte (bare continuation 0x80..0xBF, overlong
+      --  starters 0xC0..0xC1, out-of-range 0xF5..0xFF, or truncated
+      --  multi-byte sequence) falls through to the default
+      --  (U+FFFD, single-byte resync) set above.
+   end Decode_One_UTF_8_Code_Point;
+
 
    function Environment_Value (Name : Unbounded_String; Default : Unbounded_String) return Unbounded_String is
    begin
@@ -202,14 +290,71 @@ package body Standard_String_Operations is
       return To_Unbounded_String ([1 => C]);
    end From_Character;
 
-   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, NFR-UTF8-007, NFR-UTF8-010
+   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006,
+   --            FUNC-CONV-001, FUNC-CONV-003, FUNC-CONV-011,
+   --            NFR-UTF8-007, NFR-UTF8-010
    function To_UTF_8 (Source : Unbounded_String) return String is
-      S : constant String := To_String (Source);
    begin
-      return
-        Ada.Strings.UTF_Encoding.Strings.Encode
-          (Item => S, Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8, Output_BOM => False);
+      --  Per FUNC-CONV-001 storage is UTF-8; emission is byte-identity.
+      --  Prior implementation called Ada.Strings.UTF_Encoding.Strings.Encode
+      --  which double-encoded UTF-8 input by treating each stored byte as
+      --  a Latin-1 code point (the bug fixed by this work-plan).
+      return To_String (Source);
    end To_UTF_8;
+
+   --  @relation FUNC-CONV-006, FUNC-CONV-007
+   function To_Latin_1 (Source : Unbounded_String) return String is
+      Buf     : constant String := To_String (Source);
+      Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
+      I       : Natural := Buf'First;
+   begin
+      while I <= Buf'Last loop
+         declare
+            CP   : Natural;
+            Step : Natural;
+         begin
+            Decode_One_UTF_8_Code_Point (Buf, I, CP, Step);
+            if CP <= 16#FF# then
+               Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (CP));
+            else
+               Ada.Strings.Unbounded.Append (Out_Buf, '?');
+            end if;
+            I := I + Step;
+         end;
+      end loop;
+      return Ada.Strings.Unbounded.To_String (Out_Buf);
+   end To_Latin_1;
+
+   --  @relation FUNC-CONV-008, FUNC-CONV-009
+   function To_Latin_1_If_Possible
+     (Source : Unbounded_String) return Anystrings_Conv.Latin_1_Conv_Result
+   is
+      Buf     : constant String := To_String (Source);
+      Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
+      I       : Natural := Buf'First;
+      Repls   : Natural := 0;
+   begin
+      while I <= Buf'Last loop
+         declare
+            CP   : Natural;
+            Step : Natural;
+         begin
+            Decode_One_UTF_8_Code_Point (Buf, I, CP, Step);
+            if CP <= 16#FF# then
+               Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (CP));
+            else
+               Ada.Strings.Unbounded.Append (Out_Buf, '?');
+               Repls := Repls + 1;
+            end if;
+            I := I + Step;
+         end;
+      end loop;
+      return
+        (Status         => (if Repls = 0 then Anystrings_Conv.Ok
+                            else Anystrings_Conv.Lossy),
+         Value          => Out_Buf,
+         Replaced_Count => Repls);
+   end To_Latin_1_If_Possible;
 
    function Char_Is_Line_Terminator (C : Character) return Boolean is
       P : constant Natural := Character'Pos (C);

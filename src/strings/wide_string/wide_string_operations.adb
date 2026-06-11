@@ -7,10 +7,12 @@
 
 with Ada.Strings.Wide_Fixed;
 with Ada.Strings;
+with Ada.Strings.Unbounded;
 with Ada.Strings.UTF_Encoding;
 with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Environment_Variables;
 with Ada.Wide_Characters.Handling;
+with Anystrings_Conv;
 with Anystrings_Internal_Wide_Environment_Encoding;
 
 package body Wide_String_Operations is
@@ -489,5 +491,33 @@ package body Wide_String_Operations is
    begin
       return Ada.Wide_Characters.Handling.To_Upper (C);
    end Char_To_Upper;
+
+   --  @relation FUNC-CONV-008, FUNC-CONV-009
+   function To_Latin_1_If_Possible
+     (Source : Unbounded_Wide_String) return Anystrings_Conv.Latin_1_Conv_Result
+   is
+      WS      : constant Wide_String :=
+        Ada.Strings.Wide_Unbounded.To_Wide_String (Source);
+      Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
+      Repls   : Natural := 0;
+   begin
+      for I in WS'Range loop
+         declare
+            CP : constant Natural := Wide_Character'Pos (WS (I));
+         begin
+            if CP <= 16#FF# then
+               Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (CP));
+            else
+               Ada.Strings.Unbounded.Append (Out_Buf, '?');
+               Repls := Repls + 1;
+            end if;
+         end;
+      end loop;
+      return
+        (Status         => (if Repls = 0 then Anystrings_Conv.Ok
+                            else Anystrings_Conv.Lossy),
+         Value          => Out_Buf,
+         Replaced_Count => Repls);
+   end To_Latin_1_If_Possible;
 
 end Wide_String_Operations;

@@ -27,6 +27,7 @@ with Ada.Strings.Unbounded;
 with Ada.Strings.Unbounded.Hash;
 with Ada.Strings.Fixed;
 with Ada.Characters.Handling;
+with Anystrings_Conv;
 
 package Standard_String_Operations is
 
@@ -86,11 +87,40 @@ package Standard_String_Operations is
    ---------------------------------------------------------------------------
 
    --  Convert from String to Unbounded_String
+   --
+   --  The `standard` backend stores its bytes verbatim. By project convention
+   --  (FUNC-CONV-001) the caller passes a well-formed UTF-8 byte sequence;
+   --  this function is byte-identity and performs no validation.
+   --  @relation FUNC-CONV-001
    function To_Unbounded_String (Source : String) return Unbounded_String
    renames Ada.Strings.Unbounded.To_Unbounded_String;
 
-   --  Convert from Unbounded_String to String
+   --  Byte-identity extraction of the underlying Unbounded_String contents.
+   --
+   --  This is the raw-bytes accessor used internally by the operations
+   --  package (Index, Trim, To_Lower, …) and bound to the `To_UTF_8` formal
+   --  of the Anystrings generic instantiation (per FUNC-CONV-003: the
+   --  storage is UTF-8, so emission is byte-identity).
    function To_String (Source : Unbounded_String) return String renames Ada.Strings.Unbounded.To_String;
+
+   --  Latin-1 egress: decode UTF-8 storage then transliterate each code
+   --  point to a single Latin-1 byte. Code points greater than U+00FF are
+   --  replaced by the single byte '?' (16#3F#) per FUNC-CONV-006.
+   --
+   --  Total; never raises.
+   --  @relation FUNC-CONV-006, FUNC-CONV-007
+   function To_Latin_1 (Source : Unbounded_String) return String;
+
+   --  Latin-1 egress with loss detection.
+   --
+   --  Same transliteration as To_Latin_1, but the returned record reports
+   --  whether any code point was replaced by '?' and how many. See
+   --  Anystrings_Conv.Latin_1_Conv_Result.
+   --
+   --  Total; never raises.
+   --  @relation FUNC-CONV-008, FUNC-CONV-009
+   function To_Latin_1_If_Possible
+     (Source : Unbounded_String) return Anystrings_Conv.Latin_1_Conv_Result;
 
    ---------------------------------------------------------------------------
    --  Environment Operations
@@ -186,24 +216,36 @@ package Standard_String_Operations is
 
    ---------------------------------------------------------------------------
    --  UTF-8 Boundary Operations (FUNC-UTF8-003, FUNC-UTF8-008, NFR-UTF8-007)
-   ---------------------------------------------------------------------------
 
-   --  @summary Encode an Unbounded_String (Latin-1 bytes) as a UTF-8 String.
+   --  @summary Emit the UTF-8 bytes held in the storage.
    --
    --  @description
-   --  The standard backend stores Latin-1 bytes. This function encodes each
-   --  byte as a UTF-8 scalar using Ada.Strings.UTF_Encoding.Strings.Encode,
-   --  which expands code points 128..255 to two-byte UTF-8 sequences.
-   --  ASCII-only input (0..127) passes through byte-for-byte (FUNC-UTF8-005).
-   --  Surrogates cannot occur in Character (range 0..255), so FUNC-UTF8-007
-   --  is satisfied vacuously. The result is always well-formed UTF-8
-   --  (FUNC-UTF8-006). This function is NOT a rename of To_String (NFR-UTF8-010):
-   --  the output differs from To_Latin_1 for code points 128..255 because
-   --  UTF-8 expands them to multi-byte sequences whereas Latin-1 maps them 1:1.
+   --  Per FUNC-CONV-001 / FUNC-CONV-003 the `standard` backend stores its
+   --  bytes as a UTF-8 byte sequence (caller's responsibility — guaranteed
+   --  by the From_UTF_8 ingestion path, by the Ada.Command_Line bridge per
+   --  FUNC-CMDLINE-008, and by the UTF-8 source-file convention recorded in
+   --  the root AGENTS.md). To_UTF_8 is therefore byte-identity: it returns
+   --  Ada.Strings.Unbounded.To_String (Source) verbatim, with no
+   --  transcoding step.
    --
-   --  @param Source  The Unbounded_String to encode.
-   --  @return        Well-formed UTF-8 byte sequence as a Standard.String.
-   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, NFR-UTF8-007, NFR-UTF8-010
+   --  This is observationally equivalent to the prior
+   --  Ada.Strings.UTF_Encoding.Strings.Encode-based body on ASCII input,
+   --  but produces correct (non-double-encoded) output on UTF-8 input —
+   --  the previous behaviour treated stored bytes as Latin-1 code points
+   --  and re-encoded them, producing systematic mojibake on any non-ASCII
+   --  argv or environment value (FUNC-CONV-011 amendment to FUNC-UTF8-003).
+   --
+   --  ASCII (U+0000..U+007F) passes through byte-for-byte (FUNC-UTF8-005,
+   --  FUNC-CONV-005). Surrogates cannot occur in a Character (range
+   --  0..255), so FUNC-UTF8-007 is satisfied vacuously. The result is
+   --  well-formed UTF-8 whenever the storage was well-formed UTF-8
+   --  (FUNC-UTF8-006).
+   --
+   --  @param Source  The Unbounded_String whose stored bytes (UTF-8) are
+   --                 to be returned.
+   --  @return        The stored UTF-8 byte sequence.
+   --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-CONV-001,
+   --            FUNC-CONV-003, FUNC-CONV-011, NFR-UTF8-007, NFR-UTF8-010
    function To_UTF_8 (Source : Unbounded_String) return String;
 
    ---------------------------------------------------------------------------
