@@ -1,0 +1,344 @@
+[DOCUMENT]
+TITLE: Command-Line Access — Functional Requirements
+REQ_PREFIX: FUNC-CMDLINE-
+
+[GRAMMAR]
+ELEMENTS:
+- TAG: REQUIREMENT
+  FIELDS:
+  - TITLE: UID
+    TYPE: String
+    REQUIRED: True
+  - TITLE: STATUS
+    TYPE: String
+    REQUIRED: False
+  - TITLE: PRIORITY
+    TYPE: String
+    REQUIRED: False
+  - TITLE: TITLE
+    TYPE: String
+    REQUIRED: False
+  - TITLE: STATEMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: COMMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: RELATIONS
+    TYPE: String
+    REQUIRED: False
+
+[SECTION]
+TITLE: Context
+
+[TEXT]
+Feature: **CMDLINE-ACCESS** — Ada.Command_Line bridge for anystrings.
+
+Today, users who need command-line argument access must interact with
+``Ada.Command_Line`` directly and convert the returned ``String`` values into
+their backend's ``String_Type`` themselves.  This conversion is implicit and
+error-prone, particularly for the ``wide``, ``wide_wide``, ``uxstring``, and
+``vss`` backends where the encoding semantics of an Ada ``String`` differ from
+the backend's native character model.
+
+This feature adds a thin bridge so that user code can query argument count,
+retrieve individual arguments, read the command name, and manage the process
+exit status — all through ``String_Types``, without any backend-specific
+conversion code at the call site.
+
+All five bundled backends (``standard``, ``wide``, ``wide_wide``, ``uxstring``,
+``vss``) MUST expose an identical public surface for this feature through
+``String_Types``.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Argument Vector Access
+
+[REQUIREMENT]
+UID: FUNC-CMDLINE-001
+STATUS: Approved
+PRIORITY: Must
+TITLE: Argument count function
+STATEMENT: >>>
+The public API SHALL provide a function that returns the number of
+command-line arguments passed to the current program as a value of
+type ``Natural``.  The result SHALL be equivalent to the value of
+``Ada.Command_Line.Argument_Count``.
+
+When the execution environment does not support command-line arguments,
+the function SHALL return 0.
+<<<
+COMMENT: >>>
+``Argument_Count`` does not involve ``String_Type`` and therefore requires
+no encoding conversion.  It is included in this feature so that callers
+do not need to ``with Ada.Command_Line`` solely to bound the index range
+for the argument-access function (FUNC-CMDLINE-002).
+<<<
+
+[REQUIREMENT]
+UID: FUNC-CMDLINE-002
+STATUS: Approved
+PRIORITY: Must
+TITLE: Indexed argument access returning String_Type
+STATEMENT: >>>
+The public API SHALL provide a function that, given a positive integer
+index ``N``, returns the ``N``-th command-line argument as a
+``String_Type`` value.
+
+The text of the returned value SHALL represent the same argument as
+``Ada.Command_Line.Argument (N)``, converted to ``String_Type`` using
+the encoding convention specified in FUNC-CMDLINE-008.
+<<<
+COMMENT: >>>
+Indexing follows the same convention as ``Ada.Command_Line.Argument``:
+index 1 denotes the first argument following the command name.  The
+command name itself is not part of the argument vector and is accessible
+via the command-name function (FUNC-CMDLINE-004).
+<<<
+RELATIONS: FUNC-CMDLINE-001
+
+[REQUIREMENT]
+UID: FUNC-CMDLINE-003
+STATUS: Approved
+PRIORITY: Must
+TITLE: Constraint_Error raised for out-of-range argument index
+STATEMENT: >>>
+When the index ``N`` supplied to the argument-access function
+(FUNC-CMDLINE-002) does not satisfy ``1 <= N <= Argument_Count``, the
+function SHALL raise ``Constraint_Error``.  This behavior SHALL mirror
+the semantics of ``Ada.Command_Line.Argument`` when called with an
+out-of-range index.
+
+No other exception and no result value SHALL be returned for an
+out-of-range index.
+<<<
+COMMENT: >>>
+Raising ``Constraint_Error`` is the behavior mandated by Ada RM A.15 for
+``Ada.Command_Line.Argument``.  Matching this exactly ensures that
+programs which already catch ``Constraint_Error`` to detect bad indices
+behave identically when ported to use the anystrings bridge.
+
+When ``Argument_Count`` is 0 there is no valid index, so any call to
+the argument-access function SHALL raise ``Constraint_Error``.
+<<<
+RELATIONS: FUNC-CMDLINE-002
+
+[/SECTION]
+
+[SECTION]
+TITLE: Command Name
+
+[REQUIREMENT]
+UID: FUNC-CMDLINE-004
+STATUS: Approved
+PRIORITY: Must
+TITLE: Command name function returning String_Type
+STATEMENT: >>>
+The public API SHALL provide a function that returns the name under
+which the current program was invoked as a ``String_Type`` value.
+
+The text of the returned value SHALL represent the same name as
+``Ada.Command_Line.Command_Name``, converted to ``String_Type`` using
+the encoding convention specified in FUNC-CMDLINE-008.
+
+If the execution environment does not provide a meaningful command
+name, the function SHALL return the empty ``String_Type`` value,
+consistent with the empty ``String`` that ``Ada.Command_Line.Command_Name``
+may return in that case.
+<<<
+COMMENT: >>>
+Ada RM A.15 does not guarantee that ``Command_Name`` returns a non-empty
+value on all platforms.  The empty-string fallback preserves totality:
+the function SHALL NOT raise in any execution environment.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Process Exit Status
+
+[REQUIREMENT]
+UID: FUNC-CMDLINE-005
+STATUS: Approved
+PRIORITY: Must
+TITLE: Exit status type and named constants exposed through String_Types
+STATEMENT: >>>
+The public API SHALL expose:
+
+- A type or subtype representing a valid process exit status code,
+  equivalent in range and semantics to ``Ada.Command_Line.Exit_Status``.
+- A named constant ``Success`` with the same value as
+  ``Ada.Command_Line.Success``.
+- A named constant ``Failure`` with the same value as
+  ``Ada.Command_Line.Failure``.
+
+All three SHALL be accessible from ``with String_Types; use String_Types;``
+without additional ``with`` clauses.
+<<<
+COMMENT: >>>
+Exposing ``Success`` and ``Failure`` alongside the argument-access
+functions allows callers to write a complete command-line program using
+only ``String_Types``, without importing ``Ada.Command_Line`` directly.
+The type-equivalence requirement ensures that values can be passed to
+the set-exit-status procedures (FUNC-CMDLINE-006, FUNC-CMDLINE-007)
+without explicit type conversion.
+<<<
+
+[REQUIREMENT]
+UID: FUNC-CMDLINE-006
+STATUS: Approved
+PRIORITY: Must
+TITLE: Set exit status with Exit_Status value
+STATEMENT: >>>
+The public API SHALL provide a procedure that, given a value of the
+exit status type (FUNC-CMDLINE-005), communicates that value as the
+process exit status to the operating system upon normal program
+termination.  The observable effect SHALL be equivalent to calling
+``Ada.Command_Line.Set_Exit_Status`` with the same value.
+
+The procedure SHALL accept at minimum the constants ``Success`` and
+``Failure`` defined in FUNC-CMDLINE-005 as arguments.
+<<<
+RELATIONS: FUNC-CMDLINE-005
+
+[REQUIREMENT]
+UID: FUNC-CMDLINE-007
+STATUS: Approved
+PRIORITY: Should
+TITLE: Set exit status with explicit integer code
+STATEMENT: >>>
+The public API SHALL provide a procedure or an additional overload of
+the set-exit-status procedure (FUNC-CMDLINE-006) that accepts an
+explicit integer value and communicates it as the process exit status.
+The accepted integer range SHALL be consistent with the range of
+``Ada.Command_Line.Exit_Status`` on the target platform.
+<<<
+COMMENT: >>>
+Some programs signal platform-specific exit codes beyond ``Success`` and
+``Failure`` (e.g. POSIX conventions: 2 = misuse of command,
+126 = command not executable, 127 = command not found).  This overload
+avoids forcing callers to perform an explicit type conversion when a
+specific numeric code is required.
+
+This requirement is rated ``Should`` rather than ``Must`` because it
+adds call-site convenience but does not change any observable behavior
+that the named-constant procedure (FUNC-CMDLINE-006) cannot cover for
+the most common use cases.
+<<<
+RELATIONS: FUNC-CMDLINE-006
+
+[/SECTION]
+
+[SECTION]
+TITLE: Encoding Semantics
+
+[REQUIREMENT]
+UID: FUNC-CMDLINE-008
+STATUS: Approved
+PRIORITY: Must
+TITLE: Argument and command-name strings use the most encoding-precise OS primitive per backend
+STATEMENT: >>>
+Each backend's implementation of the argument-access function
+(FUNC-CMDLINE-002) and the command-name function (FUNC-CMDLINE-004)
+SHALL use the OS-supplied primitive that preserves the greatest amount
+of source information for that backend's underlying character
+repertoire:
+
+- Backends whose native character type is ``Character`` (``standard``)
+  SHALL call ``Ada.Command_Line.Argument`` and
+  ``Ada.Command_Line.Command_Name`` and pass the bytes through
+  unchanged.
+- Backends whose native character type is ``Wide_Character``
+  (``wide``) SHALL call ``Ada.Wide_Command_Line.Argument`` and
+  ``Ada.Wide_Command_Line.Command_Name`` (Ada RM A.15.1) — never
+  Latin-1-widening a narrow ``String``.
+- Backends whose native character type is ``Wide_Wide_Character``
+  (``wide_wide``) SHALL call ``Ada.Wide_Wide_Command_Line.Argument``
+  and ``Ada.Wide_Wide_Command_Line.Command_Name`` (Ada RM A.15.1).
+- Backends backed by Unicode-aware external libraries (``uxstring``,
+  ``vss``) SHALL call ``Ada.Command_Line.Argument`` and
+  ``Ada.Command_Line.Command_Name`` and decode the returned ``String``
+  as UTF-8 using the backend's native UTF-8 ingestion primitive.
+
+The chosen conversion SHALL be lossless on the set of values
+representable by both the OS-supplied primitive and the backend's
+character repertoire.
+<<<
+COMMENT: >>>
+This requirement was amended after the initial implementation revealed
+that the original "use ``To_String_Type``" convention caused systematic
+mojibake on the four Unicode-capable backends: argv is UTF-8 on most
+Linux/macOS configurations, but ``To_String_Type`` on ``wide``,
+``wide_wide``, ``uxstring`` and ``vss`` is Latin-1 widening by project
+convention.  Each backend therefore re-encoded the OS bytes as Latin-1
+code points and produced mojibake on any non-ASCII argument.
+
+The amendment binds each backend to the encoding-precise primitive that
+the Ada standard library and the external string libraries already
+provide:
+
+* ``Ada.Wide_Command_Line`` / ``Ada.Wide_Wide_Command_Line`` are the
+  Ada-RM-specified vehicles for delivering OS-decoded wide characters
+  without an intermediate ``String`` round-trip.
+* UXStrings and VSS expose explicit UTF-8 ingestion entry points;
+  using them is strictly more correct than Latin-1 widening for
+  command-line arguments coming from the OS.
+
+A future requirement may relax this in the opposite direction (e.g. an
+opt-in to force a specific OS-side encoding when the host disagrees
+with the runtime's default), but that is out of scope here.
+
+Backend parity (FUNC-CMDLINE-009) is unaffected: the public signatures
+remain identical; only the per-backend implementation path differs.
+<<<
+RELATIONS: FUNC-CMDLINE-002, FUNC-CMDLINE-004
+
+[/SECTION]
+
+[SECTION]
+TITLE: Backend Coverage and API Parity
+
+[REQUIREMENT]
+UID: FUNC-CMDLINE-009
+STATUS: Approved
+PRIORITY: Must
+TITLE: All five backends expose identical command-line API through String_Types
+STATEMENT: >>>
+The command-line access API SHALL be accessible uniformly from
+``with String_Types; use String_Types;`` for each of the five bundled
+backends:
+
+- ``src/strings/standard/``   — Latin-1 / Ada ``String`` backend
+- ``src/strings/wide/``       — ``Wide_String`` / ``Wide_Character`` backend
+- ``src/strings/wide_wide/``  — ``Wide_Wide_String`` / ``Wide_Wide_Character``
+                                backend
+- ``src/strings/uxstring/``   — UXStrings backend
+- ``src/strings/vss/``        — VSS backend
+
+The public signatures for the following SHALL be identical across all
+five backends such that user code written against one backend compiles
+and runs correctly against any other without modification:
+
+- The argument-count function (FUNC-CMDLINE-001).
+- The argument-access function (FUNC-CMDLINE-002).
+- The command-name function (FUNC-CMDLINE-004).
+- The exit status type, ``Success``, and ``Failure`` constants
+  (FUNC-CMDLINE-005).
+- The set-exit-status procedure(s) (FUNC-CMDLINE-006, FUNC-CMDLINE-007).
+<<<
+COMMENT: >>>
+This mirrors the backend-swap guarantee that governs the rest of the
+``String_Types`` surface.  The pattern is established by NFR-UTF8-006,
+which requires the UTF-8 operations to be identically exported from all
+four existing backends.  This requirement extends that parity rule to
+the command-line access feature and to all five backends including
+``vss``.
+
+The exact mechanism by which each ``string_types.ads`` makes these
+operations available (renaming, instantiation, direct declaration) is
+a tech-spec decision out of scope here.
+<<<
+RELATIONS: FUNC-CMDLINE-001, FUNC-CMDLINE-002, FUNC-CMDLINE-004, FUNC-CMDLINE-005
+
+[/SECTION]

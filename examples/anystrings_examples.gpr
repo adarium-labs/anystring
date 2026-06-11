@@ -22,10 +22,11 @@ project Anystrings_Examples is
    for Main use
      ("anystrings_examples.adb",
       "anystrings_env_encoding_regression.adb",
-      "anystrings_utf_8_demo.adb");
+      "anystrings_utf_8_demo.adb",
+      "anystrings_cmdline_demo.adb");
 
    package Compiler is
-      for Default_Switches ("Ada") use Anystrings_Examples_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2012");
+      for Default_Switches ("Ada") use Anystrings_Examples_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2022");
    end Compiler;
 
    package Binder is

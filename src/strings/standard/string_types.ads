@@ -18,6 +18,7 @@ with Standard_String_Operations;
 with Standard_UTF_8_Results;
 with Standard_UTF_8_Bridge;
 with Anystrings_UTF_8;
+with Standard_Command_Line;
 
 package String_Types is
 
@@ -305,5 +306,33 @@ package String_Types is
 
    function To_Upper (C : Character_Type) return Character_Type
    renames Standard_String_Operations.Char_To_Upper;
+
+   ---------------------------------------------------------------------------
+   --  Command-line access (FUNC-CMDLINE-001..009)
+   ---------------------------------------------------------------------------
+
+   --  @relation FUNC-CMDLINE-001, FUNC-CMDLINE-002, FUNC-CMDLINE-003,
+   --            FUNC-CMDLINE-004, FUNC-CMDLINE-005, FUNC-CMDLINE-006,
+   --            FUNC-CMDLINE-007, FUNC-CMDLINE-008, FUNC-CMDLINE-009
+
+   function Argument_Count return Natural
+     renames Standard_Command_Line.Argument_Count;
+
+   function Argument (Number : Positive) return String_Type
+     renames Standard_Command_Line.Argument;
+
+   function Command_Name return String_Type
+     renames Standard_Command_Line.Command_Name;
+
+   subtype Exit_Status is Standard_Command_Line.Exit_Status;
+
+   Success : constant Exit_Status := Standard_Command_Line.Success;
+   Failure : constant Exit_Status := Standard_Command_Line.Failure;
+
+   procedure Set_Exit_Status (Code : Exit_Status)
+     renames Standard_Command_Line.Set_Exit_Status;
+
+   procedure Set_Exit_Status (Code : Integer)
+     renames Standard_Command_Line.Set_Exit_Status;
 
 end String_Types;

@@ -388,7 +388,7 @@ package body Wide_String_Operations is
 
    function From_Character (C : Wide_Character) return Unbounded_Wide_String is
    begin
-      return Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String ((1 => C));
+      return Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String ([1 => C]);
    end From_Character;
 
    --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007, NFR-UTF8-007

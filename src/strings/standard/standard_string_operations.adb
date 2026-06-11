@@ -199,7 +199,7 @@ package body Standard_String_Operations is
 
    function From_Character (C : Character) return Unbounded_String is
    begin
-      return To_Unbounded_String ((1 => C));
+      return To_Unbounded_String ([1 => C]);
    end From_Character;
 
    --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, NFR-UTF8-007, NFR-UTF8-010

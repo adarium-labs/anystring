@@ -73,7 +73,7 @@ project Anystrings is
    for Library_Kind use Library_Type;
 
    package Compiler is
-      for Default_Switches ("Ada") use Anystrings_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2012");
+      for Default_Switches ("Ada") use Anystrings_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2022");
    end Compiler;
 
    package Binder is
