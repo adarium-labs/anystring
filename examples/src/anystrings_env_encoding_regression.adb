@@ -2,6 +2,7 @@ with Ada.Environment_Variables;
 with Ada.Text_IO; use Ada.Text_IO;
 with Anystrings_Examples_Support;
 with String_Types; use String_Types;
+with String_Types.Environment; use String_Types.Environment;
 
 procedure Anystrings_Env_Encoding_Regression is
    use type Anystrings_Examples_Support.Wide_Env_Encoding_Kind;

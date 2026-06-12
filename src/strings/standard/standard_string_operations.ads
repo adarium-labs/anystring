@@ -24,7 +24,6 @@
 with Ada.Containers;
 with Ada.Strings.Unbounded;
 with Ada.Strings.Unbounded.Hash;
-with Ada.Strings.Fixed;
 with Ada.Characters.Handling;
 with Anystrings_Conv;
 

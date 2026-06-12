@@ -2,6 +2,7 @@ with Ada.Directories;
 with Ada.Text_IO;
 with Anystrings_Examples_Support;
 with String_Types; use String_Types;
+with String_Types.Environment; use String_Types.Environment;
 with String_Types.Text_IO; use String_Types.Text_IO;
 
 procedure Anystrings_Examples is
