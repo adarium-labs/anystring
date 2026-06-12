@@ -5,7 +5,7 @@
 with AUnit.Assertions; use AUnit.Assertions;
 with AUnit.Test_Cases; use AUnit.Test_Cases;
 with String_Types;     use String_Types;
-
+with String_Types.Command_Line; use String_Types.Command_Line;
 package body Cmdline_Test is
 
    overriding function Name (T : Test_Case) return AUnit.Message_String is

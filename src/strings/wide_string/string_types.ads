@@ -18,8 +18,6 @@ with Wide_UTF_8_Results;
 with Wide_UTF_8_Bridge;
 with Anystrings_UTF_8;
 with Anystrings_Conv;
-with Wide_Command_Line;
-
 package String_Types is
 
    subtype String_Type is Wide_String_Operations.Unbounded_Wide_String;
@@ -442,32 +440,8 @@ package String_Types is
      renames Wide_String_Operations.Char_To_Upper;
 
    ---------------------------------------------------------------------------
-   --  Command-line access (FUNC-CMDLINE-001..009)
-   ---------------------------------------------------------------------------
 
-   --  @relation FUNC-CMDLINE-001, FUNC-CMDLINE-002, FUNC-CMDLINE-003,
-   --            FUNC-CMDLINE-004, FUNC-CMDLINE-005, FUNC-CMDLINE-006,
-   --            FUNC-CMDLINE-007, FUNC-CMDLINE-008, FUNC-CMDLINE-009
 
-   function Argument_Count return Natural
-     renames Wide_Command_Line.Argument_Count;
-
-   function Argument (Number : Positive) return String_Type
-     renames Wide_Command_Line.Argument;
-
-   function Command_Name return String_Type
-     renames Wide_Command_Line.Command_Name;
-
-   subtype Exit_Status is Wide_Command_Line.Exit_Status;
-
-   Success : constant Exit_Status := Wide_Command_Line.Success;
-   Failure : constant Exit_Status := Wide_Command_Line.Failure;
-
-   procedure Set_Exit_Status (Code : Exit_Status)
-     renames Wide_Command_Line.Set_Exit_Status;
-
-   procedure Set_Exit_Status (Code : Integer)
-     renames Wide_Command_Line.Set_Exit_Status;
 
    --  ----- Filesystem boundary (FUNC-DIR-001..008, NFR-DIR-001..005) -----
 

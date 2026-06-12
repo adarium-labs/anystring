@@ -24,7 +24,8 @@ project Anystrings_Examples is
       "anystrings_env_encoding_regression.adb",
       "anystrings_utf_8_demo.adb",
       "anystrings_cmdline_demo.adb",
-      "anystrings_filesystem_demo.adb");
+      "anystrings_filesystem_demo.adb",
+      "anystrings_facade_isolation.adb");
 
    package Compiler is
       for Default_Switches ("Ada") use Anystrings_Examples_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2022");

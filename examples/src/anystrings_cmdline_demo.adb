@@ -23,7 +23,7 @@
 
 with Ada.Text_IO;
 with String_Types; use String_Types;
-
+with String_Types.Command_Line; use String_Types.Command_Line;
 procedure Anystrings_Cmdline_Demo is
 begin
    --  FUNC-CMDLINE-001: query the number of command-line arguments

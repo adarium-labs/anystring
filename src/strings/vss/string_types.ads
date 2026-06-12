@@ -23,8 +23,6 @@ with VSS_Operations;
 with VSS_Strings;
 with VSS_UTF_8_Bridge;
 with VSS_UTF_8_Results;
-with VSS_Command_Line;
-
 package String_Types is
 
    subtype String_Type is VSS.Strings.Virtual_String;
@@ -422,32 +420,8 @@ package String_Types is
      renames VSS_Operations.Char_To_Upper;
 
    ---------------------------------------------------------------------------
-   --  Command-line access (FUNC-CMDLINE-001..009)
-   ---------------------------------------------------------------------------
 
-   --  @relation FUNC-CMDLINE-001, FUNC-CMDLINE-002, FUNC-CMDLINE-003,
-   --            FUNC-CMDLINE-004, FUNC-CMDLINE-005, FUNC-CMDLINE-006,
-   --            FUNC-CMDLINE-007, FUNC-CMDLINE-008, FUNC-CMDLINE-009
 
-   function Argument_Count return Natural
-     renames VSS_Command_Line.Argument_Count;
-
-   function Argument (Number : Positive) return String_Type
-     renames VSS_Command_Line.Argument;
-
-   function Command_Name return String_Type
-     renames VSS_Command_Line.Command_Name;
-
-   subtype Exit_Status is VSS_Command_Line.Exit_Status;
-
-   Success : constant Exit_Status := VSS_Command_Line.Success;
-   Failure : constant Exit_Status := VSS_Command_Line.Failure;
-
-   procedure Set_Exit_Status (Code : Exit_Status)
-     renames VSS_Command_Line.Set_Exit_Status;
-
-   procedure Set_Exit_Status (Code : Integer)
-     renames VSS_Command_Line.Set_Exit_Status;
 
    --  ----- Filesystem boundary (FUNC-DIR-001..008, NFR-DIR-001..005) -----
 

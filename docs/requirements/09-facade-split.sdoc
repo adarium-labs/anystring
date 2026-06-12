@@ -1,0 +1,301 @@
+[DOCUMENT]
+TITLE: String_Types Facade Split — Functional Requirements
+REQ_PREFIX: FUNC-FACADE-
+
+[GRAMMAR]
+ELEMENTS:
+- TAG: REQUIREMENT
+  FIELDS:
+  - TITLE: UID
+    TYPE: String
+    REQUIRED: True
+  - TITLE: STATUS
+    TYPE: String
+    REQUIRED: False
+  - TITLE: PRIORITY
+    TYPE: String
+    REQUIRED: False
+  - TITLE: TITLE
+    TYPE: String
+    REQUIRED: False
+  - TITLE: STATEMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: COMMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: RELATIONS
+    TYPE: String
+    REQUIRED: False
+
+[SECTION]
+TITLE: Context
+
+[TEXT]
+Feature: **FACADE-SPLIT** — Cleave OS-touching addons out of the
+``String_Types`` facade into Ada child packages, so the strings layer
+stays focused and SPARK-clean.
+
+Today ``String_Types`` is a god-package: it re-exports the command-line
+bridge (``Argument_Count``, ``Argument``, ``Set_Exit_Status``, …), the
+environment-variable bridge, the ``Ada.Directories`` bridge and the
+``Ada.Text_IO``-style bridge alongside the strings API. Consumers that
+need only string operations are still forced to compile against
+``Ada.Command_Line`` transitively, which (a) muddies the SPARK story —
+``Anystrings`` is ``SPARK_Mode On`` but the addons are ``SPARK_Mode
+Off`` — and (b) drags OS-coupling into every translation unit that says
+``with String_Types;``.
+
+This document covers **Layer 1** of a two-layer plan. Layer 1 splits the
+*facade* — i.e. it moves the user-visible ``renames`` for the
+command-line bridge out of ``String_Types`` and into the Ada child
+package ``String_Types.Command_Line``. Layer 2 (out of scope here)
+extracts the environment / directories / Text_IO bridges from the
+``Anystrings`` generic formals into standalone per-backend packages,
+so that a similar child-package split can be applied to them while
+also satisfying the dependency-isolation invariant
+(FUNC-FACADE-004).
+
+The decision to keep environment / directories / Text_IO inside
+``String_Types`` for Layer 1 is deliberate. Those three bridges are
+declared as **generic formal parameters** of the ``Anystrings`` package
+(``src/anystrings.ads``) and are instantiated via the per-backend
+``<X>_String_Operations`` package, whose spec ``with``s
+``Ada.Text_IO`` publicly. Moving only the *renames* into child
+packages while leaving the generic structure unchanged would not
+isolate the OS-unit dependency closure: every consumer of
+``String_Types`` would still pull ``Ada.Text_IO``,
+``Ada.Environment_Variables`` and ``Ada.Directories`` through the
+``with String_Types -> with <X>_Strings -> with
+<X>_String_Operations`` chain. Achieving true isolation for those
+three requires restructuring the generic, which is Layer 2.
+
+The command-line bridge, by contrast, is already a hand-rolled
+per-backend package (``<X>_Command_Line``) that is **not** declared
+as a formal of the ``Anystrings`` generic. Its facade can therefore
+be split into a child package today with a clean dependency-isolation
+guarantee.
+
+All five bundled backends (``standard``, ``wide_string``,
+``wide_wide_string``, ``uxstring``, ``vss``) MUST expose an identical
+public surface for the new child package, mirroring the parity rule
+already established for ``String_Types`` itself (FUNC-CMDLINE-009).
+
+[/SECTION]
+
+[SECTION]
+TITLE: Facade Shape
+
+[REQUIREMENT]
+UID: FUNC-FACADE-001
+STATUS: Approved
+PRIORITY: Must
+TITLE: String_Types is strings-only
+STATEMENT: >>>
+The package ``String_Types`` SHALL NOT re-export any subprogram, type,
+constant, or subtype belonging to the command-line bridge feature
+(FUNC-CMDLINE-001..009).
+
+The strings-shaped surface — ``String_Type``, ``Character_Type``,
+``Empty_String``, the comparison operators, conversion helpers
+(``To_String_Type``, ``To_Latin_1``, ``To_UTF_8``, ``From_UTF_8`` and
+their result types), the character-classification predicates, the
+case-mapping subprograms, the substring-search and substitution
+helpers, the prefix / suffix predicates, the Latin-1 lossy-detection
+helpers, and the Hash function — SHALL remain accessible from
+``String_Types`` directly.
+<<<
+COMMENT: >>>
+This is the facade-cleanup invariant. After this change, a consumer
+that needs only string operations writes ``with String_Types;`` and
+inherits no command-line surface. The environment / directories /
+Text_IO surfaces remain on ``String_Types`` for now (see Context for
+why); they are scheduled for Layer 2.
+<<<
+RELATIONS: FUNC-CMDLINE-009
+
+[REQUIREMENT]
+UID: FUNC-FACADE-002
+STATUS: Approved
+PRIORITY: Must
+TITLE: Command-line bridge exposed via String_Types.Command_Line child package
+STATEMENT: >>>
+The command-line bridge SHALL be exposed to user code as an Ada child
+package of ``String_Types``, named ``String_Types.Command_Line``.
+
+The child package SHALL re-export, by Ada ``renames`` or equivalent
+mechanism, the entirety of the public surface introduced by
+FUNC-CMDLINE-001..009:
+
+- The argument-count function (FUNC-CMDLINE-001).
+- The argument-access function (FUNC-CMDLINE-002, FUNC-CMDLINE-003).
+- The command-name function (FUNC-CMDLINE-004).
+- The exit-status subtype together with the ``Success`` and ``Failure``
+  constants (FUNC-CMDLINE-005).
+- Both ``Set_Exit_Status`` overloads (FUNC-CMDLINE-006, FUNC-CMDLINE-007).
+
+The signatures of these declarations in ``String_Types.Command_Line``
+SHALL be identical to those previously exposed by ``String_Types``;
+only the package qualification at the call site changes.
+<<<
+COMMENT: >>>
+"Identical signature" means same name, same parameter profile, same
+return type, same enumeration-literal visibility. Existing call sites
+that previously wrote ``Argument_Count`` (relying on ``use
+String_Types;``) will now write ``Argument_Count`` (relying on ``use
+String_Types.Command_Line;`` in addition).
+
+The right-hand side of each ``renames`` differs per backend
+(``Standard_Command_Line``, ``Wide_Command_Line``, …); this is the
+existing per-backend package that already exists in
+``src/strings/<dir>/<X>_command_line.ads/adb`` and is unchanged by
+this feature.
+<<<
+RELATIONS: FUNC-CMDLINE-001, FUNC-CMDLINE-002, FUNC-CMDLINE-003, FUNC-CMDLINE-004, FUNC-CMDLINE-005, FUNC-CMDLINE-006, FUNC-CMDLINE-007
+
+[REQUIREMENT]
+UID: FUNC-FACADE-003
+STATUS: Approved
+PRIORITY: Must
+TITLE: String_Types.Command_Line has identical surface across all five backends
+STATEMENT: >>>
+The package ``String_Types.Command_Line`` SHALL be present in every one
+of the five bundled backend directories
+(``src/strings/{standard,wide_string,wide_wide_string,uxstring,vss}/``)
+and SHALL expose the same set of declarations with the same public
+signatures across all five.
+
+Only the right-hand side of each ``renames`` MAY differ between
+backends (it MUST reference the local per-backend ``<X>_Command_Line``
+implementation package).
+
+User source code that ``with``s ``String_Types.Command_Line``,
+optionally ``use``s it, and calls any of the declared subprograms
+SHALL compile unchanged under any of the five backends.
+<<<
+COMMENT: >>>
+This is the generalisation of FUNC-CMDLINE-009 to the new child
+package. The parity rule is the same property that already governs
+the rest of ``String_Types``: backend swap MUST be a build-time
+source-directory substitution with zero consumer-side change.
+
+Mechanically: the left-hand-side declarations of all five copies of
+``string_types-command_line.ads`` MUST be byte-identical to each other
+up to (a) the ``with`` clause and (b) the right-hand side of each
+``renames``. No backend MAY add or remove a subprogram from the child
+package.
+<<<
+RELATIONS: FUNC-FACADE-002, FUNC-CMDLINE-009
+
+[/SECTION]
+
+[SECTION]
+TITLE: Dependency Isolation
+
+[REQUIREMENT]
+UID: FUNC-FACADE-004
+STATUS: Approved
+PRIORITY: Must
+TITLE: Pure String_Types consumers do not pull Ada.Command_Line transitively
+STATEMENT: >>>
+A user compilation unit whose context clause is ``with String_Types;``
+(without ``with String_Types.Command_Line;``) SHALL NOT have
+``Ada.Command_Line`` in its semantic dependence closure.
+
+Equivalently: the unit-list produced by ``gnatbind`` for a program
+``with String_Types; procedure P is begin null; end P;`` SHALL NOT
+contain a reference to ``Ada.Command_Line``.
+
+This SHALL hold for all five bundled backends.
+<<<
+COMMENT: >>>
+This is the dependency-isolation invariant — the core observable gain
+of Layer 1. Before the split, the closure
+``String_Types -> <X>_Command_Line -> Ada.Command_Line`` was forced
+on every user. After the split, ``Ada.Command_Line`` enters the
+closure only when the user explicitly opts in by saying
+``with String_Types.Command_Line;``.
+
+Verification is performed at the build-system level rather than at
+runtime: a build-time check in
+``examples/run_all_backends_demo.sh`` (or an equivalent script)
+inspects the generated ``.ali`` file for the isolation-test program
+and asserts the absence of ``Ada.Command_Line`` in the unit list.
+
+Note that this requirement scopes only the command-line bridge.
+The analogous guarantee for ``Ada.Environment_Variables``,
+``Ada.Directories`` and ``Ada.Text_IO`` is NOT in scope for Layer 1
+because their implementations are wired through ``Anystrings``
+generic formals; achieving isolation for them requires the Layer 2
+generic-restructure.
+<<<
+RELATIONS: FUNC-FACADE-001, FUNC-FACADE-002
+
+[/SECTION]
+
+[SECTION]
+TITLE: Internal Layout
+
+[REQUIREMENT]
+UID: FUNC-FACADE-005
+STATUS: Approved
+PRIORITY: Should
+TITLE: Per-backend implementation packages keep their existing flat names
+STATEMENT: >>>
+The existing per-backend implementation packages
+``Standard_Command_Line``, ``Wide_Command_Line``,
+``Wide_Wide_Command_Line``, ``UXString_Command_Line`` and
+``VSS_Command_Line`` (one per backend, located at
+``src/strings/<dir>/<prefix>_command_line.{ads,adb}``) SHALL retain
+their current names and file paths.
+
+These packages SHALL NOT be made Ada child packages of either
+``Anystrings`` or ``String_Types``; they remain top-level
+implementation units.
+<<<
+COMMENT: >>>
+The implementation packages are not user-visible — consumers go
+through ``String_Types.Command_Line``. Renaming them to mirror the
+new facade hierarchy (e.g. ``Anystrings.Command_Line.Standard``)
+would churn the directory-swap mechanism, which relies on per-backend
+flat source directories under ``src/strings/<dir>/``. The cost is
+high and the benefit is internal-only.
+
+The implementation packages MAY be relocated or restructured in a
+future refactor (Layer 2 or later); this requirement only mandates
+the *Layer 1* status quo.
+<<<
+RELATIONS: FUNC-FACADE-002
+
+[/SECTION]
+
+[SECTION]
+TITLE: Future Work (Layer 2)
+
+[REQUIREMENT]
+UID: FUNC-FACADE-006
+STATUS: Draft
+PRIORITY: Could
+TITLE: Layer 2 — extract Environment / Directories / Text_IO bridges from the Anystrings generic
+STATEMENT: >>>
+A future feature SHALL extract the environment, filesystem
+(``Ada.Directories``) and Text_IO bridges out of the ``Anystrings``
+generic formals into standalone per-backend implementation packages
+(mirroring the existing ``<X>_Command_Line`` pattern). Once that is
+done, the present facade-split treatment SHALL be applied to those
+three surfaces, producing the additional child packages
+``String_Types.Environment``, ``String_Types.Directories`` and
+``String_Types.Text_IO`` and extending the FUNC-FACADE-004
+dependency-isolation invariant to them.
+<<<
+COMMENT: >>>
+This is a forward-looking requirement, deliberately scoped to
+``Could`` priority. It MAY be re-prioritised (or split into three
+separate requirements, one per addon) once the Layer 2 design has
+been written. It is recorded here so that the Layer 1 work has an
+explicit pointer to the deferred work and so that the trace matrix
+links the two layers.
+<<<
+RELATIONS: FUNC-FACADE-001, FUNC-FACADE-004
+
+[/SECTION]

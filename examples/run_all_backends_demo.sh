@@ -61,6 +61,19 @@ for BACKEND in "${BACKENDS[@]}"; do
             "$EXPECTED_E_COUNT" "$e_count"
         all_pass=false
     fi
+    # FUNC-FACADE-004 dependency-isolation check: a 'with String_Types;'-only
+    # program must NOT pull Ada.Command_Line into its closure.  .ali files
+    # live in examples/obj/<backend>/[<enc>/]<profile>/.
+    iso_ali=$(find "$SCRIPT_DIR/obj/$BACKEND" -name "anystrings_facade_isolation.ali" -type f 2>/dev/null | head -1)
+    if [ -z "$iso_ali" ]; then
+        printf '  FACADE-ISOLATION  [SKIP] anystrings_facade_isolation.ali not found under %s/obj/%s/\n' "$SCRIPT_DIR" "$BACKEND"
+    elif grep -qiE 'ada\.command_line|a-comlin\.ads' "$iso_ali"; then
+        printf '  FACADE-ISOLATION  FAIL  Ada.Command_Line leaked into closure of with-String_Types-only program\n'
+        all_pass=false
+    else
+        printf '  FACADE-ISOLATION  PASS  (no Ada.Command_Line in .ali for facade-isolation program)\n'
+    fi
+
     printf '  argv hex: %s\n\n' "$argv_hex"
 done
 
