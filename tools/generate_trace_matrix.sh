@@ -1,15 +1,21 @@
 #!/bin/bash
 # generate_trace_matrix.sh — Generate bidirectional traceability matrix
 #
-# Extracts @relation(REQ-ID) annotations from Ada source and test files,
+# Extracts @relation FUNC-XXX-NNN annotations from Ada source and test files,
 # cross-references with StrictDoc requirement UIDs, and outputs:
 #   - output/traceability-matrix.md  (Markdown table)
 #   - output/traceability-matrix.csv (CSV for CI/tooling)
 #
 # Role inference from file path:
-#   libs/*/src/*.ads        → Specification
-#   libs/*/src/*.adb        → Implementation
-#   libs/*/tests/src/*      → Verification
+#   src/**/*.ads             → Specification
+#   src/**/*.adb             → Implementation
+#   tests/src/**/*.{ads,adb} → Verification
+#
+# Recognised annotation forms (whichever appears in the source comment):
+#   --  @relation FUNC-CMDLINE-001
+#   --  @relation FUNC-CMDLINE-001, FUNC-CMDLINE-002, FUNC-CMDLINE-003,
+#   --            FUNC-CMDLINE-004
+#   --  @relation(FUNC-CMDLINE-001)   <- legacy parenthesised form, still parsed
 
 set -euo pipefail
 
@@ -78,28 +84,48 @@ extract_requirements() {
 }
 
 # ---------------------------------------------------------------------------
-# Step 2: Extract @relation(REQ-ID) from source files
+# Step 2: Extract @relation UIDs from source files
 # ---------------------------------------------------------------------------
+# The codebase uses two annotation forms, both supported here:
+#   1. Comma-separated (possibly multi-line, with `--` continuation):
+#        --  @relation FUNC-CMDLINE-001, FUNC-CMDLINE-002, FUNC-CMDLINE-003,
+#        --            FUNC-CMDLINE-004
+#   2. Legacy parenthesised form:
+#        --  @relation(FUNC-CMDLINE-001)
 extract_relations() {
    local search_path="$1"
    local glob_pattern="$2"
-   local exclude_pattern="${3:-}"  # optional path pattern to exclude
+   local exclude_pattern="${3:-}"  # optional path-substring to exclude
 
-   find "$search_path" -name "$glob_pattern" -print0 2>/dev/null | while IFS= read -r -d '' file; do
-      # Skip files matching exclude pattern (full path check)
+   find "$search_path" -name "$glob_pattern" -type f -print0 2>/dev/null | while IFS= read -r -d '' file; do
       if [[ -n "$exclude_pattern" && "$file" == *"$exclude_pattern"* ]]; then
          continue
       fi
-      local matches
-      matches=$(grep -oE '@relation\([A-Z]+-[A-Z]*-?[0-9]+(-[A-Z]+)?\)' "$file" 2>/dev/null || true)
-      [[ -z "$matches" ]] && continue
       local bname
       bname=$(basename "$file")
-      echo "$matches" | while read -r match; do
-         local req_id
-         req_id=$(echo "$match" | sed 's/@relation(\(.*\))/\1/')
-         printf '%s\t%s\n' "$req_id" "$bname"
-      done
+
+      awk -v bname="$bname" '
+         function emit(buf,    n, i, parts) {
+            n = split(buf, parts, /[[:space:],()]+/)
+            for (i = 1; i <= n; i++) {
+               if (parts[i] ~ /^[A-Z][A-Z0-9]*-[A-Z0-9]+-[0-9]+$/) {
+                  printf "%s\t%s\n", parts[i], bname
+               }
+            }
+         }
+         /@relation[[:space:](]+[A-Z]/ {
+            line = $0
+            sub(/.*@relation[[:space:](]+/, "", line)
+            # Fold multi-line continuation while the buffer still ends in
+            # a comma (the lists in this codebase wrap on commas only).
+            while (line ~ /,[[:space:]]*$/) {
+               if ((getline nl) <= 0) break
+               sub(/^[[:space:]]*--[[:space:]]*/, " ", nl)
+               line = line nl
+            }
+            emit(line)
+         }
+      ' "$file"
    done
 }
 
@@ -115,29 +141,16 @@ else
 fi
 
 echo "Scanning .ads files (Specification)..."
-extract_relations "$PROJECT_ROOT/libs" "*.ads" "tests/src/" > "$SPEC_FILE" 2>/dev/null || true
+extract_relations "$PROJECT_ROOT/src" "*.ads" "" | sort -u > "$SPEC_FILE" 2>/dev/null || true
 
 echo "Scanning .adb files (Implementation)..."
-extract_relations "$PROJECT_ROOT/libs" "*.adb" "tests/src/" > "$IMPL_FILE" 2>/dev/null || true
+extract_relations "$PROJECT_ROOT/src" "*.adb" "" | sort -u > "$IMPL_FILE" 2>/dev/null || true
 
 echo "Scanning test files (Verification)..."
-extract_test_relations() {
-   for ext in ads adb; do
-      find "$PROJECT_ROOT/libs" -path '*/tests/src/*' -name "*.$ext" -print0 2>/dev/null | while IFS= read -r -d '' file; do
-         local matches
-         matches=$(grep -oE '@relation\([A-Z]+-[A-Z]*-?[0-9]+(-[A-Z]+)?\)' "$file" 2>/dev/null || true)
-         [[ -z "$matches" ]] && continue
-         local bname
-         bname=$(basename "$file")
-         echo "$matches" | while read -r match; do
-            local req_id
-            req_id=$(echo "$match" | sed 's/@relation(\(.*\))/\1/')
-            printf '%s\t%s\n' "$req_id" "$bname"
-         done
-      done
-   done
-}
-extract_test_relations | sort -u > "$TEST_FILE"
+{
+   extract_relations "$PROJECT_ROOT/tests" "*.ads" ""
+   extract_relations "$PROJECT_ROOT/tests" "*.adb" ""
+} | sort -u > "$TEST_FILE"
 
 # ---------------------------------------------------------------------------
 # Step 4: Generate outputs
@@ -164,19 +177,15 @@ CSV_FILE="$OUTPUT_DIR/traceability-matrix.csv"
 echo "requirement,status,spec_files,impl_files,test_files,coverage" > "$CSV_FILE"
 
 while IFS=$'\t' read -r uid status; do
-   # Collect spec files for this UID
    spec_files=$(awk -F'\t' -v uid="$uid" '$1 == uid { print $2 }' "$SPEC_FILE" | sort -u | paste -sd ',' - 2>/dev/null)
    [[ -z "$spec_files" ]] && spec_files="-"
 
-   # Collect impl files for this UID
    impl_files=$(awk -F'\t' -v uid="$uid" '$1 == uid { print $2 }' "$IMPL_FILE" | sort -u | paste -sd ',' - 2>/dev/null)
    [[ -z "$impl_files" ]] && impl_files="-"
 
-   # Collect test files for this UID
    test_files=$(awk -F'\t' -v uid="$uid" '$1 == uid { print $2 }' "$TEST_FILE" | sort -u | paste -sd ',' - 2>/dev/null)
    [[ -z "$test_files" ]] && test_files="-"
 
-   # Determine coverage level
    has_spec=false
    has_test=false
    [[ "$spec_files" != "-" ]] && has_spec=true
@@ -196,15 +205,11 @@ while IFS=$'\t' read -r uid status; do
       COVERED_NONE=$((COVERED_NONE + 1))
    fi
 
-   # Write Markdown row
    echo "| $uid | $status | $spec_files | $impl_files | $test_files | $coverage |" >> "$MD_FILE"
-
-   # Write CSV row (quote fields that may contain commas)
    echo "\"$uid\",\"$status\",\"$spec_files\",\"$impl_files\",\"$test_files\",\"$coverage\"" >> "$CSV_FILE"
 
 done < "$REQS_FILE"
 
-# Summary
 {
    echo ""
    echo "## Summary"
