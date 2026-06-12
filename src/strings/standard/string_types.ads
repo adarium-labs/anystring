@@ -23,13 +23,8 @@ package String_Types is
 
    subtype String_Type is Standard_String_Operations.Unbounded_String;
    subtype Character_Type is Character;
-   subtype File_Type is Standard_String_Operations.File_Type;
-   subtype File_Mode is Standard_String_Operations.File_Mode;
 
    Empty_String : constant String_Type := Standard_Strings.Empty_String;
-   In_File      : constant File_Mode := Standard_Strings.In_File;
-   Out_File     : constant File_Mode := Standard_Strings.Out_File;
-   Append_File  : constant File_Mode := Standard_Strings.Append_File;
 
    function Length (Source : String_Type) return Natural renames Standard_String_Operations.Length;
 
@@ -68,47 +63,6 @@ package String_Types is
 
    function Iterate_Env (Include : Env_Filter; Process : Env_Processor) return Boolean
    renames Standard_Strings.Iterate_Env;
-
-   procedure Create (File : in out File_Type; Mode : File_Mode := Out_File; Name : String := "")
-   renames Standard_Strings.Create;
-
-   procedure Open (File : in out File_Type; Mode : File_Mode; Name : String) renames Standard_Strings.Open;
-
-   procedure Close (File : in out File_Type) renames Standard_Strings.Close;
-
-   function Is_Open (File : File_Type) return Boolean renames Standard_Strings.Is_Open;
-
-   function Current_Input return File_Type renames Standard_Strings.Current_Input;
-
-   function Current_Output return File_Type renames Standard_Strings.Current_Output;
-
-   procedure Set_Input (File : File_Type) renames Standard_Strings.Set_Input;
-
-   procedure Set_Output (File : File_Type) renames Standard_Strings.Set_Output;
-
-   procedure Put (File : File_Type; Item : String_Type) renames Standard_Strings.Put;
-
-   procedure Put (Item : String_Type) renames Standard_Strings.Put;
-
-   procedure Put_Line (File : File_Type; Item : String_Type) renames Standard_Strings.Put_Line;
-
-   procedure Put_Line (Item : String_Type) renames Standard_Strings.Put_Line;
-
-   function Get_Line (File : File_Type) return String_Type renames Standard_String_Operations.Get_Line_File;
-
-   function Get_Line return String_Type renames Standard_Strings.Get_Line;
-
-   procedure Get_Line (File : File_Type; Item : out String_Type) renames Standard_Strings.Get_Line;
-
-   procedure Get_Line (Item : out String_Type) renames Standard_Strings.Get_Line;
-
-   procedure New_Line (File : File_Type) renames Standard_Strings.New_Line;
-
-   procedure New_Line renames Standard_Strings.New_Line;
-
-   function End_Of_File (File : File_Type) return Boolean renames Standard_String_Operations.End_Of_File_File;
-
-   function End_Of_File return Boolean renames Standard_Strings.End_Of_File;
 
    function Contains (Source : String_Type; Pattern : String_Type) return Boolean renames Standard_Strings.Contains;
 
@@ -330,39 +284,5 @@ package String_Types is
    ---------------------------------------------------------------------------
 
 
-
-   --  ----- Filesystem boundary (FUNC-DIR-001..008, NFR-DIR-001..005) -----
-
-   --  @relation FUNC-DIR-001, FUNC-DIR-008
-   subtype File_Kind is Standard_String_Operations.File_Kind;
-
-   --  Re-export enumeration literals so they are directly visible via
-   --  "use String_Types" (a subtype alone does not do this in Ada).
-   Directory     : constant File_Kind := Standard_String_Operations.Directory;
-   Ordinary_File : constant File_Kind := Standard_String_Operations.Ordinary_File;
-   Special_File  : constant File_Kind := Standard_String_Operations.Special_File;
-
-   function "=" (Left, Right : File_Kind) return Boolean
-     renames Standard_String_Operations."=";
-
-   --  @relation FUNC-DIR-002
-   function Exists (Path : String_Type) return Boolean
-     renames Standard_Strings.Exists;
-
-   --  @relation FUNC-DIR-003
-   function Kind (Path : String_Type) return File_Kind
-     renames Standard_Strings.Kind;
-
-   --  @relation FUNC-DIR-004
-   function Create_Directory (Path : String_Type) return Boolean
-     renames Standard_Strings.Create_Directory;
-
-   --  @relation FUNC-DIR-005
-   function Delete_File (Path : String_Type) return Boolean
-     renames Standard_Strings.Delete_File;
-
-   --  @relation FUNC-DIR-006
-   function Rename (Old_Path, New_Path : String_Type) return Boolean
-     renames Standard_Strings.Rename;
 
 end String_Types;

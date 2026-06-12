@@ -31,7 +31,6 @@
 --  sequences, matching the uxstring backend convention.
 
 with Ada.Containers;
-with Ada.Text_IO;
 with VSS.Strings;
 
 package VSS_Operations is
@@ -125,54 +124,6 @@ package VSS_Operations is
      (Process : not null access procedure
         (Name  : Virtual_String;
          Value : Virtual_String)) return Boolean;
-
-   ---------------------------------------------------------------------------
-   --  Text I/O Operations
-   ---------------------------------------------------------------------------
-
-   subtype File_Type is Ada.Text_IO.File_Type;
-   subtype File_Mode is Ada.Text_IO.File_Mode;
-
-   In_File_Mode     : constant File_Mode := Ada.Text_IO.In_File;
-   Out_File_Mode    : constant File_Mode := Ada.Text_IO.Out_File;
-   Append_File_Mode : constant File_Mode := Ada.Text_IO.Append_File;
-
-   procedure Create_File
-     (File : in out File_Type;
-      Mode : File_Mode := Out_File_Mode;
-      Name : String := "");
-
-   procedure Open_File
-     (File : in out File_Type;
-      Mode : File_Mode;
-      Name : String);
-
-   procedure Close_File (File : in out File_Type)
-     renames Ada.Text_IO.Close;
-
-   function Is_Open_File (File : File_Type) return Boolean
-     renames Ada.Text_IO.Is_Open;
-
-   function Current_Input_File return File_Type
-     renames Ada.Text_IO.Current_Input;
-
-   function Current_Output_File return File_Type
-     renames Ada.Text_IO.Current_Output;
-
-   procedure Set_Input_File (File : File_Type)
-     renames Ada.Text_IO.Set_Input;
-
-   procedure Set_Output_File (File : File_Type)
-     renames Ada.Text_IO.Set_Output;
-
-   procedure Put_File (File : File_Type; Item : Virtual_String);
-
-   function Get_Line_File (File : File_Type) return Virtual_String;
-
-   procedure New_Line_File (File : File_Type);
-
-   function End_Of_File_File (File : File_Type) return Boolean
-     renames Ada.Text_IO.End_Of_File;
 
    ---------------------------------------------------------------------------
    --  Extended Operations
@@ -273,27 +224,5 @@ package VSS_Operations is
    function Char_To_Lower (C : Wide_Wide_Character) return Wide_Wide_Character;
 
    function Char_To_Upper (C : Wide_Wide_Character) return Wide_Wide_Character;
-
-   --  Filesystem Operations (FUNC-DIR-002..006, NFR-DIR-001)
-   --  Path encoding: private To_UTF_8_String helper in vss_operations.adb
-   --  (VSS.Strings.Conversions.To_UTF_8_String) per FUNC-DIR-007.
-
-   --  @relation FUNC-DIR-001
-   type File_Kind is (Directory, Ordinary_File, Special_File);
-
-   --  @relation FUNC-DIR-002, NFR-DIR-001
-   function Path_Exists (Path : Virtual_String) return Boolean;
-
-   --  @relation FUNC-DIR-003, NFR-DIR-001
-   function Path_Kind (Path : Virtual_String) return File_Kind;
-
-   --  @relation FUNC-DIR-004, NFR-DIR-001
-   function Create_Directory_Path (Path : Virtual_String) return Boolean;
-
-   --  @relation FUNC-DIR-005, NFR-DIR-001
-   function Delete_File_Path (Path : Virtual_String) return Boolean;
-
-   --  @relation FUNC-DIR-006, NFR-DIR-001
-   function Rename_Path (Old_Path, New_Path : Virtual_String) return Boolean;
 
 end VSS_Operations;

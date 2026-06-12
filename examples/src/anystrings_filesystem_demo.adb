@@ -18,6 +18,8 @@
 with Ada.Directories;
 with Ada.Text_IO;
 with String_Types; use String_Types;
+with String_Types.Directories; use String_Types.Directories;
+with String_Types.Text_IO; use String_Types.Text_IO;
 
 procedure Anystrings_Filesystem_Demo is
 

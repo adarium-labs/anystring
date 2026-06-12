@@ -6,7 +6,6 @@
 -------------------------------------------------------------------------------
 
 with Ada.Containers;
-with Ada.Wide_Wide_Text_IO;
 with Ada.Strings.Wide_Wide_Unbounded;
 with Anystrings_Conv;
 
@@ -112,63 +111,6 @@ package Wide_Wide_String_Operations is
      (Process : not null access procedure
         (Name  : Unbounded_Wide_Wide_String;
          Value : Unbounded_Wide_Wide_String)) return Boolean;
-
-   ---------------------------------------------------------------------------
-   --  Text I/O Operations
-   ---------------------------------------------------------------------------
-
-   subtype File_Type is Ada.Wide_Wide_Text_IO.File_Type;
-   subtype File_Mode is Ada.Wide_Wide_Text_IO.File_Mode;
-
-   In_File_Mode     : constant File_Mode := Ada.Wide_Wide_Text_IO.In_File;
-   Out_File_Mode    : constant File_Mode := Ada.Wide_Wide_Text_IO.Out_File;
-   Append_File_Mode : constant File_Mode := Ada.Wide_Wide_Text_IO.Append_File;
-
-   procedure Create_File
-     (File : in out File_Type;
-      Mode : File_Mode := Out_File_Mode;
-      Name : String := "");
-
-   procedure Open_File
-     (File : in out File_Type;
-      Mode : File_Mode;
-      Name : String);
-
-   procedure Close_File
-     (File : in out File_Type)
-   renames Ada.Wide_Wide_Text_IO.Close;
-
-   function Is_Open_File
-     (File : File_Type) return Boolean
-   renames Ada.Wide_Wide_Text_IO.Is_Open;
-
-   function Current_Input_File return File_Type
-   renames Ada.Wide_Wide_Text_IO.Current_Input;
-
-   function Current_Output_File return File_Type
-   renames Ada.Wide_Wide_Text_IO.Current_Output;
-
-   procedure Set_Input_File
-     (File : File_Type)
-   renames Ada.Wide_Wide_Text_IO.Set_Input;
-
-   procedure Set_Output_File
-     (File : File_Type)
-   renames Ada.Wide_Wide_Text_IO.Set_Output;
-
-   procedure Put_File
-     (File : File_Type;
-      Item : Unbounded_Wide_Wide_String);
-
-   function Get_Line_File
-     (File : File_Type) return Unbounded_Wide_Wide_String;
-
-   procedure New_Line_File
-     (File : File_Type);
-
-   function End_Of_File_File
-     (File : File_Type) return Boolean
-   renames Ada.Wide_Wide_Text_IO.End_Of_File;
 
    function Hash
      (Key : Unbounded_Wide_Wide_String) return Ada.Containers.Hash_Type;
@@ -279,31 +221,5 @@ package Wide_Wide_String_Operations is
    function Char_To_Lower (C : Wide_Wide_Character) return Wide_Wide_Character;
 
    function Char_To_Upper (C : Wide_Wide_Character) return Wide_Wide_Character;
-
-   --  Filesystem Operations (FUNC-DIR-002..006, NFR-DIR-001)
-   --  Path encoding: To_UTF_8 (surrogate + out-of-range substitution then
-   --  Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Encode; unconditional UTF-8
-   --  per FUNC-DIR-007).
-
-   --  @relation FUNC-DIR-001
-   type File_Kind is (Directory, Ordinary_File, Special_File);
-
-   --  @relation FUNC-DIR-002, NFR-DIR-001
-   function Path_Exists (Path : Unbounded_Wide_Wide_String) return Boolean;
-
-   --  @relation FUNC-DIR-003, NFR-DIR-001
-   function Path_Kind (Path : Unbounded_Wide_Wide_String) return File_Kind;
-
-   --  @relation FUNC-DIR-004, NFR-DIR-001
-   function Create_Directory_Path
-     (Path : Unbounded_Wide_Wide_String) return Boolean;
-
-   --  @relation FUNC-DIR-005, NFR-DIR-001
-   function Delete_File_Path
-     (Path : Unbounded_Wide_Wide_String) return Boolean;
-
-   --  @relation FUNC-DIR-006, NFR-DIR-001
-   function Rename_Path
-     (Old_Path, New_Path : Unbounded_Wide_Wide_String) return Boolean;
 
 end Wide_Wide_String_Operations;

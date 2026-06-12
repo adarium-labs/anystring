@@ -274,28 +274,272 @@ TITLE: Future Work (Layer 2)
 
 [REQUIREMENT]
 UID: FUNC-FACADE-006
-STATUS: Draft
-PRIORITY: Could
-TITLE: Layer 2 — extract Environment / Directories / Text_IO bridges from the Anystrings generic
+STATUS: Approved
+PRIORITY: Must
+TITLE: Layer 2 umbrella — Environment / Directories / Text_IO bridges leave the Anystrings generic
 STATEMENT: >>>
-A future feature SHALL extract the environment, filesystem
-(``Ada.Directories``) and Text_IO bridges out of the ``Anystrings``
-generic formals into standalone per-backend implementation packages
-(mirroring the existing ``<X>_Command_Line`` pattern). Once that is
-done, the present facade-split treatment SHALL be applied to those
-three surfaces, producing the additional child packages
-``String_Types.Environment``, ``String_Types.Directories`` and
-``String_Types.Text_IO`` and extending the FUNC-FACADE-004
-dependency-isolation invariant to them.
+The environment, filesystem (``Ada.Directories``) and Text_IO bridges
+SHALL be extracted out of the ``Anystrings`` generic formals into
+standalone per-backend implementation packages following the existing
+``<X>_Command_Line`` pattern. The corresponding generic formal
+subprograms SHALL be removed from ``src/anystrings.ads`` and the
+matching ``with function ... =>`` actuals SHALL be removed from
+every backend's ``<X>_strings.ads`` instantiation.
+
+The detailed per-addon requirements are FUNC-FACADE-007 (Environment),
+FUNC-FACADE-008 (Directories) and FUNC-FACADE-009 (Text_IO); the
+extended dependency-isolation invariant is NFR-FACADE-002.
 <<<
 COMMENT: >>>
-This is a forward-looking requirement, deliberately scoped to
-``Could`` priority. It MAY be re-prioritised (or split into three
-separate requirements, one per addon) once the Layer 2 design has
-been written. It is recorded here so that the Layer 1 work has an
-explicit pointer to the deferred work and so that the trace matrix
-links the two layers.
+This is the umbrella requirement under which Layer 2 is delivered.
+Promoted from ``Draft / Could`` (Layer 1 placeholder) to
+``Approved / Must`` because Layer 2 is now in flight. The three
+per-addon FUNC requirements decompose the work, while NFR-FACADE-002
+extends the dependency-isolation guarantee originally introduced by
+FUNC-FACADE-004 (cmdline) to cover the three additional OS units.
 <<<
 RELATIONS: FUNC-FACADE-001, FUNC-FACADE-004
+
+[/SECTION]
+
+[SECTION]
+TITLE: Layer 2 — Per-addon Facade Splits
+
+[REQUIREMENT]
+UID: FUNC-FACADE-007
+STATUS: Approved
+PRIORITY: Must
+TITLE: Environment bridge exposed via String_Types.Environment child package
+STATEMENT: >>>
+The environment-variable bridge SHALL be exposed to user code as an
+Ada child package of ``String_Types``, named
+``String_Types.Environment``.
+
+The five generic formal subprograms wiring the environment bridge
+through ``Anystrings`` (``Environment_Value``, ``Environment_Exists``,
+``Environment_Set``, ``Environment_Clear``, ``Environment_Clear_All``,
+``Environment_Iterate``) and the corresponding ``with function`` /
+``with procedure`` actuals in every ``<X>_strings.ads`` SHALL be
+removed.
+
+For each backend ``<X>`` in {``standard``, ``wide_string``,
+``wide_wide_string``, ``uxstring``, ``vss``} a standalone
+per-backend implementation package ``<X>_Environment`` SHALL exist
+at ``src/strings/<X>/<prefix>_environment.{ads,adb}`` exporting the
+full environment surface as concrete subprograms operating on
+``String_Type`` (with the per-backend ``String_Type`` of that
+backend).
+
+The Ada child package ``String_Types.Environment`` SHALL be present
+in every backend directory and SHALL re-export, by Ada ``renames``
+(or equivalent), the entirety of the environment public surface:
+
+- ``Env_Processor`` access-to-procedure type.
+- ``Env_Filter`` access-to-function type.
+- ``Get_Env`` (single-argument: returns empty on absence).
+- ``Get_Env`` (two-argument: explicit default).
+- ``Env_Exists``.
+- ``Set_Env``.
+- ``Clear_Env`` (per-variable).
+- ``Clear_Env`` (no-argument: clears all).
+- ``Iterate_Env`` (with ``Process`` only).
+- ``Iterate_Env`` (with ``Include`` filter and ``Process``).
+
+The left-hand-side declarations across the five copies of
+``string_types-environment.ads`` SHALL be byte-identical up to the
+``with`` clauses and the right-hand-side rename targets.
+
+The build-time switch ``ANYSTRING_WIDE_ENV_ENCODING`` (with values
+``utf_8`` default and ``latin_1``) SHALL be preserved. The two
+selector source directories ``src/strings/wide_env_encoding/utf_8``
+and ``src/strings/wide_env_encoding/latin_1`` SHALL continue to
+work unchanged; the ``wide_string`` and ``wide_wide_string``
+backends' new ``<X>_Environment`` packages SHALL consume the
+selected ``anystrings_internal_wide_environment_encoding`` package
+the same way the prior ``<X>_String_Operations`` implementations
+did.
+<<<
+COMMENT: >>>
+The right-hand side of each ``renames`` resolves per backend:
+``Standard_Environment``, ``Wide_Environment``,
+``Wide_Wide_Environment``, ``UXString_Environment``,
+``VSS_Environment``.
+
+This requirement does NOT cover dependency isolation — that is
+NFR-FACADE-002. It only mandates the surface placement and parity.
+<<<
+RELATIONS: FUNC-FACADE-001, FUNC-FACADE-006, NFR-FACADE-002
+
+[REQUIREMENT]
+UID: FUNC-FACADE-008
+STATUS: Approved
+PRIORITY: Must
+TITLE: Directories bridge exposed via String_Types.Directories child package
+STATEMENT: >>>
+The filesystem (``Ada.Directories``) bridge SHALL be exposed to user
+code as an Ada child package of ``String_Types``, named
+``String_Types.Directories``.
+
+The generic formal type ``File_Kind`` and the five generic formal
+subprograms wiring the filesystem bridge through ``Anystrings``
+(``Path_Exists``, ``Path_Kind``, ``Create_Directory_Path``,
+``Delete_File_Path``, ``Rename_Path``) and their actuals in every
+``<X>_strings.ads`` SHALL be removed.
+
+For each backend ``<X>`` a standalone per-backend implementation
+package ``<X>_Directories`` SHALL exist at
+``src/strings/<X>/<prefix>_directories.{ads,adb}`` exporting:
+
+- The ``File_Kind`` enumeration type (with literals ``Directory``,
+  ``Ordinary_File``, ``Special_File`` in that order — matching
+  ``Ada.Directories.File_Kind``).
+- ``Exists`` / ``Kind`` / ``Create_Directory`` / ``Delete_File`` /
+  ``Rename`` operating on the per-backend ``String_Type``.
+
+The Ada child package ``String_Types.Directories`` SHALL be present
+in every backend directory and SHALL re-export the
+following public surface:
+
+- ``File_Kind`` subtype, plus the three named constants
+  ``Directory``, ``Ordinary_File``, ``Special_File`` as constants of
+  type ``File_Kind`` (so they are visible via ``use``).
+- ``"="`` on ``File_Kind``.
+- ``Exists``, ``Kind``, ``Create_Directory``, ``Delete_File``,
+  ``Rename``.
+
+The five filesystem operations SHALL remain TOTAL by contract:
+any runtime error from ``Ada.Directories`` SHALL be absorbed and
+translated into ``False`` / ``Special_File`` returns (no exception
+SHALL propagate across the ``String_Types.Directories`` boundary).
+This preserves the FUNC-DIR-001..008 / NFR-DIR-001..005 contract
+inherited from the current implementation.
+
+The left-hand-side declarations across the five copies of
+``string_types-directories.ads`` SHALL be byte-identical up to the
+``with`` clauses and the right-hand-side rename targets.
+<<<
+COMMENT: >>>
+Right-hand-side targets per backend: ``Standard_Directories``,
+``Wide_Directories``, ``Wide_Wide_Directories``,
+``UXString_Directories``, ``VSS_Directories``.
+
+The path-encoding helper used by each backend's ``Path_*`` /
+``*_Path`` implementations is unchanged (see ``src/strings/AGENTS.md``
+"Filesystem boundary path encoding" table). The refactor is purely
+structural.
+<<<
+RELATIONS: FUNC-FACADE-001, FUNC-FACADE-006, NFR-FACADE-002
+
+[REQUIREMENT]
+UID: FUNC-FACADE-009
+STATUS: Approved
+PRIORITY: Must
+TITLE: Text_IO bridge exposed via String_Types.Text_IO child package
+STATEMENT: >>>
+The Text_IO bridge SHALL be exposed to user code as an Ada child
+package of ``String_Types``, named ``String_Types.Text_IO``.
+
+The two generic formal types ``File_Type`` (limited private) and
+``File_Mode`` (private), the three formal ``File_Mode`` constants
+(``In_File_Mode``, ``Out_File_Mode``, ``Append_File_Mode``) and the
+fourteen generic formal subprograms wiring the Text_IO bridge through
+``Anystrings`` (``Create_File``, ``Open_File``, ``Close_File``,
+``Is_Open_File``, ``Current_Input_File``, ``Current_Output_File``,
+``Set_Input_File``, ``Set_Output_File``, ``Put_File``,
+``Get_Line_File``, ``New_Line_File``, ``End_Of_File_File``) and their
+actuals in every ``<X>_strings.ads`` SHALL be removed.
+
+For each backend ``<X>`` a standalone per-backend implementation
+package ``<X>_Text_IO`` SHALL exist at
+``src/strings/<X>/<prefix>_text_io.{ads,adb}`` exporting:
+
+- The ``File_Type`` (limited private) and ``File_Mode`` types.
+- The three ``File_Mode`` constants ``In_File``, ``Out_File``,
+  ``Append_File``.
+- ``Create``, ``Open``, ``Close``, ``Is_Open``, ``Current_Input``,
+  ``Current_Output``, ``Set_Input``, ``Set_Output``, ``Put`` (two
+  overloads: standard-out and file-targeted), ``Put_Line`` (two
+  overloads), ``Get_Line`` (four overloads), ``New_Line`` (two
+  overloads), ``End_Of_File`` (two overloads).
+
+The Ada child package ``String_Types.Text_IO`` SHALL be present in
+every backend directory and SHALL re-export the same public surface.
+
+The left-hand-side declarations across the five copies of
+``string_types-text_io.ads`` SHALL be byte-identical up to the
+``with`` clauses and the right-hand-side rename targets.
+
+Text_IO semantics continue to follow the selected backend's native
+Ada I/O family (``Ada.Text_IO`` for standard / uxstring,
+``Ada.Wide_Text_IO`` for wide_string, ``Ada.Wide_Wide_Text_IO`` for
+wide_wide_string; VSS continues to delegate to ``Ada.Text_IO`` via
+the VSS conversion path). External-encoding and newline behaviour
+are backend-specific at this boundary — unchanged from Layer 1.
+<<<
+COMMENT: >>>
+Right-hand-side targets per backend: ``Standard_Text_IO``,
+``Wide_Text_IO``, ``Wide_Wide_Text_IO``, ``UXString_Text_IO``,
+``VSS_Text_IO``.
+
+This is the largest of the three Layer 2 surface moves; the
+sub-iteration order in the Layer 2 work plan (Env → Dirs → Text_IO)
+puts it last so the migration patterns are well rehearsed by the
+time Text_IO's broader consumer footprint is touched.
+<<<
+RELATIONS: FUNC-FACADE-001, FUNC-FACADE-006, NFR-FACADE-002
+
+[/SECTION]
+
+[SECTION]
+TITLE: Layer 2 — Dependency Isolation (NFR)
+
+[REQUIREMENT]
+UID: NFR-FACADE-002
+STATUS: Approved
+PRIORITY: Must
+TITLE: Pure String_Types consumers do not pull Ada.Environment_Variables / Ada.Directories / Ada.Text_IO transitively
+STATEMENT: >>>
+A user compilation unit whose context clause is ``with String_Types;``
+(without any of ``with String_Types.Command_Line;``,
+``with String_Types.Environment;``, ``with String_Types.Directories;``
+or ``with String_Types.Text_IO;``) SHALL NOT have any of the
+following Ada library units in its semantic dependence closure:
+
+- ``Ada.Command_Line`` (already required by FUNC-FACADE-004).
+- ``Ada.Environment_Variables``.
+- ``Ada.Directories``.
+- ``Ada.Text_IO``, ``Ada.Wide_Text_IO``, ``Ada.Wide_Wide_Text_IO``.
+
+Equivalently: the binder-listing (or the ``.ali`` unit list) for a
+program
+
+    with String_Types; procedure P is begin null; end P;
+
+SHALL NOT contain any of ``ada.command_line``, ``a-comlin``,
+``ada.environment_variables``, ``a-envvar``, ``ada.directories``,
+``a-direct``, ``ada.text_io``, ``a-textio``,
+``ada.wide_text_io``, ``a-witeio``, ``ada.wide_wide_text_io``,
+``a-ztexio``.
+
+This SHALL hold for all five bundled backends.
+<<<
+COMMENT: >>>
+This is the extended facade-isolation invariant — the core observable
+gain of Layer 2. It supersedes FUNC-FACADE-004 by widening the
+forbidden-OS-unit set from a single unit (``Ada.Command_Line``) to
+four families.
+
+Verification is performed at the build-system level: the runner
+``examples/run_all_backends_demo.sh`` greps the ``.ali`` file of the
+``Anystrings_Facade_Isolation`` test program for any of the listed
+substrings and fails the script if any is present. The check runs
+once per backend.
+
+The Wide_Text_IO and Wide_Wide_Text_IO names are included because
+the ``wide_string`` and ``wide_wide_string`` backends previously
+pulled those units (not ``Ada.Text_IO``); after Layer 2 they must
+not appear in the ``String_Types``-only closure either.
+<<<
+RELATIONS: FUNC-FACADE-001, FUNC-FACADE-004, FUNC-FACADE-006, FUNC-FACADE-007, FUNC-FACADE-008, FUNC-FACADE-009
 
 [/SECTION]

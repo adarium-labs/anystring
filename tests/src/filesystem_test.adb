@@ -8,6 +8,8 @@ with AUnit.Assertions; use AUnit.Assertions;
 with AUnit.Test_Cases; use AUnit.Test_Cases;
 with GNAT.OS_Lib;
 with String_Types;     use String_Types;
+with String_Types.Directories; use String_Types.Directories;
+with String_Types.Text_IO; use String_Types.Text_IO;
 
 package body Filesystem_Test is
 

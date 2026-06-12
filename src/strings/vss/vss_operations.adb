@@ -12,8 +12,6 @@ with VSS.Characters;
 with VSS.Strings.Conversions;
 with VSS.Transformers.Casing;
 
-with Ada.Directories;
-
 package body VSS_Operations is
 
    --  True iff C is a valid Unicode scalar value (U+0000..U+10FFFF and
@@ -263,31 +261,6 @@ package body VSS_Operations is
    --  Text I/O Operations
    ---------------------------------------------------------------------------
 
-   procedure Create_File (File : in out File_Type; Mode : File_Mode := Out_File_Mode; Name : String := "") is
-   begin
-      Ada.Text_IO.Create (File, Mode, Name);
-   end Create_File;
-
-   procedure Open_File (File : in out File_Type; Mode : File_Mode; Name : String) is
-   begin
-      Ada.Text_IO.Open (File, Mode, Name);
-   end Open_File;
-
-   procedure Put_File (File : File_Type; Item : Virtual_String) is
-   begin
-      Ada.Text_IO.Put (File, To_UTF_8_String (Item));
-   end Put_File;
-
-   function Get_Line_File (File : File_Type) return Virtual_String is
-   begin
-      return From_UTF_8_String (Ada.Text_IO.Get_Line (File));
-   end Get_Line_File;
-
-   procedure New_Line_File (File : File_Type) is
-   begin
-      Ada.Text_IO.New_Line (File);
-   end New_Line_File;
-
    ---------------------------------------------------------------------------
    --  Extended Operations
    ---------------------------------------------------------------------------
@@ -512,85 +485,5 @@ package body VSS_Operations is
       end if;
       return Ada.Wide_Wide_Characters.Handling.To_Upper (C);
    end Char_To_Upper;
-
-   --  @relation FUNC-DIR-002, NFR-DIR-001
-   function Path_Exists (Path : Virtual_String) return Boolean is
-      POSIX_Path : constant String := To_UTF_8_String (Path);
-   begin
-      if POSIX_Path'Length = 0 then
-         return False;
-      end if;
-      return Ada.Directories.Exists (POSIX_Path);
-   exception
-      when others =>
-         return False;
-   end Path_Exists;
-
-   --  @relation FUNC-DIR-003, NFR-DIR-001
-   function Path_Kind (Path : Virtual_String) return File_Kind is
-      POSIX_Path  : constant String := To_UTF_8_String (Path);
-      Native_Kind : Ada.Directories.File_Kind;
-   begin
-      if POSIX_Path'Length = 0 then
-         return Special_File;
-      end if;
-      Native_Kind := Ada.Directories.Kind (POSIX_Path);
-      case Native_Kind is
-         when Ada.Directories.Directory     =>
-            return Directory;
-
-         when Ada.Directories.Ordinary_File =>
-            return Ordinary_File;
-
-         when Ada.Directories.Special_File  =>
-            return Special_File;
-      end case;
-   exception
-      when others =>
-         return Special_File;
-   end Path_Kind;
-
-   --  @relation FUNC-DIR-004, NFR-DIR-001
-   function Create_Directory_Path (Path : Virtual_String) return Boolean is
-      POSIX_Path : constant String := To_UTF_8_String (Path);
-   begin
-      if POSIX_Path'Length = 0 then
-         return False;
-      end if;
-      Ada.Directories.Create_Directory (POSIX_Path);
-      return True;
-   exception
-      when others =>
-         return False;
-   end Create_Directory_Path;
-
-   --  @relation FUNC-DIR-005, NFR-DIR-001
-   function Delete_File_Path (Path : Virtual_String) return Boolean is
-      POSIX_Path : constant String := To_UTF_8_String (Path);
-   begin
-      if POSIX_Path'Length = 0 then
-         return False;
-      end if;
-      Ada.Directories.Delete_File (POSIX_Path);
-      return True;
-   exception
-      when others =>
-         return False;
-   end Delete_File_Path;
-
-   --  @relation FUNC-DIR-006, NFR-DIR-001
-   function Rename_Path (Old_Path, New_Path : Virtual_String) return Boolean is
-      Src : constant String := To_UTF_8_String (Old_Path);
-      Dst : constant String := To_UTF_8_String (New_Path);
-   begin
-      if Src'Length = 0 or else Dst'Length = 0 then
-         return False;
-      end if;
-      Ada.Directories.Rename (Src, Dst);
-      return True;
-   exception
-      when others =>
-         return False;
-   end Rename_Path;
 
 end VSS_Operations;

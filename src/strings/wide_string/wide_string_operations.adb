@@ -15,8 +15,6 @@ with Ada.Wide_Characters.Handling;
 with Anystrings_Conv;
 with Anystrings_Internal_Wide_Environment_Encoding;
 
-with Ada.Directories;
-
 package body Wide_String_Operations is
 
    function To_Wide_String (Source : String) return Wide_String is
@@ -152,31 +150,6 @@ package body Wide_String_Operations is
 
       return Success;
    end Environment_Iterate;
-
-   procedure Create_File (File : in out File_Type; Mode : File_Mode := Out_File_Mode; Name : String := "") is
-   begin
-      Ada.Wide_Text_IO.Create (File, Mode, Name);
-   end Create_File;
-
-   procedure Open_File (File : in out File_Type; Mode : File_Mode; Name : String) is
-   begin
-      Ada.Wide_Text_IO.Open (File, Mode, Name);
-   end Open_File;
-
-   procedure Put_File (File : File_Type; Item : Unbounded_Wide_String) is
-   begin
-      Ada.Wide_Text_IO.Put (File, Ada.Strings.Wide_Unbounded.To_Wide_String (Item));
-   end Put_File;
-
-   function Get_Line_File (File : File_Type) return Unbounded_Wide_String is
-   begin
-      return Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String (Ada.Wide_Text_IO.Get_Line (File));
-   end Get_Line_File;
-
-   procedure New_Line_File (File : File_Type) is
-   begin
-      Ada.Wide_Text_IO.New_Line (File);
-   end New_Line_File;
 
    function Concat_String_Latin_1 (Left : Unbounded_Wide_String; Right : String) return Unbounded_Wide_String is
       use Ada.Strings.Wide_Unbounded;
@@ -450,85 +423,5 @@ package body Wide_String_Operations is
          Value          => Out_Buf,
          Replaced_Count => Repls);
    end To_Latin_1_If_Possible;
-
-   --  @relation FUNC-DIR-002, NFR-DIR-001
-   function Path_Exists (Path : Unbounded_Wide_String) return Boolean is
-      POSIX_Path : constant String := To_UTF_8 (Path);
-   begin
-      if POSIX_Path'Length = 0 then
-         return False;
-      end if;
-      return Ada.Directories.Exists (POSIX_Path);
-   exception
-      when others =>
-         return False;
-   end Path_Exists;
-
-   --  @relation FUNC-DIR-003, NFR-DIR-001
-   function Path_Kind (Path : Unbounded_Wide_String) return File_Kind is
-      POSIX_Path  : constant String := To_UTF_8 (Path);
-      Native_Kind : Ada.Directories.File_Kind;
-   begin
-      if POSIX_Path'Length = 0 then
-         return Special_File;
-      end if;
-      Native_Kind := Ada.Directories.Kind (POSIX_Path);
-      case Native_Kind is
-         when Ada.Directories.Directory     =>
-            return Directory;
-
-         when Ada.Directories.Ordinary_File =>
-            return Ordinary_File;
-
-         when Ada.Directories.Special_File  =>
-            return Special_File;
-      end case;
-   exception
-      when others =>
-         return Special_File;
-   end Path_Kind;
-
-   --  @relation FUNC-DIR-004, NFR-DIR-001
-   function Create_Directory_Path (Path : Unbounded_Wide_String) return Boolean is
-      POSIX_Path : constant String := To_UTF_8 (Path);
-   begin
-      if POSIX_Path'Length = 0 then
-         return False;
-      end if;
-      Ada.Directories.Create_Directory (POSIX_Path);
-      return True;
-   exception
-      when others =>
-         return False;
-   end Create_Directory_Path;
-
-   --  @relation FUNC-DIR-005, NFR-DIR-001
-   function Delete_File_Path (Path : Unbounded_Wide_String) return Boolean is
-      POSIX_Path : constant String := To_UTF_8 (Path);
-   begin
-      if POSIX_Path'Length = 0 then
-         return False;
-      end if;
-      Ada.Directories.Delete_File (POSIX_Path);
-      return True;
-   exception
-      when others =>
-         return False;
-   end Delete_File_Path;
-
-   --  @relation FUNC-DIR-006, NFR-DIR-001
-   function Rename_Path (Old_Path, New_Path : Unbounded_Wide_String) return Boolean is
-      Src : constant String := To_UTF_8 (Old_Path);
-      Dst : constant String := To_UTF_8 (New_Path);
-   begin
-      if Src'Length = 0 or else Dst'Length = 0 then
-         return False;
-      end if;
-      Ada.Directories.Rename (Src, Dst);
-      return True;
-   exception
-      when others =>
-         return False;
-   end Rename_Path;
 
 end Wide_String_Operations;

@@ -9,8 +9,6 @@ with Ada.Strings;
 with Ada.Environment_Variables;
 with Ada.Strings.Fixed;
 
-with Ada.Directories;
-
 package body Standard_String_Operations is
 
    --  Walk one UTF-8 code-point sequence starting at Buf (Start), decoding
@@ -154,31 +152,6 @@ package body Standard_String_Operations is
 
       return Success;
    end Environment_Iterate;
-
-   procedure Create_File (File : in out File_Type; Mode : File_Mode := Out_File_Mode; Name : String := "") is
-   begin
-      Ada.Text_IO.Create (File, Mode, Name);
-   end Create_File;
-
-   procedure Open_File (File : in out File_Type; Mode : File_Mode; Name : String) is
-   begin
-      Ada.Text_IO.Open (File, Mode, Name);
-   end Open_File;
-
-   procedure Put_File (File : File_Type; Item : Unbounded_String) is
-   begin
-      Ada.Text_IO.Put (File, To_String (Item));
-   end Put_File;
-
-   function Get_Line_File (File : File_Type) return Unbounded_String is
-   begin
-      return To_Unbounded_String (Ada.Text_IO.Get_Line (File));
-   end Get_Line_File;
-
-   procedure New_Line_File (File : File_Type) is
-   begin
-      Ada.Text_IO.New_Line (File);
-   end New_Line_File;
 
    function Index (Source : Unbounded_String; Pattern : Unbounded_String) return Natural is
       S : constant String := To_String (Source);
@@ -352,85 +325,5 @@ package body Standard_String_Operations is
       --  HT (0x09), LF (0x0A), VT (0x0B), FF (0x0C), CR (0x0D), SP (0x20).
       return P in 16#09# .. 16#0D# or else P = 16#20#;
    end Char_Is_Whitespace;
-
-   --  @relation FUNC-DIR-002, NFR-DIR-001
-   function Path_Exists (Path : Unbounded_String) return Boolean is
-      POSIX_Path : constant String := To_String (Path);
-   begin
-      if POSIX_Path'Length = 0 then
-         return False;
-      end if;
-      return Ada.Directories.Exists (POSIX_Path);
-   exception
-      when others =>
-         return False;
-   end Path_Exists;
-
-   --  @relation FUNC-DIR-003, NFR-DIR-001
-   function Path_Kind (Path : Unbounded_String) return File_Kind is
-      POSIX_Path  : constant String := To_String (Path);
-      Native_Kind : Ada.Directories.File_Kind;
-   begin
-      if POSIX_Path'Length = 0 then
-         return Special_File;
-      end if;
-      Native_Kind := Ada.Directories.Kind (POSIX_Path);
-      case Native_Kind is
-         when Ada.Directories.Directory     =>
-            return Directory;
-
-         when Ada.Directories.Ordinary_File =>
-            return Ordinary_File;
-
-         when Ada.Directories.Special_File  =>
-            return Special_File;
-      end case;
-   exception
-      when others =>
-         return Special_File;
-   end Path_Kind;
-
-   --  @relation FUNC-DIR-004, NFR-DIR-001
-   function Create_Directory_Path (Path : Unbounded_String) return Boolean is
-      POSIX_Path : constant String := To_String (Path);
-   begin
-      if POSIX_Path'Length = 0 then
-         return False;
-      end if;
-      Ada.Directories.Create_Directory (POSIX_Path);
-      return True;
-   exception
-      when others =>
-         return False;
-   end Create_Directory_Path;
-
-   --  @relation FUNC-DIR-005, NFR-DIR-001
-   function Delete_File_Path (Path : Unbounded_String) return Boolean is
-      POSIX_Path : constant String := To_String (Path);
-   begin
-      if POSIX_Path'Length = 0 then
-         return False;
-      end if;
-      Ada.Directories.Delete_File (POSIX_Path);
-      return True;
-   exception
-      when others =>
-         return False;
-   end Delete_File_Path;
-
-   --  @relation FUNC-DIR-006, NFR-DIR-001
-   function Rename_Path (Old_Path, New_Path : Unbounded_String) return Boolean is
-      Src : constant String := To_String (Old_Path);
-      Dst : constant String := To_String (New_Path);
-   begin
-      if Src'Length = 0 or else Dst'Length = 0 then
-         return False;
-      end if;
-      Ada.Directories.Rename (Src, Dst);
-      return True;
-   exception
-      when others =>
-         return False;
-   end Rename_Path;
 
 end Standard_String_Operations;
