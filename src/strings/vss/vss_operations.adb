@@ -12,6 +12,8 @@ with VSS.Characters;
 with VSS.Strings.Conversions;
 with VSS.Transformers.Casing;
 
+with Ada.Directories;
+
 package body VSS_Operations is
 
    --  True iff C is a valid Unicode scalar value (U+0000..U+10FFFF and
@@ -40,9 +42,7 @@ package body VSS_Operations is
    --  VSS.Characters.Virtual_Character. Surrogates (U+D800..U+DFFF) and
    --  values above U+10FFFF are replaced with U+FFFD so that 'Val never
    --  trips the Virtual_Character Static_Predicate.
-   function To_Valid_Virtual_Character
-     (C : Wide_Wide_Character) return VSS.Characters.Virtual_Character
-   is
+   function To_Valid_Virtual_Character (C : Wide_Wide_Character) return VSS.Characters.Virtual_Character is
       CP : constant Natural := Wide_Wide_Character'Pos (C);
    begin
       if CP > 16#10_FFFF# or else CP in 16#D800# .. 16#DFFF# then
@@ -71,8 +71,7 @@ package body VSS_Operations is
          if Wide_Wide_Character'Pos (Source (I)) > 255 then
             Result (I) := Latin_1_Substitute;
          else
-            Result (I) :=
-              Character'Val (Wide_Wide_Character'Pos (Source (I)));
+            Result (I) := Character'Val (Wide_Wide_Character'Pos (Source (I)));
          end if;
       end loop;
       return Result;
@@ -92,52 +91,33 @@ package body VSS_Operations is
       return VSS.Strings.Is_Empty (Source);
    end Is_Empty;
 
-   function Element
-     (Source : Virtual_String;
-      Index  : Positive) return Wide_Wide_Character
-   is
-      WS : constant Wide_Wide_String :=
-        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+   function Element (Source : Virtual_String; Index : Positive) return Wide_Wide_Character is
+      WS : constant Wide_Wide_String := VSS.Strings.Conversions.To_Wide_Wide_String (Source);
    begin
       return WS (WS'First + Index - 1);
    end Element;
 
-   function Concat_Strings
-     (Left  : Virtual_String;
-      Right : Virtual_String) return Virtual_String
-   is
+   function Concat_Strings (Left : Virtual_String; Right : Virtual_String) return Virtual_String is
    begin
       return VSS.Strings."&" (Left, Right);
    end Concat_Strings;
 
-   function Concat_String_Character
-     (Left  : Virtual_String;
-      Right : Wide_Wide_Character) return Virtual_String
-   is
+   function Concat_String_Character (Left : Virtual_String; Right : Wide_Wide_Character) return Virtual_String is
    begin
       return VSS.Strings."&" (Left, To_Valid_Virtual_Character (Right));
    end Concat_String_Character;
 
-   function Concat_Character_String
-     (Left  : Wide_Wide_Character;
-      Right : Virtual_String) return Virtual_String
-   is
+   function Concat_Character_String (Left : Wide_Wide_Character; Right : Virtual_String) return Virtual_String is
    begin
       return VSS.Strings."&" (To_Valid_Virtual_Character (Left), Right);
    end Concat_Character_String;
 
-   function Concat_String_Latin_1
-     (Left  : Virtual_String;
-      Right : String) return Virtual_String
-   is
+   function Concat_String_Latin_1 (Left : Virtual_String; Right : String) return Virtual_String is
    begin
       return VSS.Strings."&" (Left, To_Virtual_String (Right));
    end Concat_String_Latin_1;
 
-   function Concat_Latin_1_String
-     (Left  : String;
-      Right : Virtual_String) return Virtual_String
-   is
+   function Concat_Latin_1_String (Left : String; Right : Virtual_String) return Virtual_String is
    begin
       return VSS.Strings."&" (To_Virtual_String (Left), Right);
    end Concat_Latin_1_String;
@@ -182,8 +162,7 @@ package body VSS_Operations is
 
    function To_String (Source : Virtual_String) return String is
    begin
-      return WWS_To_Latin_1
-        (VSS.Strings.Conversions.To_Wide_Wide_String (Source));
+      return WWS_To_Latin_1 (VSS.Strings.Conversions.To_Wide_Wide_String (Source));
    end To_String;
 
    ---------------------------------------------------------------------------
@@ -207,15 +186,11 @@ package body VSS_Operations is
          return Null_Virtual_String;
    end From_UTF_8_String;
 
-   function Environment_Value
-     (Name    : Virtual_String;
-      Default : Virtual_String) return Virtual_String
-   is
+   function Environment_Value (Name : Virtual_String; Default : Virtual_String) return Virtual_String is
       Encoded_Name : constant String := To_UTF_8_String (Name);
    begin
       if Ada.Environment_Variables.Exists (Encoded_Name) then
-         return From_UTF_8_String
-           (Ada.Environment_Variables.Value (Encoded_Name));
+         return From_UTF_8_String (Ada.Environment_Variables.Value (Encoded_Name));
       else
          return Default;
       end if;
@@ -232,13 +207,9 @@ package body VSS_Operations is
          return False;
    end Environment_Exists;
 
-   function Environment_Set
-     (Name  : Virtual_String;
-      Value : Virtual_String) return Boolean
-   is
+   function Environment_Set (Name : Virtual_String; Value : Virtual_String) return Boolean is
    begin
-      Ada.Environment_Variables.Set
-        (To_UTF_8_String (Name), To_UTF_8_String (Value));
+      Ada.Environment_Variables.Set (To_UTF_8_String (Name), To_UTF_8_String (Value));
       return True;
    exception
       when others =>
@@ -264,17 +235,14 @@ package body VSS_Operations is
    end Environment_Clear;
 
    function Environment_Iterate
-     (Process : not null access procedure
-        (Name  : Virtual_String;
-         Value : Virtual_String)) return Boolean
+     (Process : not null access procedure (Name : Virtual_String; Value : Virtual_String)) return Boolean
    is
       Success : Boolean := True;
 
       procedure Process_Item (Name, Value : String) is
       begin
          begin
-            Process.all
-              (From_UTF_8_String (Name), From_UTF_8_String (Value));
+            Process.all (From_UTF_8_String (Name), From_UTF_8_String (Value));
          exception
             when others =>
                Success := False;
@@ -295,20 +263,12 @@ package body VSS_Operations is
    --  Text I/O Operations
    ---------------------------------------------------------------------------
 
-   procedure Create_File
-     (File : in out File_Type;
-      Mode : File_Mode := Out_File_Mode;
-      Name : String := "")
-   is
+   procedure Create_File (File : in out File_Type; Mode : File_Mode := Out_File_Mode; Name : String := "") is
    begin
       Ada.Text_IO.Create (File, Mode, Name);
    end Create_File;
 
-   procedure Open_File
-     (File : in out File_Type;
-      Mode : File_Mode;
-      Name : String)
-   is
+   procedure Open_File (File : in out File_Type; Mode : File_Mode; Name : String) is
    begin
       Ada.Text_IO.Open (File, Mode, Name);
    end Open_File;
@@ -340,13 +300,8 @@ package body VSS_Operations is
       return Ada.Containers.Hash_Type'Mod (Full);
    end Hash;
 
-   function Slice
-     (Source : Virtual_String;
-      Low    : Positive;
-      High   : Natural) return Virtual_String
-   is
-      WS  : constant Wide_Wide_String :=
-        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+   function Slice (Source : Virtual_String; Low : Positive; High : Natural) return Virtual_String is
+      WS  : constant Wide_Wide_String := VSS.Strings.Conversions.To_Wide_Wide_String (Source);
       Len : constant Natural := WS'Length;
    begin
       if Low > Len or else Low > High then
@@ -356,21 +311,14 @@ package body VSS_Operations is
       declare
          Hi : constant Natural := Natural'Min (High, Len);
       begin
-         return VSS.Strings.To_Virtual_String
-           (WS (WS'First + Low - 1 .. WS'First + Hi - 1));
+         return VSS.Strings.To_Virtual_String (WS (WS'First + Low - 1 .. WS'First + Hi - 1));
       end;
    end Slice;
 
-   function Index
-     (Source  : Virtual_String;
-      Pattern : Virtual_String) return Natural
-   is
-      WS_Src : constant Wide_Wide_String :=
-        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
-      WS_Pat : constant Wide_Wide_String :=
-        VSS.Strings.Conversions.To_Wide_Wide_String (Pattern);
-      Pos    : constant Natural :=
-        Ada.Strings.Wide_Wide_Fixed.Index (WS_Src, WS_Pat);
+   function Index (Source : Virtual_String; Pattern : Virtual_String) return Natural is
+      WS_Src : constant Wide_Wide_String := VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+      WS_Pat : constant Wide_Wide_String := VSS.Strings.Conversions.To_Wide_Wide_String (Pattern);
+      Pos    : constant Natural := Ada.Strings.Wide_Wide_Fixed.Index (WS_Src, WS_Pat);
    begin
       if Pos = 0 then
          return 0;
@@ -380,31 +328,21 @@ package body VSS_Operations is
       end if;
    end Index;
 
-   function Index_Latin_1
-     (Source  : Virtual_String;
-      Pattern : String) return Natural
-   is
+   function Index_Latin_1 (Source : Virtual_String; Pattern : String) return Natural is
    begin
       return Index (Source, To_Virtual_String (Pattern));
    end Index_Latin_1;
 
-   function Index_From
-     (Source      : Virtual_String;
-      Pattern     : Virtual_String;
-      Starting_At : Positive) return Natural
-   is
-      WS_Src : constant Wide_Wide_String :=
-        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
-      WS_Pat : constant Wide_Wide_String :=
-        VSS.Strings.Conversions.To_Wide_Wide_String (Pattern);
+   function Index_From (Source : Virtual_String; Pattern : Virtual_String; Starting_At : Positive) return Natural is
+      WS_Src : constant Wide_Wide_String := VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+      WS_Pat : constant Wide_Wide_String := VSS.Strings.Conversions.To_Wide_Wide_String (Pattern);
    begin
       if WS_Pat'Length = 0 or else Starting_At > WS_Src'Length then
          return 0;
       end if;
       declare
          From_Abs : constant Positive := WS_Src'First + Starting_At - 1;
-         Pos      : constant Natural :=
-           Ada.Strings.Wide_Wide_Fixed.Index (WS_Src, WS_Pat, From_Abs);
+         Pos      : constant Natural := Ada.Strings.Wide_Wide_Fixed.Index (WS_Src, WS_Pat, From_Abs);
       begin
          if Pos = 0 then
             return 0;
@@ -414,22 +352,15 @@ package body VSS_Operations is
       end;
    end Index_From;
 
-   function Index_Reverse
-     (Source  : Virtual_String;
-      Pattern : Virtual_String) return Natural
-   is
-      WS_Src : constant Wide_Wide_String :=
-        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
-      WS_Pat : constant Wide_Wide_String :=
-        VSS.Strings.Conversions.To_Wide_Wide_String (Pattern);
+   function Index_Reverse (Source : Virtual_String; Pattern : Virtual_String) return Natural is
+      WS_Src : constant Wide_Wide_String := VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+      WS_Pat : constant Wide_Wide_String := VSS.Strings.Conversions.To_Wide_Wide_String (Pattern);
    begin
       if WS_Pat'Length = 0 or else WS_Pat'Length > WS_Src'Length then
          return 0;
       end if;
       declare
-         Pos : constant Natural :=
-           Ada.Strings.Wide_Wide_Fixed.Index
-             (WS_Src, WS_Pat, Going => Ada.Strings.Backward);
+         Pos : constant Natural := Ada.Strings.Wide_Wide_Fixed.Index (WS_Src, WS_Pat, Going => Ada.Strings.Backward);
       begin
          if Pos = 0 then
             return 0;
@@ -449,36 +380,25 @@ package body VSS_Operations is
       return VSS.Transformers.Casing.To_Uppercase.Transform (Source);
    end To_Upper;
 
-   function Starts_With
-     (Source : Virtual_String;
-      Prefix : Virtual_String) return Boolean
-   is
+   function Starts_With (Source : Virtual_String; Prefix : Virtual_String) return Boolean is
    begin
       return VSS.Strings.Starts_With (Source, Prefix);
    end Starts_With;
 
-   function Starts_With_Latin_1
-     (Source : Virtual_String;
-      Prefix : String) return Boolean
-   is
+   function Starts_With_Latin_1 (Source : Virtual_String; Prefix : String) return Boolean is
    begin
       return Starts_With (Source, To_Virtual_String (Prefix));
    end Starts_With_Latin_1;
 
-   function Ends_With
-     (Source : Virtual_String;
-      Suffix : Virtual_String) return Boolean
-   is
+   function Ends_With (Source : Virtual_String; Suffix : Virtual_String) return Boolean is
    begin
       return VSS.Strings.Ends_With (Source, Suffix);
    end Ends_With;
 
    function Trim (Source : Virtual_String) return Virtual_String is
-      WS : constant Wide_Wide_String :=
-        VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+      WS : constant Wide_Wide_String := VSS.Strings.Conversions.To_Wide_Wide_String (Source);
    begin
-      return VSS.Strings.To_Virtual_String
-        (Ada.Strings.Wide_Wide_Fixed.Trim (WS, Ada.Strings.Both));
+      return VSS.Strings.To_Virtual_String (Ada.Strings.Wide_Wide_Fixed.Trim (WS, Ada.Strings.Both));
    end Trim;
 
    function From_Character (C : Wide_Wide_Character) return Virtual_String is
@@ -543,15 +463,10 @@ package body VSS_Operations is
       return Ada.Wide_Wide_Characters.Handling.Is_Letter (C);
    end Char_Is_Letter;
 
-   function Char_Is_Line_Terminator (C : Wide_Wide_Character) return Boolean
-   is
+   function Char_Is_Line_Terminator (C : Wide_Wide_Character) return Boolean is
       P : constant Natural := Wide_Wide_Character'Pos (C);
    begin
-      return P = 16#0A#
-        or else P = 16#0D#
-        or else P = 16#85#
-        or else P = 16#2028#
-        or else P = 16#2029#;
+      return P = 16#0A# or else P = 16#0D# or else P = 16#85# or else P = 16#2028# or else P = 16#2029#;
    end Char_Is_Line_Terminator;
 
    function Char_Is_Lower (C : Wide_Wide_Character) return Boolean is
@@ -582,8 +497,7 @@ package body VSS_Operations is
       return Ada.Wide_Wide_Characters.Handling.Is_Space (C);
    end Char_Is_Whitespace;
 
-   function Char_To_Lower (C : Wide_Wide_Character) return Wide_Wide_Character
-   is
+   function Char_To_Lower (C : Wide_Wide_Character) return Wide_Wide_Character is
    begin
       if not Is_Unicode_Scalar (C) then
          return C;
@@ -591,13 +505,92 @@ package body VSS_Operations is
       return Ada.Wide_Wide_Characters.Handling.To_Lower (C);
    end Char_To_Lower;
 
-   function Char_To_Upper (C : Wide_Wide_Character) return Wide_Wide_Character
-   is
+   function Char_To_Upper (C : Wide_Wide_Character) return Wide_Wide_Character is
    begin
       if not Is_Unicode_Scalar (C) then
          return C;
       end if;
       return Ada.Wide_Wide_Characters.Handling.To_Upper (C);
    end Char_To_Upper;
+
+   --  @relation FUNC-DIR-002, NFR-DIR-001
+   function Path_Exists (Path : Virtual_String) return Boolean is
+      POSIX_Path : constant String := To_UTF_8_String (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      return Ada.Directories.Exists (POSIX_Path);
+   exception
+      when others =>
+         return False;
+   end Path_Exists;
+
+   --  @relation FUNC-DIR-003, NFR-DIR-001
+   function Path_Kind (Path : Virtual_String) return File_Kind is
+      POSIX_Path  : constant String := To_UTF_8_String (Path);
+      Native_Kind : Ada.Directories.File_Kind;
+   begin
+      if POSIX_Path'Length = 0 then
+         return Special_File;
+      end if;
+      Native_Kind := Ada.Directories.Kind (POSIX_Path);
+      case Native_Kind is
+         when Ada.Directories.Directory     =>
+            return Directory;
+
+         when Ada.Directories.Ordinary_File =>
+            return Ordinary_File;
+
+         when Ada.Directories.Special_File  =>
+            return Special_File;
+      end case;
+   exception
+      when others =>
+         return Special_File;
+   end Path_Kind;
+
+   --  @relation FUNC-DIR-004, NFR-DIR-001
+   function Create_Directory_Path (Path : Virtual_String) return Boolean is
+      POSIX_Path : constant String := To_UTF_8_String (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Create_Directory (POSIX_Path);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Create_Directory_Path;
+
+   --  @relation FUNC-DIR-005, NFR-DIR-001
+   function Delete_File_Path (Path : Virtual_String) return Boolean is
+      POSIX_Path : constant String := To_UTF_8_String (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Delete_File (POSIX_Path);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Delete_File_Path;
+
+   --  @relation FUNC-DIR-006, NFR-DIR-001
+   function Rename_Path (Old_Path, New_Path : Virtual_String) return Boolean is
+      Src : constant String := To_UTF_8_String (Old_Path);
+      Dst : constant String := To_UTF_8_String (New_Path);
+   begin
+      if Src'Length = 0 or else Dst'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Rename (Src, Dst);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Rename_Path;
 
 end VSS_Operations;

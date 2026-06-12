@@ -1,0 +1,253 @@
+[DOCUMENT]
+TITLE: Filesystem Boundary — Non-Functional Requirements
+REQ_PREFIX: NFR-DIR-
+
+[GRAMMAR]
+ELEMENTS:
+- TAG: REQUIREMENT
+  FIELDS:
+  - TITLE: UID
+    TYPE: String
+    REQUIRED: True
+  - TITLE: STATUS
+    TYPE: String
+    REQUIRED: False
+  - TITLE: PRIORITY
+    TYPE: String
+    REQUIRED: False
+  - TITLE: TITLE
+    TYPE: String
+    REQUIRED: False
+  - TITLE: STATEMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: COMMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: RELATIONS
+    TYPE: String
+    REQUIRED: False
+
+[SECTION]
+TITLE: Reliability
+
+[REQUIREMENT]
+UID: NFR-DIR-001
+STATUS: Approved
+PRIORITY: Must
+TITLE: No exceptions cross the String_Types filesystem boundary
+STATEMENT: >>>
+None of the five filesystem functions (``Exists``, ``Kind``,
+``Create_Directory``, ``Delete_File``, ``Rename``) SHALL propagate any
+exception across the ``String_Types`` public boundary.
+
+All exceptions, including ``Ada.IO_Exceptions.Name_Error``,
+``Ada.IO_Exceptions.Use_Error``, ``Ada.IO_Exceptions.Status_Error``,
+``Constraint_Error``, and, to the maximum extent permitted by the Ada runtime,
+``Storage_Error``, SHALL be absorbed by the implementation and translated into
+the designated safe return values:
+
+- ``Boolean``-returning functions return ``False`` on any exception.
+- ``Kind`` returns ``Special_File`` on any exception.
+
+This totality requirement applies identically across all five backends.
+<<<
+COMMENT: >>>
+``Storage_Error`` is raised by the Ada runtime for memory exhaustion or stack
+overflow conditions.  Ada RM 11.6 explicitly allows handlers for
+``Storage_Error`` but advises caution; absorbing it here is a best-effort
+commitment.  If a backend's Ada runtime cannot safely handle ``Storage_Error``
+in an exception handler, it MAY re-propagate it; this exception is therefore
+listed as "maximum extent permitted" rather than mandatory.
+
+The primary motivation is the Aclida CLI ``OS.Files`` shim, which currently
+contains per-call exception handlers to work around the absence of this
+contract in the Ada standard library.  Centralising the absorption in the
+bridge eliminates that boilerplate from every consumer.
+<<<
+RELATIONS: FUNC-DIR-002, FUNC-DIR-003, FUNC-DIR-004, FUNC-DIR-005, FUNC-DIR-006
+
+[/SECTION]
+
+[SECTION]
+TITLE: Dependencies
+
+[REQUIREMENT]
+UID: NFR-DIR-002
+STATUS: Approved
+PRIORITY: Must
+TITLE: No new external dependencies introduced
+STATEMENT: >>>
+The filesystem boundary feature SHALL use only:
+
+- Standard Ada library packages (``Ada.Directories``,
+  ``Ada.IO_Exceptions``, ``Ada.Strings.UTF_Encoding``,
+  ``Ada.Characters.*``).
+- The per-backend encoding helpers already present in each backend's
+  ``*_operations`` packages at the time this feature is implemented.
+
+No new entries SHALL be added to ``alire.toml`` dependency declarations as a
+direct result of implementing this feature.
+
+The ``uxstring`` and ``vss`` backends MAY use the UTF-8 serialisation
+primitives already provided by their respective external crates (which are
+already declared in ``alire.toml``); those are not new dependencies.
+<<<
+COMMENT: >>>
+This preserves the library's no-runtime-dependency contract for the default
+(``standard``) build target.  A consumer who builds with the ``standard``
+backend and does not need ``uxstrings`` or ``vss`` SHALL NOT have those crates
+pulled into their dependency graph as a result of this feature.
+<<<
+RELATIONS: FUNC-DIR-007
+
+[/SECTION]
+
+[SECTION]
+TITLE: SPARK Compatibility
+
+[REQUIREMENT]
+UID: NFR-DIR-003
+STATUS: Approved
+PRIORITY: Must
+TITLE: SPARK_Mode Off scoped to the filesystem subsection of anystrings.ads
+STATEMENT: >>>
+The filesystem-related declarations added to ``src/anystrings.ads``
+(the generic signature package) SHALL be wrapped in a ``pragma SPARK_Mode (Off)``
+region.  The region SHALL encompass only the ``File_Kind`` enumeration
+(FUNC-DIR-001) and the five filesystem formal subprograms
+(FUNC-DIR-002 through FUNC-DIR-006).
+
+The ``pragma SPARK_Mode (Off)`` SHALL NOT extend beyond the filesystem
+subsection.  All pre-existing declarations in ``src/anystrings.ads`` that are
+currently under ``SPARK_Mode On`` SHALL remain under ``SPARK_Mode On``.
+<<<
+COMMENT: >>>
+``Ada.Directories`` is not covered by the SPARK subset (Ada RM A.16 calls are
+not SPARK-analyzable by GNATprove).  Wrapping only the new subsection in
+``SPARK_Mode (Off)`` follows the existing pattern in ``src/anystrings.ads``
+where I/O and environment operations are individually guarded rather than
+disabling SPARK_Mode for the whole package.
+
+The ``File_Kind`` enumeration itself has no SPARK-incompatible features, but
+it is placed inside the ``SPARK_Mode (Off)`` region because it is semantically
+coupled to the filesystem operations and GNATprove would need to follow the
+enumeration to analyze the formal subprograms that reference it.
+<<<
+RELATIONS: NFR-CONV-001
+
+[/SECTION]
+
+[SECTION]
+TITLE: Platform Scope
+
+[REQUIREMENT]
+UID: NFR-DIR-004
+STATUS: Approved
+PRIORITY: Must
+TITLE: Specified behaviour applies to POSIX filesystems only
+STATEMENT: >>>
+The functional requirements FUNC-DIR-002 through FUNC-DIR-007 specify
+behaviour for POSIX-compliant filesystems (Linux and macOS).
+
+Behaviour on Windows filesystems is explicitly out of scope.  On Windows,
+the UTF-8 path encoding specified in FUNC-DIR-007 and the totality semantics
+of NFR-DIR-001 MAY not hold due to Windows-specific path encoding conventions
+(UTF-16 wide paths, drive letters, UNC paths) and Win32 error code mappings
+that the Ada ``Ada.Directories`` binding may not fully abstract.
+
+Implementations SHOULD NOT add Windows-specific code paths; undefined
+behaviour on Windows is preferable to a silently incorrect implementation.
+<<<
+COMMENT: >>>
+The primary consumers of this library (Aclida CLI and related tooling) target
+POSIX platforms.  Windows support would require at minimum a separate encoding
+path (UTF-16 via ``Ada.Wide_Directories`` or platform-specific bindings) and
+a separate set of error-mapping tests; both are out of scope for this feature
+increment.
+
+This requirement is recorded explicitly so that future contributors who
+attempt a Windows port know the exact gap to fill and do not mistake the
+current implementation for a working Windows implementation.
+<<<
+RELATIONS: FUNC-DIR-007
+
+[/SECTION]
+
+[SECTION]
+TITLE: Backward Compatibility
+
+[REQUIREMENT]
+UID: NFR-DIR-005
+STATUS: Approved
+PRIORITY: Must
+TITLE: Additive change — no existing String_Types public name modified or removed
+STATEMENT: >>>
+The filesystem boundary feature SHALL be a purely additive change to the
+``String_Types`` public API.
+
+No existing public name (function, procedure, type, constant, or subtype)
+exposed by any of the five backends' ``string_types.ads`` files or by
+``src/anystrings.ads`` SHALL be removed, renamed, or have its signature
+changed as a result of implementing this feature.
+
+A consumer of any current ``String_Types`` backend whose source code does not
+reference the new filesystem API SHALL recompile without modification after
+the feature is implemented.
+<<<
+COMMENT: >>>
+This mirrors the additive-change constraint established for the
+conversion-semantics feature (NFR-CONV-003) and the command-line access
+feature.  It protects existing downstream consumers (including the test suite
+and the examples crate) from inadvertent breakage during the implementation
+phase.
+<<<
+RELATIONS: NFR-CONV-003, FUNC-DIR-008
+
+[/SECTION]
+
+[SECTION]
+TITLE: Quality
+
+[REQUIREMENT]
+UID: NFR-DIR-006
+STATUS: Approved
+PRIORITY: Must
+TITLE: Test coverage for filesystem operations
+STATEMENT: >>>
+The project's test suite SHALL include AUnit test cases that verify the
+filesystem boundary feature across all five backends.  The test suite SHALL
+cover at minimum:
+
+1. ``Exists`` returns ``False`` for a non-existent path (totality check for
+   query functions).
+2. ``Kind`` returns ``Special_File`` for a non-existent path (totality check
+   for the kind query).
+3. ``Create_Directory``, ``Exists``, ``Kind``, and ``Delete_File`` on a path
+   composed entirely of ASCII characters — the create/existence/kind/delete
+   round-trip.
+4. The same round-trip on a path containing at least one UTF-8 multibyte
+   character (e.g. a directory named ``café`` or ``日本語``) to exercise the
+   encoding path of FUNC-DIR-007.
+5. ``Rename`` on an ASCII path — source exists before rename, source does not
+   exist and destination does exist after rename.
+6. ``Rename`` returns ``False`` when the source path does not exist.
+
+Tests SHOULD be structured as a single AUnit fixture file that compiles
+against any backend, consistent with the pattern established by NFR-CONV-006
+for the conversion-semantics tests.
+<<<
+COMMENT: >>>
+The UTF-8 multibyte path test (item 4) is the regression test for the
+byte-corruption bug described in FUNC-DIR-007: if the implementation
+incorrectly uses ``To_Latin_1`` for path encoding on a Unicode backend, the
+test will fail because the directory will not be found under the correctly-
+encoded name.
+
+The ``standard`` backend's UTF-8 multibyte path test exercises the
+byte-passthrough path.  If the host uses a non-UTF-8 locale, the test is
+permitted to skip with a recorded note rather than fail.
+<<<
+RELATIONS: FUNC-DIR-002, FUNC-DIR-003, FUNC-DIR-004, FUNC-DIR-005, FUNC-DIR-006, FUNC-DIR-007, NFR-CONV-006
+
+[/SECTION]

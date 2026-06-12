@@ -10,6 +10,8 @@ with Ada.Strings;
 with Ada.Strings.Unbounded;
 with Ada.Wide_Wide_Characters.Handling;
 
+with Ada.Directories;
+
 package body UXString_Operations is
 
    --  True iff C is a valid Unicode scalar value (in U+0000..U+10FFFF and
@@ -459,5 +461,85 @@ package body UXString_Operations is
       end if;
       return Ada.Wide_Wide_Characters.Handling.To_Upper (C);
    end Char_To_Upper;
+
+   --  @relation FUNC-DIR-002, NFR-DIR-001
+   function Path_Exists (Path : UXString) return Boolean is
+      POSIX_Path : constant String := UXString_Operations.To_UTF_8 (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      return Ada.Directories.Exists (POSIX_Path);
+   exception
+      when others =>
+         return False;
+   end Path_Exists;
+
+   --  @relation FUNC-DIR-003, NFR-DIR-001
+   function Path_Kind (Path : UXString) return File_Kind is
+      POSIX_Path  : constant String := UXString_Operations.To_UTF_8 (Path);
+      Native_Kind : Ada.Directories.File_Kind;
+   begin
+      if POSIX_Path'Length = 0 then
+         return Special_File;
+      end if;
+      Native_Kind := Ada.Directories.Kind (POSIX_Path);
+      case Native_Kind is
+         when Ada.Directories.Directory     =>
+            return Directory;
+
+         when Ada.Directories.Ordinary_File =>
+            return Ordinary_File;
+
+         when Ada.Directories.Special_File  =>
+            return Special_File;
+      end case;
+   exception
+      when others =>
+         return Special_File;
+   end Path_Kind;
+
+   --  @relation FUNC-DIR-004, NFR-DIR-001
+   function Create_Directory_Path (Path : UXString) return Boolean is
+      POSIX_Path : constant String := UXString_Operations.To_UTF_8 (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Create_Directory (POSIX_Path);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Create_Directory_Path;
+
+   --  @relation FUNC-DIR-005, NFR-DIR-001
+   function Delete_File_Path (Path : UXString) return Boolean is
+      POSIX_Path : constant String := UXString_Operations.To_UTF_8 (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Delete_File (POSIX_Path);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Delete_File_Path;
+
+   --  @relation FUNC-DIR-006, NFR-DIR-001
+   function Rename_Path (Old_Path, New_Path : UXString) return Boolean is
+      Src : constant String := UXString_Operations.To_UTF_8 (Old_Path);
+      Dst : constant String := UXString_Operations.To_UTF_8 (New_Path);
+   begin
+      if Src'Length = 0 or else Dst'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Rename (Src, Dst);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Rename_Path;
 
 end UXString_Operations;

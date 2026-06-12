@@ -88,4 +88,10 @@ package VSS_Strings is new Anystrings
    Is_Upper                 => VSS_Operations.Char_Is_Upper,
    Is_Whitespace            => VSS_Operations.Char_Is_Whitespace,
    Char_To_Lower            => VSS_Operations.Char_To_Lower,
-   Char_To_Upper            => VSS_Operations.Char_To_Upper);
+   Char_To_Upper            => VSS_Operations.Char_To_Upper,
+   File_Kind                => VSS_Operations.File_Kind,
+   Path_Exists              => VSS_Operations.Path_Exists,
+   Path_Kind                => VSS_Operations.Path_Kind,
+   Create_Directory_Path    => VSS_Operations.Create_Directory_Path,
+   Delete_File_Path         => VSS_Operations.Delete_File_Path,
+   Rename_Path              => VSS_Operations.Rename_Path);

@@ -170,7 +170,34 @@ generic
 
    with function End_Of_File_File (File : File_Type) return Boolean;
 
-   ---------------------------------------------------------------------------
+   --  Filesystem Operations (FUNC-DIR-001..008)
+   --  NFR-DIR-003: bodies are in the existing SPARK_Mode(Off) region of the
+   --  package spec; these formals inherit the enclosing SPARK_Mode setting.
+
+   --  @relation FUNC-DIR-001
+   --  Formal discrete type mirroring Ada.Directories.File_Kind (Ada RM A.16).
+   --  Declaration order matches Ada.Directories (Directory, Ordinary_File,
+   --  Special_File) so 'Pos-based reasoning is unambiguous.
+   type File_Kind is (<>);
+
+   --  @relation FUNC-DIR-002, NFR-DIR-001
+   --  Total: must not raise; returns False on any exception.
+   with function Path_Exists (Path : String_Type) return Boolean;
+
+   --  @relation FUNC-DIR-003, NFR-DIR-001
+   --  Total: must not raise; returns Special_File on any exception or on any
+   --  Ada.Directories.File_Kind value not in the three mapped cases.
+   with function Path_Kind (Path : String_Type) return File_Kind;
+
+   --  @relation FUNC-DIR-004, NFR-DIR-001
+   with function Create_Directory_Path (Path : String_Type) return Boolean;
+
+   --  @relation FUNC-DIR-005, NFR-DIR-001
+   with function Delete_File_Path (Path : String_Type) return Boolean;
+
+   --  @relation FUNC-DIR-006, NFR-DIR-001
+   with function Rename_Path (Old_Path, New_Path : String_Type) return Boolean;
+
    --  Extended Operations (required by the framework)
    ---------------------------------------------------------------------------
 
@@ -585,5 +612,29 @@ is
 
    --  @summary Truncate-from-left or left-pad Source to exactly Count characters.
    function Tail (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type;
+
+   --  ----- Filesystem boundary (FUNC-DIR-002..006, NFR-DIR-001..005) -----
+   --  Expression-function wrappers over the generic formals. Live inside the
+   --  existing pragma SPARK_Mode (Off) region opened at Environment Operations.
+
+   --  @relation FUNC-DIR-002
+   function Exists (Path : String_Type) return Boolean
+   is (Path_Exists (Path));
+
+   --  @relation FUNC-DIR-003
+   function Kind (Path : String_Type) return File_Kind
+   is (Path_Kind (Path));
+
+   --  @relation FUNC-DIR-004
+   function Create_Directory (Path : String_Type) return Boolean
+   is (Create_Directory_Path (Path));
+
+   --  @relation FUNC-DIR-005
+   function Delete_File (Path : String_Type) return Boolean
+   is (Delete_File_Path (Path));
+
+   --  @relation FUNC-DIR-006
+   function Rename (Old_Path, New_Path : String_Type) return Boolean
+   is (Rename_Path (Old_Path, New_Path));
 
 end Anystrings;

@@ -290,4 +290,26 @@ package Standard_String_Operations is
    function Char_To_Upper (C : Character) return Character
    renames Ada.Characters.Handling.To_Upper;
 
+   --  Filesystem Operations (FUNC-DIR-002..006, NFR-DIR-001)
+   --  Path encoding: Ada.Strings.Unbounded.To_String (byte-identity; storage
+   --  IS UTF-8 per FUNC-CONV-001). Bodies in standard_string_operations.adb.
+
+   --  @relation FUNC-DIR-001
+   type File_Kind is (Directory, Ordinary_File, Special_File);
+
+   --  @relation FUNC-DIR-002, NFR-DIR-001
+   function Path_Exists (Path : Unbounded_String) return Boolean;
+
+   --  @relation FUNC-DIR-003, NFR-DIR-001
+   function Path_Kind (Path : Unbounded_String) return File_Kind;
+
+   --  @relation FUNC-DIR-004, NFR-DIR-001
+   function Create_Directory_Path (Path : Unbounded_String) return Boolean;
+
+   --  @relation FUNC-DIR-005, NFR-DIR-001
+   function Delete_File_Path (Path : Unbounded_String) return Boolean;
+
+   --  @relation FUNC-DIR-006, NFR-DIR-001
+   function Rename_Path (Old_Path, New_Path : Unbounded_String) return Boolean;
+
 end Standard_String_Operations;

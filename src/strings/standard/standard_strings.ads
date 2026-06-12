@@ -101,4 +101,10 @@ package Standard_Strings is new
      Is_Upper                => Standard_String_Operations.Char_Is_Upper,
      Is_Whitespace           => Standard_String_Operations.Char_Is_Whitespace,
      Char_To_Lower           => Standard_String_Operations.Char_To_Lower,
-     Char_To_Upper           => Standard_String_Operations.Char_To_Upper);
+     Char_To_Upper           => Standard_String_Operations.Char_To_Upper,
+     File_Kind               => Standard_String_Operations.File_Kind,
+     Path_Exists             => Standard_String_Operations.Path_Exists,
+     Path_Kind               => Standard_String_Operations.Path_Kind,
+     Create_Directory_Path   => Standard_String_Operations.Create_Directory_Path,
+     Delete_File_Path        => Standard_String_Operations.Delete_File_Path,
+     Rename_Path             => Standard_String_Operations.Rename_Path);

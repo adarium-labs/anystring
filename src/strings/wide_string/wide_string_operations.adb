@@ -15,6 +15,8 @@ with Ada.Wide_Characters.Handling;
 with Anystrings_Conv;
 with Anystrings_Internal_Wide_Environment_Encoding;
 
+with Ada.Directories;
+
 package body Wide_String_Operations is
 
    function To_Wide_String (Source : String) return Wide_String is
@@ -32,6 +34,7 @@ package body Wide_String_Operations is
       for I in Source'Range loop
          if Wide_Character'Pos (Source (I)) > 255 then
             Result (I) := '?';  --  Replacement for non-Latin-1 characters
+
          else
             Result (I) := Character'Val (Wide_Character'Pos (Source (I)));
          end if;
@@ -40,9 +43,7 @@ package body Wide_String_Operations is
    end To_String_From_Wide;
 
    function Environment_Value
-     (Name    : Unbounded_Wide_String;
-      Default : Unbounded_Wide_String) return Unbounded_Wide_String
-   is
+     (Name : Unbounded_Wide_String; Default : Unbounded_Wide_String) return Unbounded_Wide_String is
    begin
       if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name) then
          return Default;
@@ -52,8 +53,9 @@ package body Wide_String_Operations is
          Encoded_Name : constant String := Anystrings_Internal_Wide_Environment_Encoding.Encode (Name);
       begin
          if Ada.Environment_Variables.Exists (Encoded_Name) then
-            return Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide
-              (Ada.Environment_Variables.Value (Encoded_Name));
+            return
+              Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide
+                (Ada.Environment_Variables.Value (Encoded_Name));
          else
             return Default;
          end if;
@@ -63,9 +65,7 @@ package body Wide_String_Operations is
          return Default;
    end Environment_Value;
 
-   function Environment_Exists
-     (Name : Unbounded_Wide_String) return Boolean
-   is
+   function Environment_Exists (Name : Unbounded_Wide_String) return Boolean is
    begin
       if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name) then
          return False;
@@ -77,10 +77,7 @@ package body Wide_String_Operations is
          return False;
    end Environment_Exists;
 
-   function Environment_Set
-     (Name  : Unbounded_Wide_String;
-      Value : Unbounded_Wide_String) return Boolean
-   is
+   function Environment_Set (Name : Unbounded_Wide_String; Value : Unbounded_Wide_String) return Boolean is
    begin
       if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name)
         or else not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Value)
@@ -97,9 +94,7 @@ package body Wide_String_Operations is
          return False;
    end Environment_Set;
 
-   function Environment_Clear
-     (Name : Unbounded_Wide_String) return Boolean
-   is
+   function Environment_Clear (Name : Unbounded_Wide_String) return Boolean is
    begin
       if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name) then
          return False;
@@ -122,19 +117,15 @@ package body Wide_String_Operations is
    end Environment_Clear;
 
    function Environment_Iterate
-     (Process : not null access procedure
-        (Name  : Unbounded_Wide_String;
-         Value : Unbounded_Wide_String)) return Boolean
+     (Process : not null access procedure (Name : Unbounded_Wide_String; Value : Unbounded_Wide_String)) return Boolean
    is
       Success : Boolean := True;
 
-      procedure Process_Item
-        (Name, Value : String)
-      is
+      procedure Process_Item (Name, Value : String) is
       begin
          begin
             declare
-               Decoded_Name : constant Unbounded_Wide_String :=
+               Decoded_Name  : constant Unbounded_Wide_String :=
                  Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide (Name);
                Decoded_Value : constant Unbounded_Wide_String :=
                  Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide (Value);
@@ -162,79 +153,51 @@ package body Wide_String_Operations is
       return Success;
    end Environment_Iterate;
 
-   procedure Create_File
-     (File : in out File_Type;
-      Mode : File_Mode := Out_File_Mode;
-      Name : String := "")
-   is
+   procedure Create_File (File : in out File_Type; Mode : File_Mode := Out_File_Mode; Name : String := "") is
    begin
       Ada.Wide_Text_IO.Create (File, Mode, Name);
    end Create_File;
 
-   procedure Open_File
-     (File : in out File_Type;
-      Mode : File_Mode;
-      Name : String)
-   is
+   procedure Open_File (File : in out File_Type; Mode : File_Mode; Name : String) is
    begin
       Ada.Wide_Text_IO.Open (File, Mode, Name);
    end Open_File;
 
-   procedure Put_File
-     (File : File_Type;
-      Item : Unbounded_Wide_String)
-   is
+   procedure Put_File (File : File_Type; Item : Unbounded_Wide_String) is
    begin
-      Ada.Wide_Text_IO.Put
-        (File,
-         Ada.Strings.Wide_Unbounded.To_Wide_String (Item));
+      Ada.Wide_Text_IO.Put (File, Ada.Strings.Wide_Unbounded.To_Wide_String (Item));
    end Put_File;
 
-   function Get_Line_File
-     (File : File_Type) return Unbounded_Wide_String
-   is
+   function Get_Line_File (File : File_Type) return Unbounded_Wide_String is
    begin
-      return Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String
-        (Ada.Wide_Text_IO.Get_Line (File));
+      return Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String (Ada.Wide_Text_IO.Get_Line (File));
    end Get_Line_File;
 
-   procedure New_Line_File
-     (File : File_Type)
-   is
+   procedure New_Line_File (File : File_Type) is
    begin
       Ada.Wide_Text_IO.New_Line (File);
    end New_Line_File;
 
-   function Concat_String_Latin_1
-     (Left  : Unbounded_Wide_String;
-      Right : String) return Unbounded_Wide_String
-   is
+   function Concat_String_Latin_1 (Left : Unbounded_Wide_String; Right : String) return Unbounded_Wide_String is
       use Ada.Strings.Wide_Unbounded;
    begin
       return Left & To_Wide_String (Right);
    end Concat_String_Latin_1;
 
-   function Concat_Latin_1_String
-     (Left  : String;
-      Right : Unbounded_Wide_String) return Unbounded_Wide_String
-   is
+   function Concat_Latin_1_String (Left : String; Right : Unbounded_Wide_String) return Unbounded_Wide_String is
       use Ada.Strings.Wide_Unbounded;
    begin
       return To_Wide_String (Left) & Right;
    end Concat_Latin_1_String;
 
-   function To_Unbounded_Wide_String
-     (Source : String) return Unbounded_Wide_String
-   is
+   function To_Unbounded_Wide_String (Source : String) return Unbounded_Wide_String is
    begin
-      return Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String
-        (To_Wide_String (Source));
+      return Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String (To_Wide_String (Source));
    end To_Unbounded_Wide_String;
 
    function To_String (Source : Unbounded_Wide_String) return String is
    begin
-      return To_String_From_Wide
-        (Ada.Strings.Wide_Unbounded.To_Wide_String (Source));
+      return To_String_From_Wide (Ada.Strings.Wide_Unbounded.To_Wide_String (Source));
    end To_String;
 
    function Hash (Key : Unbounded_Wide_String) return Ada.Containers.Hash_Type is
@@ -248,38 +211,25 @@ package body Wide_String_Operations is
       return Result;
    end Hash;
 
-   function Slice
-     (Source : Unbounded_Wide_String;
-      Low    : Positive;
-      High   : Natural) return Unbounded_Wide_String
-   is
+   function Slice (Source : Unbounded_Wide_String; Low : Positive; High : Natural) return Unbounded_Wide_String is
       use Ada.Strings.Wide_Unbounded;
    begin
       return To_Unbounded_Wide_String (Slice (Source, Low, High));
    end Slice;
 
-   function Index
-     (Source  : Unbounded_Wide_String;
-      Pattern : Unbounded_Wide_String) return Natural
-   is
+   function Index (Source : Unbounded_Wide_String; Pattern : Unbounded_Wide_String) return Natural is
       use Ada.Strings.Wide_Unbounded;
    begin
-      return Ada.Strings.Wide_Fixed.Index
-        (To_Wide_String (Source), To_Wide_String (Pattern));
+      return Ada.Strings.Wide_Fixed.Index (To_Wide_String (Source), To_Wide_String (Pattern));
    end Index;
 
-   function Index_Latin_1
-     (Source  : Unbounded_Wide_String;
-      Pattern : String) return Natural
-   is
+   function Index_Latin_1 (Source : Unbounded_Wide_String; Pattern : String) return Natural is
    begin
       return Index (Source, To_Unbounded_Wide_String (Pattern));
    end Index_Latin_1;
 
    function Index_From
-     (Source      : Unbounded_Wide_String;
-      Pattern     : Unbounded_Wide_String;
-      Starting_At : Positive) return Natural
+     (Source : Unbounded_Wide_String; Pattern : Unbounded_Wide_String; Starting_At : Positive) return Natural
    is
       use Ada.Strings.Wide_Unbounded;
       S : constant Wide_String := To_Wide_String (Source);
@@ -291,10 +241,7 @@ package body Wide_String_Operations is
       return Ada.Strings.Wide_Fixed.Index (S, P, Starting_At);
    end Index_From;
 
-   function Index_Reverse
-     (Source  : Unbounded_Wide_String;
-      Pattern : Unbounded_Wide_String) return Natural
-   is
+   function Index_Reverse (Source : Unbounded_Wide_String; Pattern : Unbounded_Wide_String) return Natural is
       use Ada.Strings.Wide_Unbounded;
       S : constant Wide_String := To_Wide_String (Source);
       P : constant Wide_String := To_Wide_String (Pattern);
@@ -305,8 +252,7 @@ package body Wide_String_Operations is
       return Ada.Strings.Wide_Fixed.Index (S, P, Going => Ada.Strings.Backward);
    end Index_Reverse;
 
-   function To_Lower (Source : Unbounded_Wide_String) return Unbounded_Wide_String
-   is
+   function To_Lower (Source : Unbounded_Wide_String) return Unbounded_Wide_String is
       use Ada.Strings.Wide_Unbounded;
       S      : constant Wide_String := To_Wide_String (Source);
       Result : Wide_String (S'Range);
@@ -321,8 +267,7 @@ package body Wide_String_Operations is
       return To_Unbounded_Wide_String (Result);
    end To_Lower;
 
-   function To_Upper (Source : Unbounded_Wide_String) return Unbounded_Wide_String
-   is
+   function To_Upper (Source : Unbounded_Wide_String) return Unbounded_Wide_String is
       use Ada.Strings.Wide_Unbounded;
       S      : constant Wide_String := To_Wide_String (Source);
       Result : Wide_String (S'Range);
@@ -337,10 +282,7 @@ package body Wide_String_Operations is
       return To_Unbounded_Wide_String (Result);
    end To_Upper;
 
-   function Starts_With
-     (Source : Unbounded_Wide_String;
-      Prefix : Unbounded_Wide_String) return Boolean
-   is
+   function Starts_With (Source : Unbounded_Wide_String; Prefix : Unbounded_Wide_String) return Boolean is
       Prefix_Len : constant Natural := Ada.Strings.Wide_Unbounded.Length (Prefix);
    begin
       if Prefix_Len = 0 then
@@ -348,25 +290,20 @@ package body Wide_String_Operations is
       elsif Prefix_Len > Ada.Strings.Wide_Unbounded.Length (Source) then
          return False;
       else
-         return Wide_String_Operations."="
-           (Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String
-              (Ada.Strings.Wide_Unbounded.Slice (Source, 1, Prefix_Len)),
-            Prefix);
+         return
+           Wide_String_Operations."="
+             (Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String
+                (Ada.Strings.Wide_Unbounded.Slice (Source, 1, Prefix_Len)),
+              Prefix);
       end if;
    end Starts_With;
 
-   function Starts_With_Latin_1
-     (Source : Unbounded_Wide_String;
-      Prefix : String) return Boolean
-   is
+   function Starts_With_Latin_1 (Source : Unbounded_Wide_String; Prefix : String) return Boolean is
    begin
       return Starts_With (Source, To_Unbounded_Wide_String (Prefix));
    end Starts_With_Latin_1;
 
-   function Ends_With
-     (Source : Unbounded_Wide_String;
-      Suffix : Unbounded_Wide_String) return Boolean
-   is
+   function Ends_With (Source : Unbounded_Wide_String; Suffix : Unbounded_Wide_String) return Boolean is
       Source_Len : constant Natural := Ada.Strings.Wide_Unbounded.Length (Source);
       Suffix_Len : constant Natural := Ada.Strings.Wide_Unbounded.Length (Suffix);
    begin
@@ -375,11 +312,11 @@ package body Wide_String_Operations is
       elsif Suffix_Len > Source_Len then
          return False;
       else
-         return Wide_String_Operations."="
-           (Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String
-              (Ada.Strings.Wide_Unbounded.Slice
-                 (Source, Source_Len - Suffix_Len + 1, Source_Len)),
-            Suffix);
+         return
+           Wide_String_Operations."="
+             (Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String
+                (Ada.Strings.Wide_Unbounded.Slice (Source, Source_Len - Suffix_Len + 1, Source_Len)),
+              Suffix);
       end if;
    end Ends_With;
 
@@ -395,8 +332,7 @@ package body Wide_String_Operations is
 
    --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007, NFR-UTF8-007
    function To_UTF_8 (Source : Unbounded_Wide_String) return String is
-      WS : constant Wide_String :=
-        Ada.Strings.Wide_Unbounded.To_Wide_String (Source);
+      WS : constant Wide_String := Ada.Strings.Wide_Unbounded.To_Wide_String (Source);
 
       --  U+FFFD replacement character as Wide_Character
       Replacement : constant Wide_Character := Wide_Character'Val (16#FFFD#);
@@ -416,10 +352,9 @@ package body Wide_String_Operations is
          end;
       end loop;
 
-      return Ada.Strings.UTF_Encoding.Wide_Strings.Encode
-        (Item          => Sanitised,
-         Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8,
-         Output_BOM    => False);
+      return
+        Ada.Strings.UTF_Encoding.Wide_Strings.Encode
+          (Item => Sanitised, Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8, Output_BOM => False);
    end To_UTF_8;
 
    ---------------------------------------------------------------------------
@@ -493,11 +428,8 @@ package body Wide_String_Operations is
    end Char_To_Upper;
 
    --  @relation FUNC-CONV-008, FUNC-CONV-009
-   function To_Latin_1_If_Possible
-     (Source : Unbounded_Wide_String) return Anystrings_Conv.Latin_1_Conv_Result
-   is
-      WS      : constant Wide_String :=
-        Ada.Strings.Wide_Unbounded.To_Wide_String (Source);
+   function To_Latin_1_If_Possible (Source : Unbounded_Wide_String) return Anystrings_Conv.Latin_1_Conv_Result is
+      WS      : constant Wide_String := Ada.Strings.Wide_Unbounded.To_Wide_String (Source);
       Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
       Repls   : Natural := 0;
    begin
@@ -514,10 +446,89 @@ package body Wide_String_Operations is
          end;
       end loop;
       return
-        (Status         => (if Repls = 0 then Anystrings_Conv.Ok
-                            else Anystrings_Conv.Lossy),
+        (Status         => (if Repls = 0 then Anystrings_Conv.Ok else Anystrings_Conv.Lossy),
          Value          => Out_Buf,
          Replaced_Count => Repls);
    end To_Latin_1_If_Possible;
+
+   --  @relation FUNC-DIR-002, NFR-DIR-001
+   function Path_Exists (Path : Unbounded_Wide_String) return Boolean is
+      POSIX_Path : constant String := To_UTF_8 (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      return Ada.Directories.Exists (POSIX_Path);
+   exception
+      when others =>
+         return False;
+   end Path_Exists;
+
+   --  @relation FUNC-DIR-003, NFR-DIR-001
+   function Path_Kind (Path : Unbounded_Wide_String) return File_Kind is
+      POSIX_Path  : constant String := To_UTF_8 (Path);
+      Native_Kind : Ada.Directories.File_Kind;
+   begin
+      if POSIX_Path'Length = 0 then
+         return Special_File;
+      end if;
+      Native_Kind := Ada.Directories.Kind (POSIX_Path);
+      case Native_Kind is
+         when Ada.Directories.Directory     =>
+            return Directory;
+
+         when Ada.Directories.Ordinary_File =>
+            return Ordinary_File;
+
+         when Ada.Directories.Special_File  =>
+            return Special_File;
+      end case;
+   exception
+      when others =>
+         return Special_File;
+   end Path_Kind;
+
+   --  @relation FUNC-DIR-004, NFR-DIR-001
+   function Create_Directory_Path (Path : Unbounded_Wide_String) return Boolean is
+      POSIX_Path : constant String := To_UTF_8 (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Create_Directory (POSIX_Path);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Create_Directory_Path;
+
+   --  @relation FUNC-DIR-005, NFR-DIR-001
+   function Delete_File_Path (Path : Unbounded_Wide_String) return Boolean is
+      POSIX_Path : constant String := To_UTF_8 (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Delete_File (POSIX_Path);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Delete_File_Path;
+
+   --  @relation FUNC-DIR-006, NFR-DIR-001
+   function Rename_Path (Old_Path, New_Path : Unbounded_Wide_String) return Boolean is
+      Src : constant String := To_UTF_8 (Old_Path);
+      Dst : constant String := To_UTF_8 (New_Path);
+   begin
+      if Src'Length = 0 or else Dst'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Rename (Src, Dst);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Rename_Path;
 
 end Wide_String_Operations;

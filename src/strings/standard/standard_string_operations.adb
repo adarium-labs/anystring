@@ -9,6 +9,8 @@ with Ada.Strings;
 with Ada.Environment_Variables;
 with Ada.Strings.Fixed;
 
+with Ada.Directories;
+
 package body Standard_String_Operations is
 
    --  Walk one UTF-8 code-point sequence starting at Buf (Start), decoding
@@ -25,17 +27,9 @@ package body Standard_String_Operations is
    --  To_Latin_1_If_Possible need to consume exactly the same byte-walking
    --  semantics, and the only difference between them is whether a
    --  replacement is counted.
-   procedure Decode_One_UTF_8_Code_Point
-     (Buf        : String;
-      Start      : Natural;
-      Code_Point : out Natural;
-      Step       : out Natural);
+   procedure Decode_One_UTF_8_Code_Point (Buf : String; Start : Natural; Code_Point : out Natural; Step : out Natural);
 
-   procedure Decode_One_UTF_8_Code_Point
-     (Buf        : String;
-      Start      : Natural;
-      Code_Point : out Natural;
-      Step       : out Natural)
+   procedure Decode_One_UTF_8_Code_Point (Buf : String; Start : Natural; Code_Point : out Natural; Step : out Natural)
    is
       function Is_Cont (C : Character) return Boolean
       is (Character'Pos (C) in 16#80# .. 16#BF#);
@@ -44,22 +38,17 @@ package body Standard_String_Operations is
    begin
       --  Default for malformed input: U+FFFD, single-byte resync.
       Code_Point := 16#FFFD#;
-      Step       := 1;
+      Step := 1;
 
       if Lead <= 16#7F# then
          --  1-byte ASCII.
          Code_Point := Lead;
-         Step       := 1;
+         Step := 1;
 
-      elsif Lead in 16#C2# .. 16#DF#
-        and then Start + 1 <= Buf'Last
-        and then Is_Cont (Buf (Start + 1))
-      then
+      elsif Lead in 16#C2# .. 16#DF# and then Start + 1 <= Buf'Last and then Is_Cont (Buf (Start + 1)) then
          --  2-byte sequence: 110xxxxx 10xxxxxx — encodes U+0080..U+07FF.
-         Code_Point :=
-           (Lead mod 32) * 64
-           + (Character'Pos (Buf (Start + 1)) mod 64);
-         Step       := 2;
+         Code_Point := (Lead mod 32) * 64 + (Character'Pos (Buf (Start + 1)) mod 64);
+         Step := 2;
 
       elsif Lead in 16#E0# .. 16#EF#
         and then Start + 2 <= Buf'Last
@@ -70,10 +59,11 @@ package body Standard_String_Operations is
          --  — encodes U+0800..U+FFFF (with surrogates U+D800..U+DFFF
          --  treated as replacement).
          Code_Point :=
-           (Lead mod 16) * 4_096
+           (Lead mod 16)
+           * 4_096
            + (Character'Pos (Buf (Start + 1)) mod 64) * 64
            + (Character'Pos (Buf (Start + 2)) mod 64);
-         Step       := 3;
+         Step := 3;
          if Code_Point in 16#D800# .. 16#DFFF# then
             Code_Point := 16#FFFD#;
          end if;
@@ -87,21 +77,21 @@ package body Standard_String_Operations is
          --  4-byte sequence: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
          --  — encodes U+10000..U+10FFFF.
          Code_Point :=
-           (Lead mod 8) * 262_144
+           (Lead mod 8)
+           * 262_144
            + (Character'Pos (Buf (Start + 1)) mod 64) * 4_096
            + (Character'Pos (Buf (Start + 2)) mod 64) * 64
            + (Character'Pos (Buf (Start + 3)) mod 64);
-         Step       := 4;
+         Step := 4;
          if Code_Point > 16#10_FFFF# then
             Code_Point := 16#FFFD#;
          end if;
       end if;
-      --  Any other lead byte (bare continuation 0x80..0xBF, overlong
-      --  starters 0xC0..0xC1, out-of-range 0xF5..0xFF, or truncated
-      --  multi-byte sequence) falls through to the default
-      --  (U+FFFD, single-byte resync) set above.
+   --  Any other lead byte (bare continuation 0x80..0xBF, overlong
+   --  starters 0xC0..0xC1, out-of-range 0xF5..0xFF, or truncated
+   --  multi-byte sequence) falls through to the default
+   --  (U+FFFD, single-byte resync) set above.
    end Decode_One_UTF_8_Code_Point;
-
 
    function Environment_Value (Name : Unbounded_String; Default : Unbounded_String) return Unbounded_String is
    begin
@@ -203,11 +193,7 @@ package body Standard_String_Operations is
       return Ada.Strings.Fixed.Index (S, Pattern);
    end Index_Latin_1;
 
-   function Index_From
-     (Source      : Unbounded_String;
-      Pattern     : Unbounded_String;
-      Starting_At : Positive) return Natural
-   is
+   function Index_From (Source : Unbounded_String; Pattern : Unbounded_String; Starting_At : Positive) return Natural is
       S : constant String := To_String (Source);
       P : constant String := To_String (Pattern);
    begin
@@ -326,9 +312,7 @@ package body Standard_String_Operations is
    end To_Latin_1;
 
    --  @relation FUNC-CONV-008, FUNC-CONV-009
-   function To_Latin_1_If_Possible
-     (Source : Unbounded_String) return Anystrings_Conv.Latin_1_Conv_Result
-   is
+   function To_Latin_1_If_Possible (Source : Unbounded_String) return Anystrings_Conv.Latin_1_Conv_Result is
       Buf     : constant String := To_String (Source);
       Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
       I       : Natural := Buf'First;
@@ -350,8 +334,7 @@ package body Standard_String_Operations is
          end;
       end loop;
       return
-        (Status         => (if Repls = 0 then Anystrings_Conv.Ok
-                            else Anystrings_Conv.Lossy),
+        (Status         => (if Repls = 0 then Anystrings_Conv.Ok else Anystrings_Conv.Lossy),
          Value          => Out_Buf,
          Replaced_Count => Repls);
    end To_Latin_1_If_Possible;
@@ -369,5 +352,85 @@ package body Standard_String_Operations is
       --  HT (0x09), LF (0x0A), VT (0x0B), FF (0x0C), CR (0x0D), SP (0x20).
       return P in 16#09# .. 16#0D# or else P = 16#20#;
    end Char_Is_Whitespace;
+
+   --  @relation FUNC-DIR-002, NFR-DIR-001
+   function Path_Exists (Path : Unbounded_String) return Boolean is
+      POSIX_Path : constant String := To_String (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      return Ada.Directories.Exists (POSIX_Path);
+   exception
+      when others =>
+         return False;
+   end Path_Exists;
+
+   --  @relation FUNC-DIR-003, NFR-DIR-001
+   function Path_Kind (Path : Unbounded_String) return File_Kind is
+      POSIX_Path  : constant String := To_String (Path);
+      Native_Kind : Ada.Directories.File_Kind;
+   begin
+      if POSIX_Path'Length = 0 then
+         return Special_File;
+      end if;
+      Native_Kind := Ada.Directories.Kind (POSIX_Path);
+      case Native_Kind is
+         when Ada.Directories.Directory     =>
+            return Directory;
+
+         when Ada.Directories.Ordinary_File =>
+            return Ordinary_File;
+
+         when Ada.Directories.Special_File  =>
+            return Special_File;
+      end case;
+   exception
+      when others =>
+         return Special_File;
+   end Path_Kind;
+
+   --  @relation FUNC-DIR-004, NFR-DIR-001
+   function Create_Directory_Path (Path : Unbounded_String) return Boolean is
+      POSIX_Path : constant String := To_String (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Create_Directory (POSIX_Path);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Create_Directory_Path;
+
+   --  @relation FUNC-DIR-005, NFR-DIR-001
+   function Delete_File_Path (Path : Unbounded_String) return Boolean is
+      POSIX_Path : constant String := To_String (Path);
+   begin
+      if POSIX_Path'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Delete_File (POSIX_Path);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Delete_File_Path;
+
+   --  @relation FUNC-DIR-006, NFR-DIR-001
+   function Rename_Path (Old_Path, New_Path : Unbounded_String) return Boolean is
+      Src : constant String := To_String (Old_Path);
+      Dst : constant String := To_String (New_Path);
+   begin
+      if Src'Length = 0 or else Dst'Length = 0 then
+         return False;
+      end if;
+      Ada.Directories.Rename (Src, Dst);
+      return True;
+   exception
+      when others =>
+         return False;
+   end Rename_Path;
 
 end Standard_String_Operations;

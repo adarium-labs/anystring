@@ -16,9 +16,9 @@ strings/
 ## THE 3-FILE PATTERN (every backend must follow)
 | File | Role | Must export |
 |------|------|-------------|
-| `<v>_operations.ads/adb` | concrete impls of every formal subprogram of `Anystrings` | the underlying `<v>_String` type, `Null_<v>_String`, all 40+ ops including the 12 character-classification primitives (`Char_Is_Alphanumeric`, `Char_Is_Control`, `Char_Is_Digit`, `Char_Is_Graphic`, `Char_Is_Hex_Digit`, `Char_Is_Letter`, `Char_Is_Line_Terminator`, `Char_Is_Lower`, `Char_Is_Upper`, `Char_Is_Whitespace`, `Char_To_Lower`, `Char_To_Upper`) and the substring-search primitives (`Index_From`, `Index_Reverse`) |
-| `<v>_strings.ads` | `package <V>_Strings is new Anystrings (...);` | nothing else; pure instantiation. The character predicates must be wired through the formal names `Is_Alphanumeric`, `Is_Control`, `Is_Digit`, `Is_Graphic`, `Is_Hex_Digit`, `Is_Letter`, `Is_Line_Terminator`, `Is_Lower`, `Is_Upper`, `Is_Whitespace`, `Char_To_Lower`, `Char_To_Upper` — note that the character-level `Char_To_Lower`/`Char_To_Upper` formals are deliberately named distinctly from the existing string-level `To_Lower`/`To_Upper` to keep named instantiation unambiguous. `Index_From` and `Index_Reverse` are also wired here. |
-| `string_types.ads` | user-facing facade; **package name is identical across all four dirs** | `String_Type`, `Character_Type`, `Empty_String`, all renames + `"&"` overloads. Re-exports character predicates under their unadorned names (`Is_Digit`, `Is_Letter`, …), overloads `To_Lower`/`To_Upper` on `Character_Type`, and exposes `Index_From`, `Index_Reverse`, `Replace`, `Head`, `Tail` plus their `Standard.String` Latin-1 overloads (`Index_From (S, String, Pos)`, `Replace (S, String, By)`, `Replace (S, P, String)`). |
+| `<v>_operations.ads/adb` | concrete impls of every formal subprogram of `Anystrings` | the underlying `<v>_String` type, `Null_<v>_String`, all 40+ ops including the 12 character-classification primitives (`Char_Is_Alphanumeric`, `Char_Is_Control`, `Char_Is_Digit`, `Char_Is_Graphic`, `Char_Is_Hex_Digit`, `Char_Is_Letter`, `Char_Is_Line_Terminator`, `Char_Is_Lower`, `Char_Is_Upper`, `Char_Is_Whitespace`, `Char_To_Lower`, `Char_To_Upper`), the substring-search primitives (`Index_From`, `Index_Reverse`), and the filesystem-boundary primitives (`File_Kind` enum, `Path_Exists`, `Path_Kind`, `Create_Directory_Path`, `Delete_File_Path`, `Rename_Path`) |
+| `<v>_strings.ads` | `package <V>_Strings is new Anystrings (...);` | nothing else; pure instantiation. The character predicates must be wired through the formal names `Is_Alphanumeric`, `Is_Control`, `Is_Digit`, `Is_Graphic`, `Is_Hex_Digit`, `Is_Letter`, `Is_Line_Terminator`, `Is_Lower`, `Is_Upper`, `Is_Whitespace`, `Char_To_Lower`, `Char_To_Upper` — note that the character-level `Char_To_Lower`/`Char_To_Upper` formals are deliberately named distinctly from the existing string-level `To_Lower`/`To_Upper` to keep named instantiation unambiguous. `Index_From` and `Index_Reverse` are also wired here. The filesystem actuals (`File_Kind` actual type plus `Path_Exists`, `Path_Kind`, `Create_Directory_Path`, `Delete_File_Path`, `Rename_Path`) are passed in the same instantiation. |
+| `string_types.ads` | user-facing facade; **package name is identical across all four dirs** | `String_Type`, `Character_Type`, `Empty_String`, all renames + `"&"` overloads. Re-exports character predicates under their unadorned names (`Is_Digit`, `Is_Letter`, …), overloads `To_Lower`/`To_Upper` on `Character_Type`, exposes `Index_From`, `Index_Reverse`, `Replace`, `Head`, `Tail` plus their `Standard.String` Latin-1 overloads (`Index_From (S, String, Pos)`, `Replace (S, String, By)`, `Replace (S, P, String)`). Filesystem boundary: re-exports the `File_Kind` subtype, the three named constants (`Directory`, `Ordinary_File`, `Special_File`), and the five filesystem subprograms (`Exists`, `Kind`, `Create_Directory`, `Delete_File`, `Rename`) — all five total: they never propagate exceptions across this boundary. |
 
 The package name collision on `string_types.ads` is intentional — it's how directory swap selects a backend without consumer-side changes.
 
@@ -40,6 +40,20 @@ Notes:
 - All wide and wide_wide based backends guard against code points outside U+0000..U+10FFFF and the UTF-16 surrogate range U+D800..U+DFFF. Classifiers return `False` for these; `Char_To_Lower` / `Char_To_Upper` return the input unchanged. This is required because `Ada.Wide_Wide_Characters.Handling` raises `Constraint_Error` on non-scalar arguments.
 - `standard` cannot classify code points > U+00FF (e.g. Arabic-Indic digits, Greek capitals); attempting to construct such a `Character` value raises `Constraint_Error` at construction time.
 - `wide_string` *can* classify Unicode code points in the BMP via `Ada.Wide_Characters.Handling`, but is treated as ASCII-only for `Is_Whitespace` and `Is_Line_Terminator` by contract, for symmetry with `standard`.
+
+### Filesystem boundary path encoding
+
+The five filesystem operations (`Exists`, `Kind`, `Create_Directory`, `Delete_File`, `Rename`) accept `String_Type` paths and hand them to `Ada.Directories` as `Standard.String`. Each backend converts the path with the SAME encoding helper it uses for environment variables and command-line arguments, so the same byte-stream invariants apply:
+
+| Backend | Path encoding helper | Egress bytes |
+|---------|---------------------|--------------|
+| `standard` | `Ada.Strings.Unbounded.To_String` | byte-identity (storage is UTF-8 per FUNC-CONV-001) |
+| `wide_string` | private `To_UTF_8` in `wide_string_operations.adb` | UTF-8 |
+| `wide_wide_string` | private `To_UTF_8` in `wide_wide_string_operations.adb` | UTF-8 |
+| `uxstring` | `UXString_Operations.To_UTF_8` (fully-qualified to disambiguate from `UXStrings.To_UTF_8`) | UTF-8 |
+| `vss` | private `To_UTF_8_String` in `vss_operations.adb` | UTF-8 |
+
+There is no decode boundary for these operations — they only return `Boolean` / `File_Kind`, never paths back. The five operations are TOTAL by contract (NFR-DIR-001): any runtime error (`Name_Error`, `Use_Error`, `Status_Error`, anything else) is absorbed and translated into `False` / `Special_File` returns. Behaviour is specified for POSIX filesystems only (NFR-DIR-004); Windows path quirks are out of scope.
 
 ## WHERE TO LOOK
 | Task | Location |

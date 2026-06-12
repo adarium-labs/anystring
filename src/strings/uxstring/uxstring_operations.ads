@@ -294,4 +294,26 @@ package UXString_Operations is
 
    function Char_To_Upper (C : Unicode_Character) return Unicode_Character;
 
+   --  Filesystem Operations (FUNC-DIR-002..006, NFR-DIR-001)
+   --  Path encoding: To_UTF_8 (String (UXStrings.To_UTF_8 (Source)));
+   --  independent of UXS_VARIANT per FUNC-DIR-007.
+
+   --  @relation FUNC-DIR-001
+   type File_Kind is (Directory, Ordinary_File, Special_File);
+
+   --  @relation FUNC-DIR-002, NFR-DIR-001
+   function Path_Exists (Path : UXString) return Boolean;
+
+   --  @relation FUNC-DIR-003, NFR-DIR-001
+   function Path_Kind (Path : UXString) return File_Kind;
+
+   --  @relation FUNC-DIR-004, NFR-DIR-001
+   function Create_Directory_Path (Path : UXString) return Boolean;
+
+   --  @relation FUNC-DIR-005, NFR-DIR-001
+   function Delete_File_Path (Path : UXString) return Boolean;
+
+   --  @relation FUNC-DIR-006, NFR-DIR-001
+   function Rename_Path (Old_Path, New_Path : UXString) return Boolean;
+
 end UXString_Operations;

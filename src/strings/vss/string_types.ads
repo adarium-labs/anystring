@@ -449,4 +449,38 @@ package String_Types is
    procedure Set_Exit_Status (Code : Integer)
      renames VSS_Command_Line.Set_Exit_Status;
 
+   --  ----- Filesystem boundary (FUNC-DIR-001..008, NFR-DIR-001..005) -----
+
+   --  @relation FUNC-DIR-001, FUNC-DIR-008
+   subtype File_Kind is VSS_Operations.File_Kind;
+
+   --  Re-export enumeration literals so they are directly visible via
+   --  "use String_Types" (a subtype alone does not do this in Ada).
+   Directory     : constant File_Kind := VSS_Operations.Directory;
+   Ordinary_File : constant File_Kind := VSS_Operations.Ordinary_File;
+   Special_File  : constant File_Kind := VSS_Operations.Special_File;
+
+   function "=" (Left, Right : File_Kind) return Boolean
+     renames VSS_Operations."=";
+
+   --  @relation FUNC-DIR-002
+   function Exists (Path : String_Type) return Boolean
+     renames VSS_Strings.Exists;
+
+   --  @relation FUNC-DIR-003
+   function Kind (Path : String_Type) return File_Kind
+     renames VSS_Strings.Kind;
+
+   --  @relation FUNC-DIR-004
+   function Create_Directory (Path : String_Type) return Boolean
+     renames VSS_Strings.Create_Directory;
+
+   --  @relation FUNC-DIR-005
+   function Delete_File (Path : String_Type) return Boolean
+     renames VSS_Strings.Delete_File;
+
+   --  @relation FUNC-DIR-006
+   function Rename (Old_Path, New_Path : String_Type) return Boolean
+     renames VSS_Strings.Rename;
+
 end String_Types;

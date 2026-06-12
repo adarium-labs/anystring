@@ -84,4 +84,10 @@ package Wide_Wide_Strings is new Anystrings
    Is_Upper                 => Wide_Wide_String_Operations.Char_Is_Upper,
    Is_Whitespace            => Wide_Wide_String_Operations.Char_Is_Whitespace,
    Char_To_Lower            => Wide_Wide_String_Operations.Char_To_Lower,
-   Char_To_Upper            => Wide_Wide_String_Operations.Char_To_Upper);
+   Char_To_Upper            => Wide_Wide_String_Operations.Char_To_Upper,
+   File_Kind                => Wide_Wide_String_Operations.File_Kind,
+   Path_Exists              => Wide_Wide_String_Operations.Path_Exists,
+   Path_Kind                => Wide_Wide_String_Operations.Path_Kind,
+   Create_Directory_Path    => Wide_Wide_String_Operations.Create_Directory_Path,
+   Delete_File_Path         => Wide_Wide_String_Operations.Delete_File_Path,
+   Rename_Path              => Wide_Wide_String_Operations.Rename_Path);

@@ -1,6 +1,6 @@
 name = "anystrings"
 description = "A string abstraction library"
-version = "0.2.0-dev"
+version = "0.3.0-dev"
 
 authors = ["Heziode"]
 maintainers = ["Quentin DAUPRAT (Heziode) <contact@adarium.dev>"]

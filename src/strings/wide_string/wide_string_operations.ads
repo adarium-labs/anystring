@@ -288,4 +288,27 @@ package Wide_String_Operations is
 
    function Char_To_Upper (C : Wide_Character) return Wide_Character;
 
+   --  Filesystem Operations (FUNC-DIR-002..006, NFR-DIR-001)
+   --  Path encoding: To_UTF_8 (surrogate-safe UTF-8; unconditional per
+   --  FUNC-DIR-007 — the selectable env-var encoder is NOT used here).
+
+   --  @relation FUNC-DIR-001
+   type File_Kind is (Directory, Ordinary_File, Special_File);
+
+   --  @relation FUNC-DIR-002, NFR-DIR-001
+   function Path_Exists (Path : Unbounded_Wide_String) return Boolean;
+
+   --  @relation FUNC-DIR-003, NFR-DIR-001
+   function Path_Kind (Path : Unbounded_Wide_String) return File_Kind;
+
+   --  @relation FUNC-DIR-004, NFR-DIR-001
+   function Create_Directory_Path (Path : Unbounded_Wide_String) return Boolean;
+
+   --  @relation FUNC-DIR-005, NFR-DIR-001
+   function Delete_File_Path (Path : Unbounded_Wide_String) return Boolean;
+
+   --  @relation FUNC-DIR-006, NFR-DIR-001
+   function Rename_Path
+     (Old_Path, New_Path : Unbounded_Wide_String) return Boolean;
+
 end Wide_String_Operations;

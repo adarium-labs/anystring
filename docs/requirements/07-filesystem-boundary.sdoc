@@ -1,0 +1,349 @@
+[DOCUMENT]
+TITLE: Filesystem Boundary — Functional Requirements
+REQ_PREFIX: FUNC-DIR-
+
+[GRAMMAR]
+ELEMENTS:
+- TAG: REQUIREMENT
+  FIELDS:
+  - TITLE: UID
+    TYPE: String
+    REQUIRED: True
+  - TITLE: STATUS
+    TYPE: String
+    REQUIRED: False
+  - TITLE: PRIORITY
+    TYPE: String
+    REQUIRED: False
+  - TITLE: TITLE
+    TYPE: String
+    REQUIRED: False
+  - TITLE: STATEMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: COMMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: RELATIONS
+    TYPE: String
+    REQUIRED: False
+
+[SECTION]
+TITLE: Context
+
+[TEXT]
+Feature: **FILESYSTEM-BOUNDARY** — Ada.Directories bridge for anystrings.
+
+Today, users who need filesystem access must interact with ``Ada.Directories``
+directly and manually convert ``String_Type`` path values into a ``String``
+via ``To_Latin_1 (Path)`` before each call.  On the ``wide``, ``wide_wide``,
+``uxstring``, and ``vss`` backends this round-trip corrupts non-Latin-1 path
+bytes: ``To_Latin_1`` performs a Latin-1-widening encode, not a UTF-8 decode,
+so any non-ASCII byte in the path is silently replaced by a Latin-1 surrogate
+or ``'?'``.  The downstream Aclida CLI ``OS.Files`` shim was written to work
+around exactly this bug.
+
+This feature adds a thin bridge so that user code can check path existence,
+query filesystem entry kind, create directories, delete ordinary files, and
+rename filesystem entries — all through ``String_Types``, without any
+backend-specific conversion code at the call site.
+
+All five bundled backends (``standard``, ``wide``, ``wide_wide``, ``uxstring``,
+``vss``) MUST expose an identical public surface for this feature through
+``String_Types``.
+
+[/SECTION]
+
+[SECTION]
+TITLE: File_Kind Enumeration
+
+[REQUIREMENT]
+UID: FUNC-DIR-001
+STATUS: Approved
+PRIORITY: Must
+TITLE: File_Kind enumeration mirroring Ada.Directories.File_Kind
+STATEMENT: >>>
+The generic signature package ``Anystrings`` SHALL declare a public enumeration
+type ``File_Kind`` with exactly three values: ``Directory``, ``Ordinary_File``,
+and ``Special_File``, corresponding in meaning to the identically named values
+of ``Ada.Directories.File_Kind`` (Ada RM A.16).
+
+The enumeration SHALL be part of the generic signature so that all backends
+expose it uniformly through ``String_Types`` without requiring consumers to
+``with Ada.Directories``.
+<<<
+COMMENT: >>>
+Mirroring ``Ada.Directories.File_Kind`` rather than defining independent
+semantics ensures that the mapping in FUNC-DIR-003 (Kind query) is a
+bijection: each ``Ada.Directories.File_Kind`` value maps to the corresponding
+``String_Types.File_Kind`` value with no information loss.
+
+The downstream pain point is the Aclida CLI ``OS.Files`` shim, which currently
+re-declares an equivalent enumeration locally because there is no backend-
+neutral type to import from ``String_Types``.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Filesystem Query Operations
+
+[REQUIREMENT]
+UID: FUNC-DIR-002
+STATUS: Approved
+PRIORITY: Must
+TITLE: Exists — total filesystem presence query
+STATEMENT: >>>
+The public API SHALL provide a function with the following signature:
+
+  function Exists (Path : String_Type) return Boolean
+
+The function SHALL return ``True`` if and only if ``Path`` resolves to an
+existing filesystem entry visible to the current process.  Its semantics
+SHALL be equivalent to ``Ada.Directories.Exists`` applied to the encoded form
+of ``Path`` per the rule in FUNC-DIR-007.
+
+The function SHALL be total: any runtime exception, including but not limited
+to ``Ada.IO_Exceptions.Name_Error``, ``Ada.IO_Exceptions.Use_Error``,
+``Ada.IO_Exceptions.Status_Error``, and ``Constraint_Error``, SHALL be caught
+internally and cause the function to return ``False`` rather than propagate
+to the caller.
+<<<
+COMMENT: >>>
+The totality contract is the primary design rationale.  The downstream Aclida
+CLI ``OS.Files`` shim currently wraps every ``Ada.Directories`` call in an
+exception handler; making the bridge total eliminates that boilerplate.
+
+``Storage_Error`` is addressed by NFR-DIR-001, which governs the exception-
+absorption policy for all five operations.
+<<<
+
+[REQUIREMENT]
+UID: FUNC-DIR-003
+STATUS: Approved
+PRIORITY: Must
+TITLE: Kind — total filesystem entry kind query
+STATEMENT: >>>
+The public API SHALL provide a function with the following signature:
+
+  function Kind (Path : String_Type) return File_Kind
+
+The function SHALL return the kind of the filesystem entry at ``Path``, mapped
+to the ``File_Kind`` enumeration (FUNC-DIR-001) as follows:
+
+- ``Ada.Directories.Directory``     → ``Directory``
+- ``Ada.Directories.Ordinary_File`` → ``Ordinary_File``
+- ``Ada.Directories.Special_File``  → ``Special_File``
+
+The path encoding rule of FUNC-DIR-007 applies.
+
+The function SHALL be total: any runtime exception (including
+``Ada.IO_Exceptions.Name_Error`` when the path does not exist) and any
+``Ada.Directories.File_Kind`` value not listed above SHALL cause the function
+to return ``Special_File`` rather than propagate an exception.
+<<<
+COMMENT: >>>
+Returning ``Special_File`` as the catch-all default is consistent with Ada RM
+A.16: ``Special_File`` is defined as the fallback for any entry that is
+neither a directory nor an ordinary file.  Using it as the error sentinel keeps
+the contract unambiguous: callers that need to distinguish a genuine
+``Special_File`` from an error path should call ``Exists`` first.
+
+The downstream pain point is identical to FUNC-DIR-002: the Aclida
+``OS.Files`` shim wraps every ``Ada.Directories.Kind`` call in an exception
+handler specifically to handle ``Name_Error``.
+<<<
+RELATIONS: FUNC-DIR-001
+
+[/SECTION]
+
+[SECTION]
+TITLE: Filesystem Mutation Operations
+
+[REQUIREMENT]
+UID: FUNC-DIR-004
+STATUS: Approved
+PRIORITY: Must
+TITLE: Create_Directory — total directory creation
+STATEMENT: >>>
+The public API SHALL provide a function with the following signature:
+
+  function Create_Directory (Path : String_Type) return Boolean
+
+The function SHALL create the directory at ``Path`` and return ``True`` if the
+creation succeeded.  Its semantics SHALL be equivalent to calling
+``Ada.Directories.Create_Directory`` with the encoded form of ``Path`` per
+FUNC-DIR-007.
+
+The function SHALL be total: any runtime exception, including
+``Ada.IO_Exceptions.Name_Error``, ``Ada.IO_Exceptions.Use_Error``,
+``Ada.IO_Exceptions.Status_Error``, and ``Constraint_Error``, SHALL be caught
+internally and cause the function to return ``False`` rather than propagate
+to the caller.
+<<<
+COMMENT: >>>
+Returning ``Boolean`` rather than using an Ada.Directories-style procedure
+(which raises on failure) follows the library's existing pattern of wrapping
+every ``String``-bearing OS boundary in a total function.  The pattern was
+established for the UTF-8 / Latin-1 conversion boundary and extended to the
+command-line access boundary; this requirement extends it to the filesystem
+boundary.
+
+A ``False`` return covers both the error case (e.g. permission denied, path
+already exists as a non-directory) and the precondition violation case (e.g.
+the parent directory does not exist).  Callers that need finer-grained status
+should check ``Exists`` and ``Kind`` before calling ``Create_Directory``.
+<<<
+RELATIONS: FUNC-DIR-002
+
+[REQUIREMENT]
+UID: FUNC-DIR-005
+STATUS: Approved
+PRIORITY: Must
+TITLE: Delete_File — total ordinary-file deletion
+STATEMENT: >>>
+The public API SHALL provide a function with the following signature:
+
+  function Delete_File (Path : String_Type) return Boolean
+
+The function SHALL delete the ordinary file at ``Path`` and return ``True`` if
+the deletion succeeded.  Its semantics SHALL be equivalent to calling
+``Ada.Directories.Delete_File`` with the encoded form of ``Path`` per
+FUNC-DIR-007.
+
+The function SHALL be total: any runtime exception SHALL be caught internally
+and cause the function to return ``False`` rather than propagate to the caller.
+
+The function is specified for ordinary files only; behaviour when ``Path``
+names a directory or a special file is implementation-defined.  Callers SHOULD
+verify the entry kind via FUNC-DIR-003 before calling this function.
+<<<
+COMMENT: >>>
+Ada RM A.16 defines ``Delete_File`` as raising ``Name_Error`` if the entry does
+not exist or is not an ordinary file, and ``Use_Error`` if the environment does
+not permit deletion.  The totality contract absorbs both into a ``False``
+return, consistent with FUNC-DIR-002 through FUNC-DIR-004.
+
+The restriction to ordinary files mirrors ``Ada.Directories.Delete_File``
+semantics and avoids the need to specify recursive-directory-deletion
+behaviour in this requirement.  A separate ``Delete_Directory`` function may
+be specified in a future requirement.
+<<<
+RELATIONS: FUNC-DIR-003
+
+[REQUIREMENT]
+UID: FUNC-DIR-006
+STATUS: Approved
+PRIORITY: Must
+TITLE: Rename — total filesystem entry rename
+STATEMENT: >>>
+The public API SHALL provide a function with the following signature:
+
+  function Rename (Old_Path, New_Path : String_Type) return Boolean
+
+The function SHALL rename the filesystem entry at ``Old_Path`` to ``New_Path``
+and return ``True`` if the rename succeeded.  Its semantics SHALL be equivalent
+to calling ``Ada.Directories.Rename`` with the encoded forms of both paths
+per FUNC-DIR-007.
+
+The function SHALL be total: any runtime exception SHALL be caught internally
+and cause the function to return ``False`` rather than propagate to the caller.
+<<<
+COMMENT: >>>
+Both path arguments are encoded independently using the same rule (FUNC-DIR-007).
+The function does not guarantee atomicity of cross-device renames; that is a
+POSIX / ``Ada.Directories`` implementation detail.
+
+The totality contract covers the common failure modes: ``Name_Error`` when
+``Old_Path`` does not exist, ``Use_Error`` when the environment does not permit
+the rename, and ``Status_Error`` on I/O precondition violations.
+<<<
+RELATIONS: FUNC-DIR-003
+
+[/SECTION]
+
+[SECTION]
+TITLE: Encoding Semantics
+
+[REQUIREMENT]
+UID: FUNC-DIR-007
+STATUS: Approved
+PRIORITY: Must
+TITLE: Path encoding — UTF-8 on Unicode backends, byte-passthrough on standard
+STATEMENT: >>>
+Each backend SHALL convert a ``String_Type`` path to the ``Standard.String``
+expected by ``Ada.Directories`` according to the following rules:
+
+- The ``standard`` backend SHALL pass path bytes through unchanged via
+  ``To_Latin_1 (Path)``.  Because the ``standard`` backend's storage IS its
+  byte stream, no re-encoding is performed.
+- The ``wide``, ``wide_wide``, ``uxstring``, and ``vss`` backends SHALL
+  encode ``Path`` to UTF-8 using the backend's native UTF-8 serialisation
+  primitive — the inverse of the UTF-8 ingestion path defined for the command-
+  line bridge by FUNC-CMDLINE-008 — before passing the result to
+  ``Ada.Directories``.
+
+No backend SHALL use ``To_Latin_1`` as the encoding step for a
+Unicode-capable backend path, because that function performs Latin-1 widening
+rather than UTF-8 encoding and corrupts non-Latin-1 path bytes.
+<<<
+COMMENT: >>>
+This requirement documents and forbids the ``To_Latin_1`` byte-corruption bug
+that motivated the entire filesystem-boundary feature: the Aclida CLI
+``OS.Files`` shim was introduced specifically because calling
+``To_Latin_1 (Path)`` on a ``wide_string``-backed path containing e.g. ``café``
+silently replaced the UTF-8 multibyte sequence with Latin-1 surrogates, causing
+``Ada.Directories`` to receive a malformed path string.
+
+The UTF-8 encoding direction is the dual of the encoding-precise ingestion
+rule established by FUNC-CMDLINE-008 for the command-line bridge.  Both rules
+share the invariant: the bytes handed to the OS MUST be the UTF-8 encoding of
+the Unicode scalar values stored in the ``String_Type``, not a Latin-1
+representation of those scalar values.
+<<<
+RELATIONS: FUNC-CMDLINE-008
+
+[/SECTION]
+
+[SECTION]
+TITLE: Backend Coverage and API Parity
+
+[REQUIREMENT]
+UID: FUNC-DIR-008
+STATUS: Approved
+PRIORITY: Must
+TITLE: All five backends expose identical filesystem API through String_Types
+STATEMENT: >>>
+The filesystem access API SHALL be accessible uniformly from
+``with String_Types; use String_Types;`` for each of the five bundled backends:
+
+- ``src/strings/standard/``   — Latin-1 / Ada ``String`` backend
+- ``src/strings/wide/``       — ``Wide_String`` / ``Wide_Character`` backend
+- ``src/strings/wide_wide/``  — ``Wide_Wide_String`` / ``Wide_Wide_Character``
+                                backend
+- ``src/strings/uxstring/``   — UXStrings backend
+- ``src/strings/vss/``        — VSS backend
+
+The public signatures for the following SHALL be identical across all five
+backends such that user code written against one backend compiles and runs
+correctly against any other without modification:
+
+- The ``File_Kind`` enumeration (FUNC-DIR-001).
+- The ``Exists`` function (FUNC-DIR-002).
+- The ``Kind`` function (FUNC-DIR-003).
+- The ``Create_Directory`` function (FUNC-DIR-004).
+- The ``Delete_File`` function (FUNC-DIR-005).
+- The ``Rename`` function (FUNC-DIR-006).
+<<<
+COMMENT: >>>
+This mirrors the backend-swap guarantee that governs the rest of the
+``String_Types`` surface, established by NFR-UTF8-006 for the UTF-8 operations
+and extended to the command-line bridge by FUNC-CMDLINE-009.
+
+The exact mechanism by which each ``string_types.ads`` makes these operations
+available (renaming, instantiation, direct declaration) is a tech-spec decision
+out of scope here.
+<<<
+RELATIONS: FUNC-DIR-001, FUNC-DIR-002, FUNC-DIR-003, FUNC-DIR-004, FUNC-DIR-005, FUNC-DIR-006, FUNC-CMDLINE-009
+
+[/SECTION]

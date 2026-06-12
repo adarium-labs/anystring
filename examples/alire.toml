@@ -1,9 +1,13 @@
-# Demonstrates: String_Types command-line bridge (FUNC-CMDLINE-001..009)
+# Demonstrates:
+#   - String_Types command-line bridge    (FUNC-CMDLINE-001..009)
+#   - String_Types filesystem boundary   (FUNC-DIR-001..008)
 #
 # Usage:
 #   cd examples && alr build
 #   bin/standard/anystrings_cmdline_demo hello world
-#   STRING_TYPE=wide_string alr build && bin/wide_string/anystrings_cmdline_demo hello
+#   bin/standard/anystrings_filesystem_demo
+#   STRING_TYPE=wide_string alr build && bin/wide_string/utf_8/anystrings_cmdline_demo hello
+#   STRING_TYPE=wide_string alr build && bin/wide_string/utf_8/anystrings_filesystem_demo
 name = "anystrings_examples"
 description = ""
 version = "0.1.0-dev"

@@ -45,6 +45,8 @@ UID scheme:
 - **FUNC-CMDLINE-NNN**  — Command-line access functional requirements
 - **FUNC-CONV-NNN**     — Library-wide conversion semantics functional requirements
 - **NFR-CONV-NNN**      — Library-wide conversion semantics non-functional requirements
+- **FUNC-DIR-NNN**     — Filesystem boundary (Ada.Directories) functional requirements
+- **NFR-DIR-NNN**      — Filesystem boundary (Ada.Directories) non-functional requirements
 
 All UIDs use zero-padded three-digit ordinals (001, 002, …).  New UID
 prefixes are added here as new feature areas are specified.
@@ -60,5 +62,7 @@ TITLE: Documents
 - docs/requirements/04-cmdline.sdoc — Command-line access functional requirements
 - docs/requirements/05-conversion-semantics.sdoc — Library-wide UTF-8 / Latin-1 conversion semantics functional requirements
 - docs/requirements/06-conversion-semantics-nfr.sdoc — Library-wide UTF-8 / Latin-1 conversion semantics non-functional requirements
+- docs/requirements/07-filesystem-boundary.sdoc — Filesystem boundary (Ada.Directories) functional requirements
+- docs/requirements/08-filesystem-boundary-nfr.sdoc — Filesystem boundary (Ada.Directories) non-functional requirements
 
 [/SECTION]

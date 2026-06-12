@@ -274,4 +274,26 @@ package VSS_Operations is
 
    function Char_To_Upper (C : Wide_Wide_Character) return Wide_Wide_Character;
 
+   --  Filesystem Operations (FUNC-DIR-002..006, NFR-DIR-001)
+   --  Path encoding: private To_UTF_8_String helper in vss_operations.adb
+   --  (VSS.Strings.Conversions.To_UTF_8_String) per FUNC-DIR-007.
+
+   --  @relation FUNC-DIR-001
+   type File_Kind is (Directory, Ordinary_File, Special_File);
+
+   --  @relation FUNC-DIR-002, NFR-DIR-001
+   function Path_Exists (Path : Virtual_String) return Boolean;
+
+   --  @relation FUNC-DIR-003, NFR-DIR-001
+   function Path_Kind (Path : Virtual_String) return File_Kind;
+
+   --  @relation FUNC-DIR-004, NFR-DIR-001
+   function Create_Directory_Path (Path : Virtual_String) return Boolean;
+
+   --  @relation FUNC-DIR-005, NFR-DIR-001
+   function Delete_File_Path (Path : Virtual_String) return Boolean;
+
+   --  @relation FUNC-DIR-006, NFR-DIR-001
+   function Rename_Path (Old_Path, New_Path : Virtual_String) return Boolean;
+
 end VSS_Operations;
