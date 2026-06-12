@@ -122,23 +122,6 @@ package Standard_String_Operations is
      (Source : Unbounded_String) return Anystrings_Conv.Latin_1_Conv_Result;
 
    ---------------------------------------------------------------------------
-   --  Environment Operations
-   ---------------------------------------------------------------------------
-
-   function Environment_Value (Name : Unbounded_String; Default : Unbounded_String) return Unbounded_String;
-
-   function Environment_Exists (Name : Unbounded_String) return Boolean;
-
-   function Environment_Set (Name : Unbounded_String; Value : Unbounded_String) return Boolean;
-
-   function Environment_Clear (Name : Unbounded_String) return Boolean;
-
-   function Environment_Clear return Boolean;
-
-   function Environment_Iterate
-     (Process : not null access procedure (Name : Unbounded_String; Value : Unbounded_String)) return Boolean;
-
-   ---------------------------------------------------------------------------
    --  Extended Operations (used by String_Types)
    ---------------------------------------------------------------------------
 

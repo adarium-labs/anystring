@@ -101,31 +101,6 @@ package UXString_Operations is
    function To_String (Source : UXString) return String;
 
    ---------------------------------------------------------------------------
-   --  Environment Operations
-   ---------------------------------------------------------------------------
-
-   function Environment_Value
-     (Name    : UXString;
-      Default : UXString) return UXString;
-
-   function Environment_Exists
-     (Name : UXString) return Boolean;
-
-   function Environment_Set
-     (Name  : UXString;
-      Value : UXString) return Boolean;
-
-   function Environment_Clear
-     (Name : UXString) return Boolean;
-
-   function Environment_Clear return Boolean;
-
-   function Environment_Iterate
-     (Process : not null access procedure
-        (Name  : UXString;
-         Value : UXString)) return Boolean;
-
-   ---------------------------------------------------------------------------
    --  Extended Operations (used by String_Types)
    ---------------------------------------------------------------------------
 

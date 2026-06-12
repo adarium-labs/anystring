@@ -5,7 +5,6 @@
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
-with Ada.Environment_Variables;
 with Ada.Strings.Wide_Wide_Fixed;
 with Ada.Wide_Wide_Characters.Handling;
 with VSS.Characters;
@@ -183,79 +182,6 @@ package body VSS_Operations is
       when others =>
          return Null_Virtual_String;
    end From_UTF_8_String;
-
-   function Environment_Value (Name : Virtual_String; Default : Virtual_String) return Virtual_String is
-      Encoded_Name : constant String := To_UTF_8_String (Name);
-   begin
-      if Ada.Environment_Variables.Exists (Encoded_Name) then
-         return From_UTF_8_String (Ada.Environment_Variables.Value (Encoded_Name));
-      else
-         return Default;
-      end if;
-   exception
-      when others =>
-         return Default;
-   end Environment_Value;
-
-   function Environment_Exists (Name : Virtual_String) return Boolean is
-   begin
-      return Ada.Environment_Variables.Exists (To_UTF_8_String (Name));
-   exception
-      when others =>
-         return False;
-   end Environment_Exists;
-
-   function Environment_Set (Name : Virtual_String; Value : Virtual_String) return Boolean is
-   begin
-      Ada.Environment_Variables.Set (To_UTF_8_String (Name), To_UTF_8_String (Value));
-      return True;
-   exception
-      when others =>
-         return False;
-   end Environment_Set;
-
-   function Environment_Clear (Name : Virtual_String) return Boolean is
-   begin
-      Ada.Environment_Variables.Clear (To_UTF_8_String (Name));
-      return True;
-   exception
-      when others =>
-         return False;
-   end Environment_Clear;
-
-   function Environment_Clear return Boolean is
-   begin
-      Ada.Environment_Variables.Clear;
-      return True;
-   exception
-      when others =>
-         return False;
-   end Environment_Clear;
-
-   function Environment_Iterate
-     (Process : not null access procedure (Name : Virtual_String; Value : Virtual_String)) return Boolean
-   is
-      Success : Boolean := True;
-
-      procedure Process_Item (Name, Value : String) is
-      begin
-         begin
-            Process.all (From_UTF_8_String (Name), From_UTF_8_String (Value));
-         exception
-            when others =>
-               Success := False;
-         end;
-      end Process_Item;
-   begin
-      begin
-         Ada.Environment_Variables.Iterate (Process_Item'Access);
-      exception
-         when others =>
-            Success := False;
-      end;
-
-      return Success;
-   end Environment_Iterate;
 
    ---------------------------------------------------------------------------
    --  Text I/O Operations

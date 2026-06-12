@@ -87,31 +87,6 @@ package Wide_Wide_String_Operations is
    function To_Latin_1_If_Possible
      (Source : Unbounded_Wide_Wide_String) return Anystrings_Conv.Latin_1_Conv_Result;
 
-   ---------------------------------------------------------------------------
-   --  Environment Operations
-   ---------------------------------------------------------------------------
-
-   function Environment_Value
-     (Name    : Unbounded_Wide_Wide_String;
-      Default : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String;
-
-   function Environment_Exists
-     (Name : Unbounded_Wide_Wide_String) return Boolean;
-
-   function Environment_Set
-     (Name  : Unbounded_Wide_Wide_String;
-      Value : Unbounded_Wide_Wide_String) return Boolean;
-
-   function Environment_Clear
-     (Name : Unbounded_Wide_Wide_String) return Boolean;
-
-   function Environment_Clear return Boolean;
-
-   function Environment_Iterate
-     (Process : not null access procedure
-        (Name  : Unbounded_Wide_Wide_String;
-         Value : Unbounded_Wide_Wide_String)) return Boolean;
-
    function Hash
      (Key : Unbounded_Wide_Wide_String) return Ada.Containers.Hash_Type;
 

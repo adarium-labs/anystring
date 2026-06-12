@@ -5,7 +5,6 @@
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
-with Ada.Environment_Variables;
 with Ada.Strings;
 with Ada.Strings.Unbounded;
 with Ada.Wide_Wide_Characters.Handling;
@@ -29,72 +28,6 @@ package body UXString_Operations is
       when others =>
          return String (UXStrings.To_UTF_8 (Source));
    end To_String;
-
-   function Environment_Value (Name : UXString; Default : UXString) return UXString is
-      Encoded_Name : constant String := To_String (Name);
-   begin
-      if Ada.Environment_Variables.Exists (Encoded_Name) then
-         return From_UTF_8 (Ada.Environment_Variables.Value (Encoded_Name));
-      else
-         return Default;
-      end if;
-   end Environment_Value;
-
-   function Environment_Exists (Name : UXString) return Boolean is
-   begin
-      return Ada.Environment_Variables.Exists (To_String (Name));
-   end Environment_Exists;
-
-   function Environment_Set (Name : UXString; Value : UXString) return Boolean is
-   begin
-      Ada.Environment_Variables.Set (To_String (Name), To_String (Value));
-      return True;
-   exception
-      when others =>
-         return False;
-   end Environment_Set;
-
-   function Environment_Clear (Name : UXString) return Boolean is
-   begin
-      Ada.Environment_Variables.Clear (To_String (Name));
-      return True;
-   exception
-      when others =>
-         return False;
-   end Environment_Clear;
-
-   function Environment_Clear return Boolean is
-   begin
-      Ada.Environment_Variables.Clear;
-      return True;
-   exception
-      when others =>
-         return False;
-   end Environment_Clear;
-
-   function Environment_Iterate (Process : not null access procedure (Name : UXString; Value : UXString)) return Boolean
-   is
-      Success : Boolean := True;
-
-      procedure Process_Item (Name, Value : String) is
-      begin
-         begin
-            Process.all (From_UTF_8 (Name), From_UTF_8 (Value));
-         exception
-            when others =>
-               Success := False;
-         end;
-      end Process_Item;
-   begin
-      begin
-         Ada.Environment_Variables.Iterate (Process_Item'Access);
-      exception
-         when others =>
-            Success := False;
-      end;
-
-      return Success;
-   end Environment_Iterate;
 
    function Concat_String_Latin_1 (Left : UXString; Right : String) return UXString is
    begin

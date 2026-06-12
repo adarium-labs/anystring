@@ -53,38 +53,6 @@ package String_Types is
    function Last_Index (Source : String_Type) return Natural
      renames Wide_Strings.Last_Index;
 
-   function Get_Env (Name : String_Type) return String_Type
-     renames Wide_Strings.Get_Env;
-
-   function Get_Env
-     (Name    : String_Type;
-      Default : String_Type) return String_Type
-     renames Wide_Strings.Get_Env;
-
-   function Env_Exists (Name : String_Type) return Boolean
-     renames Wide_Strings.Env_Exists;
-
-   subtype Env_Processor is Wide_Strings.Env_Processor;
-   subtype Env_Filter is Wide_Strings.Env_Filter;
-
-   function Set_Env
-     (Name  : String_Type;
-      Value : String_Type) return Boolean
-     renames Wide_Strings.Set_Env;
-
-   function Clear_Env (Name : String_Type) return Boolean
-     renames Wide_Strings.Clear_Env;
-
-   function Clear_Env return Boolean
-     renames Wide_Strings.Clear_Env;
-
-   function Iterate_Env (Process : Env_Processor) return Boolean
-     renames Wide_Strings.Iterate_Env;
-
-   function Iterate_Env
-     (Include : Env_Filter;
-      Process : Env_Processor) return Boolean
-     renames Wide_Strings.Iterate_Env;
 
    function Contains (Source : String_Type; Pattern : String_Type) return Boolean
      renames Wide_Strings.Contains;

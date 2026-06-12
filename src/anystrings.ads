@@ -106,30 +106,6 @@ generic
    with function From_UTF_8 (Source : String) return UTF_8.UTF_8_Decode_Result;
 
    ---------------------------------------------------------------------------
-   --  Environment Operations
-   ---------------------------------------------------------------------------
-
-   --  Returns the value of the environment variable whose name equals Name.
-   --  Returns Default if the variable does not exist.
-   with function Environment_Value (Name : String_Type; Default : String_Type) return String_Type;
-
-   --  Returns True iff an environment variable with that name is set.
-   with function Environment_Exists (Name : String_Type) return Boolean;
-
-   --  Sets an environment variable and returns True on success.
-   with function Environment_Set (Name : String_Type; Value : String_Type) return Boolean;
-
-   --  Clears one environment variable and returns True on success.
-   with function Environment_Clear (Name : String_Type) return Boolean;
-
-   --  Clears all environment variables and returns True on success.
-   with function Environment_Clear_All return Boolean;
-
-   --  Iterates over all environment variables and returns True on success.
-   with
-     function Environment_Iterate
-       (Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean;
-
    --  Extended Operations (required by the framework)
    ---------------------------------------------------------------------------
 
@@ -347,46 +323,6 @@ is
    function UTF_8_Is_Valid (Source : String) return Boolean
    is (UTF_8.Is_Ok (From_UTF_8 (Source)))
    with Post => UTF_8_Is_Valid'Result = UTF_8.Is_Ok (From_UTF_8 (Source));
-
-   ---------------------------------------------------------------------------
-   --  Environment Operations
-   ---------------------------------------------------------------------------
-
-   pragma SPARK_Mode (Off);
-
-   type Env_Processor is not null access procedure (Name : String_Type; Value : String_Type);
-
-   type Env_Filter is not null access function (Name : String_Type; Value : String_Type) return Boolean;
-
-   --  @summary Retrieve an environment variable, empty string if absent.
-   function Get_Env (Name : String_Type) return String_Type
-   is (Environment_Value (Name, To_String_Type ("")));
-
-   --  @summary Retrieve an environment variable with an explicit fallback.
-   function Get_Env (Name : String_Type; Default : String_Type) return String_Type
-   is (Environment_Value (Name, Default));
-
-   --  @summary True iff the environment variable is set.
-   function Env_Exists (Name : String_Type) return Boolean
-   is (Environment_Exists (Name));
-
-   --  @summary Set an environment variable.
-   function Set_Env (Name : String_Type; Value : String_Type) return Boolean
-   is (Environment_Set (Name, Value));
-
-   --  @summary Clear one environment variable.
-   function Clear_Env (Name : String_Type) return Boolean
-   is (Environment_Clear (Name));
-
-   --  @summary Clear all environment variables.
-   function Clear_Env return Boolean
-   is (Environment_Clear_All);
-
-   --  @summary Iterate over all environment variables.
-   function Iterate_Env (Process : Env_Processor) return Boolean;
-
-   --  @summary Iterate over filtered environment variables.
-   function Iterate_Env (Include : Env_Filter; Process : Env_Processor) return Boolean;
 
    ---------------------------------------------------------------------------
    --  Extended String Operations

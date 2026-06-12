@@ -103,29 +103,6 @@ package VSS_Operations is
    function To_String (Source : Virtual_String) return String;
 
    ---------------------------------------------------------------------------
-   --  Environment Operations (UTF-8 boundary)
-   ---------------------------------------------------------------------------
-
-   function Environment_Value
-     (Name    : Virtual_String;
-      Default : Virtual_String) return Virtual_String;
-
-   function Environment_Exists (Name : Virtual_String) return Boolean;
-
-   function Environment_Set
-     (Name  : Virtual_String;
-      Value : Virtual_String) return Boolean;
-
-   function Environment_Clear (Name : Virtual_String) return Boolean;
-
-   function Environment_Clear return Boolean;
-
-   function Environment_Iterate
-     (Process : not null access procedure
-        (Name  : Virtual_String;
-         Value : Virtual_String)) return Boolean;
-
-   ---------------------------------------------------------------------------
    --  Extended Operations
    ---------------------------------------------------------------------------
 

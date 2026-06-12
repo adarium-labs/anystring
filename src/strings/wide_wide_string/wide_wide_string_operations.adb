@@ -10,10 +10,8 @@ with Ada.Strings;
 with Ada.Strings.Unbounded;
 with Ada.Strings.UTF_Encoding;
 with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
-with Ada.Environment_Variables;
 with Ada.Wide_Wide_Characters.Handling;
 with Anystrings_Conv;
-with Anystrings_Internal_Wide_Environment_Encoding;
 
 package body Wide_Wide_String_Operations is
 
@@ -48,118 +46,6 @@ package body Wide_Wide_String_Operations is
       end loop;
       return Result;
    end To_String_From_Wide_Wide;
-
-   function Environment_Value
-     (Name : Unbounded_Wide_Wide_String; Default : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String is
-   begin
-      if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name) then
-         return Default;
-      end if;
-
-      declare
-         Encoded_Name : constant String := Anystrings_Internal_Wide_Environment_Encoding.Encode (Name);
-      begin
-         if Ada.Environment_Variables.Exists (Encoded_Name) then
-            return
-              Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide_Wide
-                (Ada.Environment_Variables.Value (Encoded_Name));
-         else
-            return Default;
-         end if;
-      end;
-   exception
-      when others =>
-         return Default;
-   end Environment_Value;
-
-   function Environment_Exists (Name : Unbounded_Wide_Wide_String) return Boolean is
-   begin
-      if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name) then
-         return False;
-      end if;
-
-      return Ada.Environment_Variables.Exists (Anystrings_Internal_Wide_Environment_Encoding.Encode (Name));
-   exception
-      when others =>
-         return False;
-   end Environment_Exists;
-
-   function Environment_Set (Name : Unbounded_Wide_Wide_String; Value : Unbounded_Wide_Wide_String) return Boolean is
-   begin
-      if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name)
-        or else not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Value)
-      then
-         return False;
-      end if;
-
-      Ada.Environment_Variables.Set
-        (Anystrings_Internal_Wide_Environment_Encoding.Encode (Name),
-         Anystrings_Internal_Wide_Environment_Encoding.Encode (Value));
-      return True;
-   exception
-      when others =>
-         return False;
-   end Environment_Set;
-
-   function Environment_Clear (Name : Unbounded_Wide_Wide_String) return Boolean is
-   begin
-      if not Anystrings_Internal_Wide_Environment_Encoding.Can_Encode (Name) then
-         return False;
-      end if;
-
-      Ada.Environment_Variables.Clear (Anystrings_Internal_Wide_Environment_Encoding.Encode (Name));
-      return True;
-   exception
-      when others =>
-         return False;
-   end Environment_Clear;
-
-   function Environment_Clear return Boolean is
-   begin
-      Ada.Environment_Variables.Clear;
-      return True;
-   exception
-      when others =>
-         return False;
-   end Environment_Clear;
-
-   function Environment_Iterate
-     (Process : not null access procedure (Name : Unbounded_Wide_Wide_String; Value : Unbounded_Wide_Wide_String))
-      return Boolean
-   is
-      Success : Boolean := True;
-
-      procedure Process_Item (Name, Value : String) is
-      begin
-         begin
-            declare
-               Decoded_Name  : constant Unbounded_Wide_Wide_String :=
-                 Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide_Wide (Name);
-               Decoded_Value : constant Unbounded_Wide_Wide_String :=
-                 Anystrings_Internal_Wide_Environment_Encoding.Decode_Wide_Wide (Value);
-            begin
-               begin
-                  Process.all (Decoded_Name, Decoded_Value);
-               exception
-                  when others =>
-                     Success := False;
-               end;
-            end;
-         exception
-            when others =>
-               null;
-         end;
-      end Process_Item;
-   begin
-      begin
-         Ada.Environment_Variables.Iterate (Process_Item'Access);
-      exception
-         when others =>
-            Success := False;
-      end;
-
-      return Success;
-   end Environment_Iterate;
 
    function Concat_String_Latin_1 (Left : Unbounded_Wide_Wide_String; Right : String) return Unbounded_Wide_Wide_String
    is
