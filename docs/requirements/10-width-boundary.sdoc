@@ -1,0 +1,806 @@
+[DOCUMENT]
+TITLE: Display-Width / Grapheme-Cluster Boundary — Functional & Non-Functional Requirements
+REQ_PREFIX: FUNC-WIDTH-
+
+[GRAMMAR]
+ELEMENTS:
+- TAG: REQUIREMENT
+  FIELDS:
+  - TITLE: UID
+    TYPE: String
+    REQUIRED: True
+  - TITLE: STATUS
+    TYPE: String
+    REQUIRED: False
+  - TITLE: PRIORITY
+    TYPE: String
+    REQUIRED: False
+  - TITLE: TITLE
+    TYPE: String
+    REQUIRED: False
+  - TITLE: STATEMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: COMMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: RELATIONS
+    TYPE: String
+    REQUIRED: False
+
+[SECTION]
+TITLE: Context
+
+[TEXT]
+Feature: **WIDTH-SUPPORT** — Expose a display-width and grapheme-cluster
+API across every backend, backed by Alejandro R. Mosteo's ``umwi``
+("Unicode Monospace Width Information") crate.
+
+``docs/text-model.md`` §3 establishes that ``Length``, ``Element`` and
+``Slice`` on ``String_Type`` are **backend-native**: they count UTF-8
+bytes on ``standard``, ``Wide_Character`` code units on ``wide_string``,
+``Wide_Wide_Character`` slots on ``wide_wide_string``, and Unicode code
+points on ``uxstring`` / ``vss``. None of the backends count graphemes,
+terminal cells, or UTF-8 bytes uniformly. §4.3 of the same document
+acknowledges this leaves a real gap for terminal/style consumers: on
+the non-VSS backends, grapheme-stable iteration today requires
+hand-rolling UAX #29 on top of ``To_UTF_8``.
+
+This feature plugs that gap. It does **not** redefine the existing
+``Length`` / ``Element`` / ``Slice`` semantics; the backend-native
+contract from ``docs/text-model.md`` is preserved verbatim. Instead, a
+new opt-in Ada child package ``String_Types.Width`` is added per
+backend, exposing display-width and grapheme-cluster APIs. The new
+surface is **only** visible when a consumer explicitly writes
+``with String_Types.Width;`` — mirroring the existing FACADE-SPLIT
+isolation contract (FUNC-FACADE-004 / NFR-FACADE-002).
+
+Three constraints frame the design:
+
+1. **License preservation.** ``anystrings`` is Apache-2.0 WITH
+   LLVM-exception; ``umwi`` is LGPL-3.0-or-later. The default build
+   MUST NOT transitively pull ``umwi`` into a consumer's binary, to
+   keep the consumer's license obligations as today. ``umwi`` is
+   therefore an **opt-in build-time dependency**, not an unconditional
+   one.
+
+2. **Facade isolation.** A consumer that does not write
+   ``with String_Types.Width;`` MUST NOT see ``umwi`` (or its
+   transitive symbols) in the ``.ali`` closure. This extends the
+   ``examples/run_all_backends_demo.sh`` grep used for
+   ``FUNC-FACADE-004`` / ``NFR-FACADE-002`` to also reject ``umwi``
+   for pure ``with String_Types;`` programs.
+
+3. **Parity across backends.** The new child package SHALL follow the
+   established FACADE parity rule (FUNC-FACADE-003 / FUNC-FACADE-007 /
+   FUNC-FACADE-008 / FUNC-FACADE-009): every backend ships an
+   identical left-hand-side surface; only the rename targets on the
+   right-hand side differ.
+
+The ``vss`` backend MAY short-circuit grapheme iteration through VSS's
+native grapheme cursor when it is functionally equivalent to UMWI's
+output; this is a permitted optimisation, not a divergence.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Surface placement & parity
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-001
+STATUS: Approved
+PRIORITY: Must
+TITLE: Width / grapheme surface exposed via String_Types.Width child package
+STATEMENT: >>>
+The display-width and grapheme-cluster surface SHALL be exposed to
+user code as an Ada child package of ``String_Types``, named
+``String_Types.Width``.
+
+The package SHALL be present in every one of the five bundled backend
+directories (``src/strings/{standard,wide_string,wide_wide_string,uxstring,vss}/``)
+at ``src/strings/<backend>/string_types-width.ads``.
+
+A consumer wishing to use the surface SHALL write
+``with String_Types.Width;`` (optionally followed by ``use
+String_Types.Width;``). No other ``with`` clause SHALL be required
+beyond ``with String_Types;``.
+<<<
+COMMENT: >>>
+The placement mirrors the FACADE-SPLIT layout of ``String_Types.Command_Line``,
+``String_Types.Environment``, ``String_Types.Directories``, and
+``String_Types.Text_IO``. The hyphen in the source filename follows
+Ada's child-package filename convention; the Ada package is
+``String_Types.Width``.
+<<<
+RELATIONS: FUNC-FACADE-001, FUNC-FACADE-002
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-002
+STATUS: Approved
+PRIORITY: Must
+TITLE: String_Types.Width has identical left-hand-side surface across all five backends
+STATEMENT: >>>
+The left-hand-side declarations of all five copies of
+``string_types-width.ads`` SHALL be byte-identical up to (a) the
+``with`` clauses and (b) the right-hand-side rename targets.
+
+User source code that ``with``s ``String_Types.Width``, optionally
+``use``s it, and calls any of the declared subprograms or types SHALL
+compile unchanged under any of the five bundled backends.
+<<<
+COMMENT: >>>
+This is the generalisation of the FACADE parity invariant
+(FUNC-FACADE-003 / FUNC-FACADE-007 / FUNC-FACADE-008 / FUNC-FACADE-009)
+to the new child package. The right-hand-side rename targets resolve
+per backend: ``Standard_Width``, ``Wide_Width``, ``Wide_Wide_Width``,
+``UXString_Width``, ``VSS_Width``.
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-FACADE-003
+
+[/SECTION]
+
+[SECTION]
+TITLE: Width API
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-003
+STATUS: Approved
+PRIORITY: Must
+TITLE: Display_Width computes monospace-cell count for a String_Type
+STATEMENT: >>>
+The package ``String_Types.Width`` SHALL expose a function
+
+    function Display_Width
+      (S    : String_Type;
+       Conf : Width_Configuration := Default_Linux) return Natural;
+
+which returns the number of monospace-font terminal cells required to
+display ``S`` according to the Unicode East Asian Width property
+(UAX #11) and Emoji presentation rules (UAX #51), as computed by
+``umwi``.
+
+The implementation SHALL route ``S`` through the existing UTF-8
+boundary primitive ``To_UTF_8 (S)`` (or, on backends whose
+``String_Type`` IS ``Wide_Wide_String``-compatible, directly through
+the ``WWString`` overload of ``Umwi.Count``) and return
+``Umwi.Count (...).Width``. The function SHALL be total: on malformed
+input it SHALL fall back to the best-effort UMWI default (no exception
+propagates out of ``String_Types.Width`` unless ``Conf.Reject_Illegal``
+is explicitly set to ``True``).
+<<<
+COMMENT: >>>
+Naming is ``Display_Width`` (not ``Length``) to avoid colliding with,
+or being mistaken for, the existing ``Length`` formal on the
+``Anystrings`` generic. ``Length`` stays backend-native per
+``docs/text-model.md``.
+
+``Default_Linux`` is the recommended starting default because it
+matches the wcwidth behaviour observed on typical Linux terminals,
+which is what most consumers will display against. Consumers
+targeting CJK locales can override via ``Conf``.
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-WIDTH-006
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-004
+STATUS: Approved
+PRIORITY: Must
+TITLE: Grapheme_Count returns the user-perceived character count
+STATEMENT: >>>
+The package ``String_Types.Width`` SHALL expose a function
+
+    function Grapheme_Count
+      (S    : String_Type;
+       Conf : Width_Configuration := Default_Linux) return Natural;
+
+which returns the number of grapheme clusters in ``S`` as defined by
+Unicode UAX #29 / UAX #51, as computed by ``umwi``. ``Grapheme_Count
+(S) = Umwi.Count (To_UTF_8 (S), …).Clusters`` SHALL hold for every
+backend.
+
+The function SHALL be total under the same conditions as
+``Display_Width`` (best-effort by default, strict only when
+``Conf.Reject_Illegal`` is ``True``).
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-WIDTH-006
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-005
+STATUS: Approved
+PRIORITY: Must
+TITLE: Iterable grapheme view (for ... of) over a String_Type
+STATEMENT: >>>
+The package ``String_Types.Width`` SHALL expose an iterable view
+suitable for the Ada ``for ... of`` loop syntax:
+
+    type Grapheme is record
+       Width       : Natural;     -- 0, 1 or 2 monospace cells
+       Code_Points : Positive;    -- count of code points in the cluster
+       Slice       : String_Type; -- the cluster's text as String_Type
+    end record;
+
+    function Graphemes
+      (S    : String_Type;
+       Conf : Width_Configuration := Default_Linux)
+      return Grapheme_View;
+
+where ``Grapheme_View`` is iterable yielding ``Grapheme`` records.
+
+The view SHALL satisfy the following identity: concatenating all
+``G.Slice`` over the iteration SHALL reproduce ``S`` byte-for-byte (on
+``standard``) or code-unit-for-code-unit (on the other backends) up to
+the underlying string type's equality.
+
+The view SHALL be implemented on top of ``Umwi.Clusters`` (UTF-8
+overload) — except on the ``vss`` backend, which MAY substitute
+VSS's native grapheme-cluster cursor if the two are observationally
+equivalent under the same ``Conf``.
+<<<
+COMMENT: >>>
+The ``Slice`` field is returned as a ``String_Type`` (not as a
+``UTF8_String`` or ``Wide_Wide_String``) so consumers stay portable
+across backend swaps. The conversion cost is small (one
+``From_UTF_8`` per cluster) and is the price of facade portability;
+consumers needing zero-copy can use the underlying-backend APIs
+directly.
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-WIDTH-003, FUNC-WIDTH-004, FUNC-WIDTH-006
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-006
+STATUS: Approved
+PRIORITY: Must
+TITLE: Width_Configuration re-export with named defaults
+STATEMENT: >>>
+The package ``String_Types.Width`` SHALL expose a configuration type
+``Width_Configuration`` that maps one-to-one onto ``Umwi.Configuration``
+(``Context``, ``Honor_Emoji_Selectors``, ``Honor_Emoji_Modifiers``,
+``Reject_Illegal``).
+
+The package SHALL expose at least the following named-default
+constants:
+
+- ``Default_Linux`` — matches the wcwidth behaviour observed on
+  typical Linux terminals (mirrors ``Umwi.Defaults.Linux``).
+- ``Default_Strict`` — strict Unicode interpretation; raises on
+  malformed input (mirrors ``Umwi.Defaults.Strict``).
+
+The package MAY expose the underlying ``Umwi.Configuration`` enum
+literals (``Narrow``, ``Wide``) under unqualified names so consumers
+that ``use String_Types.Width;`` can write ``Wide`` directly.
+<<<
+COMMENT: >>>
+Re-exporting via subtype + named constants (rather than ``renames``
+of the package itself) keeps ``Umwi`` out of the user's
+``with``-graph: ``with String_Types.Width;`` is enough — they never
+need ``with Umwi;``. This is the same pattern already used for
+``UTF_8_Decode_Error`` literals in ``string_types.ads``.
+<<<
+RELATIONS: FUNC-WIDTH-001
+
+[/SECTION]
+
+[SECTION]
+TITLE: Cluster-aware indexing and width-budget helpers
+
+[TEXT]
+The Width / Graphemes primitives (FUNC-WIDTH-003..005) leave a real gap
+for callers whose task is "render this string into a terminal column".
+``Element (S, I)`` may return a partial UTF-8 byte; ``Slice (S, 1, 10)``
+may split a multi-byte sequence and yield invalid UTF-8; "first N
+displayed characters" requires composing ``Graphemes`` with manual
+width accounting on every call site. The helpers below close that gap
+inside ``String_Types.Width`` so consumers never have to roll their
+own.
+
+All helpers SHALL be cluster-boundary-safe: a returned ``String_Type``
+SHALL never contain a partial grapheme cluster (in particular, never a
+partial UTF-8 sequence). All helpers SHALL be total: empty input,
+zero / negative budgets, and out-of-range counts yield well-defined
+empty or unchanged results (specified per requirement below). All
+helpers SHALL be implemented on top of the same ``Umwi.Clusters``
+walk used by ``Graphemes`` (FUNC-WIDTH-005), so cluster boundaries
+agree by construction; the ``vss`` backend MAY use its native cursor
+under the same equivalence constraint as FUNC-WIDTH-008.
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-010
+STATUS: Approved
+PRIORITY: Must
+TITLE: Cluster_Length returns the user-perceived character count
+STATEMENT: >>>
+The package ``String_Types.Width`` SHALL expose
+
+    function Cluster_Length
+      (S    : String_Type;
+       Conf : Width_Configuration := Default_Linux) return Natural;
+
+returning the number of grapheme clusters in ``S``. The function
+SHALL satisfy ``Cluster_Length (S, Conf) = Grapheme_Count (S, Conf)``
+for every ``S`` and every ``Conf``.
+
+The duplication with ``Grapheme_Count`` (FUNC-WIDTH-004) is
+deliberate: ``Cluster_Length`` is the naming-symmetric partner of
+``Length`` for consumers who already think in "clusters", while
+``Grapheme_Count`` is the discoverable name for consumers thinking in
+"user-perceived characters". Implementation MAY be a one-line
+renames.
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-WIDTH-004
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-011
+STATUS: Approved
+PRIORITY: Must
+TITLE: Cluster_Element returns the i-th grapheme cluster
+STATEMENT: >>>
+The package ``String_Types.Width`` SHALL expose
+
+    function Cluster_Element
+      (S     : String_Type;
+       Index : Positive;
+       Conf  : Width_Configuration := Default_Linux) return Grapheme
+       with Pre => Index in 1 .. Cluster_Length (S, Conf);
+
+returning the ``Index``-th grapheme cluster of ``S`` (1-based, per
+Ada convention and consistent with the existing ``Element`` formal
+on ``Anystrings``). The returned ``Grapheme`` record carries the
+same fields as in FUNC-WIDTH-005 (``Width``, ``Code_Points``,
+``Slice : String_Type``); ``Slice`` SHALL be exactly the i-th
+cluster's text.
+
+The precondition is enforceable at run time (raising
+``Constraint_Error`` on violation in non-SPARK clients) and is
+mechanically discharged in SPARK clients.
+<<<
+COMMENT: >>>
+Index domain is 1-based to match Ada's ``Positive`` convention. Both
+``String_Types.Element`` and the ``Anystrings`` formal ``Element``
+also start at 1, so the call-site mental model is preserved.
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-WIDTH-005, FUNC-WIDTH-010
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-012
+STATUS: Approved
+PRIORITY: Must
+TITLE: Cluster_Slice extracts a cluster-boundary-safe sub-string
+STATEMENT: >>>
+The package ``String_Types.Width`` SHALL expose
+
+    function Cluster_Slice
+      (S            : String_Type;
+       From_Cluster : Positive;
+       To_Cluster   : Natural;
+       Conf         : Width_Configuration := Default_Linux) return String_Type
+       with Pre =>
+         (To_Cluster = 0 or else From_Cluster <= To_Cluster)
+         and then To_Cluster <= Cluster_Length (S, Conf);
+
+returning the concatenation of clusters ``From_Cluster .. To_Cluster``
+of ``S`` as a ``String_Type``, byte-for-byte (or unit-for-unit, per
+backend) equivalent to walking those clusters via ``Graphemes`` and
+concatenating their ``Slice`` fields.
+
+Empty-range convention: when ``To_Cluster = 0`` (and so
+``To_Cluster < From_Cluster``), ``Cluster_Slice`` SHALL return
+``Empty_String``. This mirrors the Ada idiom for empty ranges on
+``Slice``-style functions.
+<<<
+COMMENT: >>>
+``Cluster_Slice`` is the cluster-domain counterpart of the existing
+``Slice`` formal. The naming is parallel; the index basis is
+different (clusters vs backend-native units). Documentation in
+``docs/text-model.md`` SHALL flag the index-basis difference
+prominently.
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-WIDTH-005, FUNC-WIDTH-010
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-013
+STATUS: Approved
+PRIORITY: Must
+TITLE: Cluster_Head and Cluster_Tail return prefix / suffix by cluster count
+STATEMENT: >>>
+The package ``String_Types.Width`` SHALL expose
+
+    function Cluster_Head
+      (S     : String_Type;
+       Count : Natural;
+       Conf  : Width_Configuration := Default_Linux) return String_Type;
+
+    function Cluster_Tail
+      (S     : String_Type;
+       Count : Natural;
+       Conf  : Width_Configuration := Default_Linux) return String_Type;
+
+returning the first / last ``Count`` grapheme clusters of ``S`` as a
+``String_Type``. When ``Count = 0``, both functions SHALL return
+``Empty_String``. When ``Count >= Cluster_Length (S, Conf)``, both
+functions SHALL return ``S`` unchanged (no exception, no truncation).
+
+Cluster boundaries SHALL be respected: the returned ``String_Type``
+SHALL never contain a partial cluster.
+<<<
+COMMENT: >>>
+Counterparts of the existing ``Head`` / ``Tail`` functions on
+``String_Types`` (which work in backend-native units and pad). The
+``Width`` versions deliberately do NOT pad — padding semantics are
+delegated to ``Pad_To_Width`` (FUNC-WIDTH-016), which is
+cell-aware rather than cluster-count-aware.
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-WIDTH-005, FUNC-WIDTH-010, FUNC-WIDTH-016
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-014
+STATUS: Approved
+PRIORITY: Must
+TITLE: Head_By_Width returns the longest cluster-aligned prefix fitting a cell budget
+STATEMENT: >>>
+The package ``String_Types.Width`` SHALL expose a type and function
+
+    type Width_Slice_Result is record
+       Result    : String_Type;  -- the cluster-aligned prefix
+       Width     : Natural;      -- Display_Width (Result) under Conf
+       Truncated : Boolean;      -- True iff Result /= S
+    end record;
+
+    function Head_By_Width
+      (S                : String_Type;
+       Max_Cells        : Natural;
+       Allow_Split_Wide : Boolean := False;
+       Conf             : Width_Configuration := Default_Linux)
+      return Width_Slice_Result;
+
+returning the longest prefix of ``S`` whose ``Display_Width`` is
+``<= Max_Cells`` and whose end aligns to a cluster boundary.
+
+``Result.Width`` SHALL satisfy ``Result.Width <= Max_Cells`` for
+every input. ``Result.Truncated`` SHALL be ``True`` iff
+``Result.Result /= S``. When ``Max_Cells = 0``,
+``Result.Result = Empty_String``, ``Result.Width = 0``, and
+``Result.Truncated = (S /= Empty_String)``.
+
+``Allow_Split_Wide`` controls what happens at the boundary when the
+next cluster would push width past ``Max_Cells`` by exactly one
+cell because the cluster is 2-cell wide:
+
+- ``False`` (default): the 2-cell cluster is dropped; ``Result.Width``
+  may end up at ``Max_Cells - 1``.
+- ``True``: the 2-cell cluster is included only if it fits exactly
+  (i.e. ``Result.Width + Cluster.Width <= Max_Cells``); otherwise
+  same as False. The flag is reserved for future "render half a wide
+  glyph as a space" semantics; the current implementation MAY treat
+  it identically to ``False``.
+<<<
+COMMENT: >>>
+This is the workhorse function for terminal-column rendering. The
+default (``Allow_Split_Wide => False``) is what callers almost
+always want: never split a glyph, never overflow the budget. The
+flag is reserved for future use rather than fully implemented now,
+so consumers don't have to revisit their call sites if a
+"half-glyph fallback" semantics ever lands.
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-WIDTH-003, FUNC-WIDTH-005
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-015
+STATUS: Approved
+PRIORITY: Must
+TITLE: Truncate_With_Ellipsis fits text into a budget with a marker
+STATEMENT: >>>
+The package ``String_Types.Width`` SHALL expose
+
+    Default_Ellipsis : constant String_Type;
+    --  Single-cluster ellipsis on backends supporting it ('…',
+    --  U+2026, 1 cell); ASCII fallback "..." on backends whose
+    --  Character_Type cannot represent U+2026 (i.e. 'standard',
+    --  whose Character is Latin-1 — but the ellipsis lives in the
+    --  String_Type's UTF-8 storage, so this is reachable; the
+    --  fallback is therefore only used if Display_Width of '…'
+    --  cannot be computed reliably).
+
+    function Truncate_With_Ellipsis
+      (S         : String_Type;
+       Max_Cells : Natural;
+       Ellipsis  : String_Type := Default_Ellipsis;
+       Conf      : Width_Configuration := Default_Linux) return String_Type;
+
+returning:
+
+- ``S`` unchanged if ``Display_Width (S, Conf) <= Max_Cells``;
+- otherwise, the result of
+  ``Head_By_Width (S, Max_Cells - Display_Width (Ellipsis, Conf), …)
+  & Ellipsis``;
+- ``Empty_String`` if ``Max_Cells < Display_Width (Ellipsis, Conf)``
+  (no room for even the ellipsis).
+
+The function SHALL preserve cluster boundaries (it delegates to
+``Head_By_Width``) and SHALL be total.
+<<<
+COMMENT: >>>
+The default ellipsis is U+2026 (HORIZONTAL ELLIPSIS), 1 monospace
+cell — fits most consumer expectations and is shorter than "...".
+On the ``standard`` backend the ellipsis is still stored as 3 UTF-8
+bytes in the ``Unbounded_String``; only ``Length (S)`` would report
+3 (per the backend-native invariant). ``Display_Width`` reports 1,
+which is what this function uses.
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-WIDTH-003, FUNC-WIDTH-014
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-016
+STATUS: Approved
+PRIORITY: Must
+TITLE: Pad_To_Width pads a string to a target cell count
+STATEMENT: >>>
+The package ``String_Types.Width`` SHALL expose
+
+    type Pad_Side is (Left, Right, Both);
+
+    function Pad_To_Width
+      (S            : String_Type;
+       Target_Cells : Natural;
+       Pad          : Character_Type := ' ';
+       Side         : Pad_Side := Right;
+       Conf         : Width_Configuration := Default_Linux) return String_Type
+       with Pre => Display_Width (From_Character (Pad), Conf) = 1;
+
+returning a ``String_Type`` whose ``Display_Width`` equals
+``Target_Cells``, by appending / prepending / splitting (per ``Side``)
+copies of ``Pad`` to ``S``.
+
+When ``Display_Width (S, Conf) >= Target_Cells``, ``Pad_To_Width``
+SHALL return ``S`` unchanged (no truncation). When ``Side = Both``,
+the function SHALL split the padding as evenly as possible, with any
+extra cell going to the right side (``ceil`` on right, ``floor`` on
+left).
+
+The precondition ``Display_Width (From_Character (Pad), Conf) = 1``
+guarantees the cell count is exact; passing a wide pad character
+(e.g. a CJK fullwidth space) would otherwise make the result's
+width undefined in odd-cell cases. Consumers needing wide-pad
+support can call the function iteratively or open a separate
+roadmap item.
+<<<
+COMMENT: >>>
+Pads with single-cell characters by contract; the most common pad
+is a space. ``Side => Both`` is the table-centering case; the
+right-biased rounding matches the behaviour of most CLI table
+libraries (e.g. Python's ``textwrap``, the ``column`` Unix tool).
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-WIDTH-003
+
+[/SECTION]
+
+[SECTION]
+TITLE: Internal layout
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-007
+STATUS: Approved
+PRIORITY: Must
+TITLE: Per-backend implementation packages — flat names, one per backend
+STATEMENT: >>>
+For each backend ``<X>`` in {``standard``, ``wide_string``,
+``wide_wide_string``, ``uxstring``, ``vss``} a standalone per-backend
+implementation package ``<X>_Width`` SHALL exist at
+``src/strings/<X>/<prefix>_width.{ads,adb}``, exporting the concrete
+``Display_Width``, ``Grapheme_Count``, and ``Graphemes`` subprograms
+operating on the per-backend ``String_Type``.
+
+These packages SHALL NOT be Ada child packages of either ``Anystrings``
+or ``String_Types``; they remain top-level implementation units,
+following the FUNC-FACADE-005 / FUNC-CMDLINE pattern.
+
+The implementation packages SHALL be the only units in the codebase
+that ``with`` ``umwi``. ``String_Types.Width`` SHALL only ``with``
+the local ``<X>_Width`` package and re-export via ``renames``.
+<<<
+COMMENT: >>>
+This is the structural invariant that makes NFR-WIDTH-001 (facade
+isolation) achievable: ``with String_Types;`` cannot reach ``umwi``
+because the path ``String_Types -> <X>_Width -> Umwi`` only exists
+behind the explicit ``with String_Types.Width;`` opt-in.
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-FACADE-005
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-008
+STATUS: Approved
+PRIORITY: Should
+TITLE: VSS backend MAY use native grapheme-cluster cursor
+STATEMENT: >>>
+The ``vss`` backend's ``VSS_Width`` implementation MAY substitute
+VSS's native grapheme-cluster cursor for ``Umwi.Clusters`` when both
+are observationally equivalent for the given ``Width_Configuration``.
+
+If the substitution is taken, ``VSS_Width.Display_Width`` MUST still
+return the same value that ``Umwi.Count (To_UTF_8 (S), Conf).Width``
+would return, for every ``S`` and every ``Conf`` — the substitution is
+a performance optimisation, not a semantic divergence.
+<<<
+COMMENT: >>>
+VSS already maintains its own UAX #29 implementation. On long strings
+its cursor is materially faster than UTF-8 round-tripping through
+UMWI. The MAY (not MUST) leaves the choice to the implementor;
+correctness is verified by a property test that compares output
+against the UMWI path for a corpus including emoji ZWJ sequences,
+combining marks, regional-indicator flags, and CJK fullwidth text.
+<<<
+RELATIONS: FUNC-WIDTH-003, FUNC-WIDTH-005
+
+[/SECTION]
+
+[SECTION]
+TITLE: Non-functional requirements
+
+[REQUIREMENT]
+UID: NFR-WIDTH-001
+STATUS: Approved
+PRIORITY: Must
+TITLE: Facade isolation — `with String_Types;` does not pull umwi
+STATEMENT: >>>
+A user compilation unit whose context clause is ``with String_Types;``
+alone (without ``with String_Types.Width;``) SHALL NOT have any
+``umwi`` library unit in its semantic dependence closure.
+
+Equivalently: the binder-listing (or the ``.ali`` unit list) for a
+program
+
+    with String_Types; procedure P is begin null; end P;
+
+SHALL NOT contain a reference to ``umwi`` or any of its child units
+(``umwi``, ``umwi.properties``, ``umwi.generated``, …).
+
+The runner ``examples/run_all_backends_demo.sh`` SHALL be extended
+to assert this absence per backend, in addition to its existing checks
+for ``Ada.Command_Line`` / ``Ada.Environment_Variables`` /
+``Ada.Directories`` / ``Ada.*Text_IO``.
+<<<
+COMMENT: >>>
+This is the natural extension of FUNC-FACADE-004 and NFR-FACADE-002 to
+the new opt-in surface. The mechanical verification piggy-backs on
+the existing ``anystrings_facade_isolation.adb`` witness; no new
+witness program is required.
+<<<
+RELATIONS: FUNC-FACADE-004, NFR-FACADE-002, FUNC-WIDTH-007
+
+[REQUIREMENT]
+UID: NFR-WIDTH-002
+STATUS: Approved
+PRIORITY: Must
+TITLE: License — default build does not pull LGPL umwi
+STATEMENT: >>>
+The default ``alr build`` (any backend, no width opt-in flag set)
+SHALL NOT pull ``umwi`` as a transitive dependency. A consumer
+binary built against ``anystrings`` with the default configuration
+SHALL be free of LGPL-3.0-or-later obligations stemming from
+``umwi``.
+
+The opt-in mechanism MAY be either (a) a build-time switch on
+``anystrings`` itself (e.g. an Alire crate-configuration variable
+``ANYSTRING_WITH_WIDTH=true`` gating the inclusion of
+``string_types-width.ads`` and the per-backend ``<X>_Width`` packages
+into the project's ``Source_Files``), or (b) a separate sibling
+crate ``anystrings_width`` that depends on both ``anystrings`` and
+``umwi`` and adds the child package. The tech-spec phase SHALL pick
+between (a) and (b).
+
+Either mechanism MUST satisfy NFR-WIDTH-001 mechanically — the
+isolation grep on the default build is the verification.
+<<<
+COMMENT: >>>
+This is the showstopper that drives the entire opt-in design. Without
+it, ``anystrings`` ceases to be a pure Apache-2.0 dependency and every
+downstream consumer inherits LGPL §5/§6 relinking obligations on
+their final binary. The Alire crate-configuration mechanism
+introduced in Alire 2.0 (option types, conditional dependencies) is
+the natural fit for option (a).
+<<<
+RELATIONS: FUNC-WIDTH-001, NFR-WIDTH-001
+
+[REQUIREMENT]
+UID: NFR-WIDTH-003
+STATUS: Approved
+PRIORITY: Must
+TITLE: Default Width_Configuration matches Linux wcwidth behaviour
+STATEMENT: >>>
+The constant ``String_Types.Width.Default_Linux`` SHALL be defined
+such that ``Display_Width`` returns the same cell count that the
+Linux ``wcwidth(3)`` family of functions would return for the same
+input on a default ``en_US.UTF-8`` locale, to the extent UMWI's
+implementation does so.
+
+Specifically: ``Context = Narrow``, ``Honor_Emoji_Selectors = False``,
+``Honor_Emoji_Modifiers = True``, ``Reject_Illegal = False``
+(mirroring ``Umwi.Defaults.Linux``).
+<<<
+COMMENT: >>>
+This is the right starting default because the dominant consumer
+use case is rendering to a terminal that behaves like a modern Linux
+console. CJK consumers override via ``Conf.Context := Wide``.
+<<<
+RELATIONS: FUNC-WIDTH-006
+
+[REQUIREMENT]
+UID: NFR-WIDTH-004
+STATUS: Approved
+PRIORITY: Must
+TITLE: Malformed input — best-effort by default; strict on opt-in
+STATEMENT: >>>
+When ``Conf.Reject_Illegal = False`` (the default for both
+``Default_Linux`` and ``Default_Strict``'s opposite), every byte in
+the input that does not decode to a valid UTF-8 code point SHALL be
+counted as a single-byte cluster of width 1, mirroring UMWI's
+best-effort contract. ``Display_Width`` and ``Grapheme_Count`` SHALL
+NOT raise ``Encoding_Error`` in this mode.
+
+When ``Conf.Reject_Illegal = True``, both functions and the
+``Graphemes`` view MAY raise ``Encoding_Error`` (propagated from
+``umwi``) on the first invalid byte.
+<<<
+COMMENT: >>>
+This mirrors ``Umwi``'s own contract for the UTF-8 overloads of
+``Next_Cluster`` and ``Clusters``. Note that ``Umwi.Count
+(UTF8_String, …)`` is a special case in UMWI: it always raises on
+malformed input regardless of ``Reject_Illegal``. The
+``Display_Width`` implementation SHALL therefore route through the
+iterator (``Umwi.Clusters`` + manual sum), not through ``Count``, to
+honour the best-effort contract.
+<<<
+RELATIONS: FUNC-WIDTH-003, FUNC-WIDTH-004, FUNC-WIDTH-005
+
+[REQUIREMENT]
+UID: NFR-WIDTH-005
+STATUS: Approved
+PRIORITY: Should
+TITLE: Performance is O(N); documented as such
+STATEMENT: >>>
+``Display_Width``, ``Grapheme_Count``, and the ``Graphemes``
+iteration SHALL run in time linear in the input's UTF-8 byte length
+(or, equivalently, linear in its code-point count on backends whose
+``String_Type`` is code-point-indexed).
+
+This contract SHALL be documented in ``docs/text-model.md`` §4.3 (or
+its successor) so consumers do not assume O(1) and call
+``Display_Width`` in tight loops over unchanged strings.
+<<<
+COMMENT: >>>
+Memoisation is the consumer's responsibility. The implementation
+SHALL NOT introduce per-``String_Type`` caching, because that would
+require either (a) embedding mutable state in the backend's
+``String_Type`` (impossible — they are external types) or (b) a
+global thread-local cache (a footgun under SPARK and concurrency).
+<<<
+RELATIONS: FUNC-WIDTH-003, FUNC-WIDTH-004, FUNC-WIDTH-005
+
+[/SECTION]
+
+[SECTION]
+TITLE: Documentation impact
+
+[REQUIREMENT]
+UID: FUNC-WIDTH-009
+STATUS: Approved
+PRIORITY: Should
+TITLE: docs/text-model.md §4.3 updated to point at String_Types.Width
+STATEMENT: >>>
+Once ``String_Types.Width`` is implemented, ``docs/text-model.md``
+§4.3 (Grapheme-stable iteration) SHALL be updated to point at the
+new child package as the first recommendation, demoting the
+"segment manually on top of ``To_UTF_8``" guidance to a fallback.
+
+The root ``README.md`` and ``src/strings/README.md`` SHALL be updated
+to list ``String_Types.Width`` in their "Public surface" tables
+alongside the four existing child packages.
+<<<
+COMMENT: >>>
+This is a downstream documentation requirement, not part of the
+implementation surface; it's listed here so the trace matrix
+captures the cross-document link. The actual edits will land as
+part of the WIDTH-SUPPORT validation gate (Phase 7).
+<<<
+RELATIONS: FUNC-WIDTH-001, FUNC-WIDTH-005
+
+[/SECTION]

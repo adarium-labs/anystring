@@ -48,6 +48,9 @@ UID scheme:
 - **FUNC-DIR-NNN**     — Filesystem boundary (Ada.Directories) functional requirements
 - **NFR-DIR-NNN**      — Filesystem boundary (Ada.Directories) non-functional requirements
 - **FUNC-FACADE-NNN**  — String_Types facade-split (Layer 1) functional requirements
+- **NFR-FACADE-NNN**   — String_Types facade-split (Layer 2) non-functional requirements
+- **FUNC-WIDTH-NNN**   — Display-width / grapheme-cluster boundary functional requirements
+- **NFR-WIDTH-NNN**    — Display-width / grapheme-cluster boundary non-functional requirements
 
 All UIDs use zero-padded three-digit ordinals (001, 002, …).  New UID
 prefixes are added here as new feature areas are specified.
@@ -65,6 +68,7 @@ TITLE: Documents
 - docs/requirements/06-conversion-semantics-nfr.sdoc — Library-wide UTF-8 / Latin-1 conversion semantics non-functional requirements
 - docs/requirements/07-filesystem-boundary.sdoc — Filesystem boundary (Ada.Directories) functional requirements
 - docs/requirements/08-filesystem-boundary-nfr.sdoc — Filesystem boundary (Ada.Directories) non-functional requirements
-- docs/requirements/09-facade-split.sdoc — String_Types facade-split (Layer 1) functional requirements
+- docs/requirements/09-facade-split.sdoc — String_Types facade-split (Layer 1 + Layer 2) functional and non-functional requirements
+- docs/requirements/10-width-boundary.sdoc — Display-width / grapheme-cluster boundary functional and non-functional requirements (UMWI-backed, opt-in)
 
 [/SECTION]

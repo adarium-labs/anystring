@@ -15,5 +15,14 @@ uxstrings = "~0.9"
 [[depends-on]]
 vss_text = "~26"
 
+[[depends-on]]
+umwi = "~0.2"
+
+[configuration.variables]
+ANYSTRING_WITH_WIDTH = {type = "Boolean", default = false}
+
 [environment]
 UXS_VARIANT.set = "UXS1"
+
+[[pins]]
+umwi = { path='../umwi' }

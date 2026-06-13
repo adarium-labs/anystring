@@ -5,6 +5,9 @@ project Anystrings_Examples is
      ("standard", "wide_string", "wide_wide_string", "uxstring", "vss", "custom");
    String_Type : String_Type_Choice := external ("STRING_TYPE", "standard");
 
+   type With_Width_Choice is ("true", "false");
+   With_Width : With_Width_Choice := external ("ANYSTRING_WITH_WIDTH", "false");
+
    Wide_Env_Output_Suffix := "";
    case String_Type is
       when "wide_string" | "wide_wide_string" =>
@@ -19,13 +22,25 @@ project Anystrings_Examples is
      & Anystrings_Examples_Config.Build_Profile;
    for Create_Missing_Dirs use "True";
    for Exec_Dir use "bin/" & external ("STRING_TYPE", "standard") & Wide_Env_Output_Suffix;
-   for Main use
-     ("anystrings_examples.adb",
-      "anystrings_env_encoding_regression.adb",
-      "anystrings_utf_8_demo.adb",
-      "anystrings_cmdline_demo.adb",
-      "anystrings_filesystem_demo.adb",
-      "anystrings_facade_isolation.adb");
+   case With_Width is
+      when "true" =>
+         for Main use
+           ("anystrings_examples.adb",
+            "anystrings_env_encoding_regression.adb",
+            "anystrings_utf_8_demo.adb",
+            "anystrings_cmdline_demo.adb",
+            "anystrings_filesystem_demo.adb",
+            "anystrings_facade_isolation.adb",
+            "anystrings_width_demo.adb");
+      when "false" =>
+         for Main use
+           ("anystrings_examples.adb",
+            "anystrings_env_encoding_regression.adb",
+            "anystrings_utf_8_demo.adb",
+            "anystrings_cmdline_demo.adb",
+            "anystrings_filesystem_demo.adb",
+            "anystrings_facade_isolation.adb");
+   end case;
 
    package Compiler is
       for Default_Switches ("Ada") use Anystrings_Examples_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2022");

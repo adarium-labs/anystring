@@ -5,6 +5,10 @@ project Anystrings_Tests is
      ("standard", "wide_string", "wide_wide_string", "uxstring", "vss", "custom");
    String_Type : String_Type_Choice := external ("STRING_TYPE", "standard");
 
+   type With_Width_Choice is ("true", "false");
+   With_Width : With_Width_Choice :=
+     external ("ANYSTRING_WITH_WIDTH", "false");
+
    Wide_Env_Output_Suffix := "";
    case String_Type is
       when "wide_string" | "wide_wide_string" =>
@@ -14,13 +18,38 @@ project Anystrings_Tests is
          null;
    end case;
 
+   --  Gate width test files + the full runner behind ANYSTRING_WITH_WIDTH=true.
+   --  anystrings_test_runner.adb      — full runner (WITH_WIDTH=true only)
+   --  anystrings_test_runner_no_width.adb — base runner (WITH_WIDTH=false)
+   --  Mirrors Width_Excluded in anystrings.gpr (NFR-WIDTH-001, NFR-WIDTH-002).
+   Width_Test_Excluded := ();
+   case With_Width is
+      when "false" =>
+         Width_Test_Excluded :=
+           ("anystrings_test_runner.adb",
+            "width_core_test.ads",     "width_core_test.adb",
+            "width_clusters_test.ads", "width_clusters_test.adb",
+            "width_helpers_test.ads",  "width_helpers_test.adb",
+            "width_config_test.ads",   "width_config_test.adb",
+            "width_parity_test.ads",   "width_parity_test.adb");
+      when "true" =>
+         Width_Test_Excluded := ("anystrings_test_runner_no_width.adb");
+   end case;
+   for Excluded_Source_Files use Width_Test_Excluded;
+
    for Source_Dirs use ("src/", "config/");
    for Object_Dir use
      "obj/" & external ("STRING_TYPE", "standard") & Wide_Env_Output_Suffix & "/"
      & Anystrings_Tests_Config.Build_Profile;
    for Create_Missing_Dirs use "True";
    for Exec_Dir use "bin/" & external ("STRING_TYPE", "standard") & Wide_Env_Output_Suffix;
-   for Main use ("anystrings_test_runner.adb");
+
+   case With_Width is
+      when "false" =>
+         for Main use ("anystrings_test_runner_no_width.adb");
+      when "true" =>
+         for Main use ("anystrings_test_runner.adb");
+   end case;
 
    package Compiler is
       for Default_Switches ("Ada") use

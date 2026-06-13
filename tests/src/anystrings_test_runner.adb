@@ -40,6 +40,11 @@ with Char_Classification_Test;
 with Cmdline_Test;
 with Filesystem_Test;
 with String_Extension_Test;
+with Width_Core_Test;
+with Width_Clusters_Test;
+with Width_Helpers_Test;
+with Width_Config_Test;
+with Width_Parity_Test;
 
 procedure Anystrings_Test_Runner is
 
@@ -61,6 +66,11 @@ procedure Anystrings_Test_Runner is
       S.Add_Test (new String_Extension_Test.Test_Case);
       S.Add_Test (new Cmdline_Test.Test_Case);
       S.Add_Test (new Filesystem_Test.Test_Case);
+      S.Add_Test (new Width_Core_Test.Test_Case);
+      S.Add_Test (new Width_Clusters_Test.Test_Case);
+      S.Add_Test (new Width_Helpers_Test.Test_Case);
+      S.Add_Test (new Width_Config_Test.Test_Case);
+      S.Add_Test (new Width_Parity_Test.Test_Case);
       return S;
    end Suite;
 

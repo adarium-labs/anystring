@@ -1,74 +1,161 @@
-# Anystrings String Abstraction
+# `src/strings/` — Backend Implementations
 
-This directory contains alternative string type implementations for Anystrings.
+This directory holds the five interchangeable backend instantiations of the
+`Anystrings` generic and the build-time-selected `String_Types` facade. Exactly
+one backend is included in the build, chosen by `STRING_TYPE` (see root
+`README.md`).
 
-## Overview
+For agent-facing notes (what each file must export, anti-patterns, parity
+rules), see `AGENTS.md` in this directory.
 
-Anystrings uses a generic string abstraction that allows users to choose a preferred string representation at compile time. By default, it uses `Ada.Strings.Unbounded.Unbounded_String`.
-
-## Quick Start
-
-Set the `STRING_TYPE` environment variable before building:
+## Quick start
 
 ```bash
-# Use standard Unbounded_String (default)
+# Standard backend — Ada.Strings.Unbounded.Unbounded_String (default)
 alr build
 
-# Use UXStrings (requires uxstrings dependency)
+# UXStrings — full Unicode (Unicode_Character code points); pulls the uxstrings crate
 STRING_TYPE=uxstring alr build
 
-# Select how wide / wide_wide environment names and values are encoded
+# Wide_Character / Wide_Wide_Character (BMP / full Unicode)
+STRING_TYPE=wide_string alr build
+STRING_TYPE=wide_wide_string alr build
+
+# VSS Virtual_String — full Unicode; pulls the vss_text crate
+STRING_TYPE=vss alr build
+
+# Override how environment-variable names/values are encoded on the wide backends
 STRING_TYPE=wide_string ANYSTRING_WIDE_ENV_ENCODING=latin_1 alr build
 
-# Use a custom implementation
-STRING_TYPE=custom STRING_PATH=/path/to/my/strings alr build
+# Custom backend
+STRING_TYPE=custom STRING_PATH=/abs/path/to/my/strings alr build
 ```
 
-## Status of Implementations
+## Status of implementations
 
-| Type | Status | Notes |
-|------|--------|-------|
-| `standard` | ✅ Ready | Default, uses `Unbounded_String` |
-| `uxstring` | ✅ Ready | Full Unicode support, requires `uxstrings` dependency |
-| `wide_string` | ✅ Ready | Uses `Wide_Character` and builds as a selectable variant |
-| `wide_wide_string` | ✅ Ready | Uses `Wide_Wide_Character` and builds as a selectable variant |
-| `vss` | ✅ Ready | Full Unicode via VSS `Virtual_String`, requires `vss_text` dependency |
-| `custom` | ✅ Ready | Specify path via `STRING_PATH` |
+| Type               | Status   | Notes                                                                       |
+|--------------------|----------|-----------------------------------------------------------------------------|
+| `standard`         | Ready    | Default; `Unbounded_String`; `Length`/`Element` operate on **UTF-8 bytes**  |
+| `wide_string`      | Ready    | `Wide_Character` code units; BMP only                                       |
+| `wide_wide_string` | Ready    | `Wide_Wide_Character` slots; full Unicode                                   |
+| `uxstring`         | Ready    | Full Unicode; `Length`/`Element` operate on **code points**; pulls `uxstrings` |
+| `vss`              | Ready    | Full Unicode via `VSS.Strings.Virtual_String`; pulls `vss_text`             |
+| `custom`           | Ready    | Pick your own directory via `STRING_PATH`                                   |
 
-For `wide_string` and `wide_wide_string`, environment operations are selected at build time through
-`ANYSTRING_WIDE_ENV_ENCODING`. Supported values are `utf_8` (default) and `latin_1`.
+For `wide_string` and `wide_wide_string`, the environment-variable boundary
+encoding is selected at build time via `ANYSTRING_WIDE_ENV_ENCODING`. Allowed
+values: `utf_8` (default) and `latin_1`.
+
+## Public surface — what each backend exposes
+
+Since the **FACADE-SPLIT** refactor (Layer 1 + Layer 2), the four OS-touching
+addons live in Ada **child packages** of `String_Types`. The strings facade
+itself stays strings-only; the addons are opt-in.
+
+| Package                       | What it carries                                                  | Source file in each backend dir   |
+|-------------------------------|------------------------------------------------------------------|-----------------------------------|
+| `String_Types`                | `String_Type`, `Character_Type`, `Empty_String`, all string ops, UTF-8 boundary types, conversion helpers, character classifiers | `string_types.ads`                |
+| `String_Types.Command_Line`   | `Argument_Count`, `Argument`, `Command_Name`, `Exit_Status`, `Set_Exit_Status` | `string_types-command_line.ads`   |
+| `String_Types.Environment`    | `Get_Env`, `Set_Env`, `Env_Exists`, `Clear_Env`, `Iterate_Env`, plus filter/processor access types | `string_types-environment.ads`    |
+| `String_Types.Directories`    | `Exists`, `Kind`, `Create_Directory`, `Delete_File`, `Rename`, `File_Kind` subtype and constants | `string_types-directories.ads`    |
+| `String_Types.Text_IO`        | `File_Type`, `File_Mode`, `Create`, `Open`, `Close`, `Put`, `Put_Line`, `Get_Line`, `End_Of_File`, `New_Line`, `Is_Open` | `string_types-text_io.ads`        |
+| `String_Types.Width`          | `Display_Width`, `Grapheme_Count`, iterable `Graphemes`, cluster-indexed `Cluster_Element`/`Cluster_Slice`/`Cluster_Head`/`Cluster_Tail`, width-budget helpers `Head_By_Width`/`Truncate_With_Ellipsis`/`Pad_To_Width`. Opt-in via `ANYSTRING_WITH_WIDTH=true` (UMWI is LGPL-3.0-or-later). | `string_types-width.ads`          |
+
+Every backend directory ships all five files. The left-hand sides of the
+child specs are **byte-identical** across backends; only the rename targets
+on the right-hand side differ (`Standard_Command_Line`, `Wide_Command_Line`,
+…). This is the parity invariant — `FUNC-FACADE-003` and friends — that keeps
+`STRING_TYPE` a pure directory swap.
+
+## Consumption pattern
+
+Users opt in to exactly the surfaces they need:
+
+```ada
+with String_Types;                use String_Types;
+with String_Types.Environment;    use String_Types.Environment;
+with String_Types.Text_IO;        use String_Types.Text_IO;
+
+procedure My_Tool is
+   S : constant String_Type := To_String_Type ("hello");
+   F : File_Type;
+begin
+   Put_Line (S);
+   if Env_Exists (To_String_Type ("HOME")) then
+      ...
+   end if;
+end My_Tool;
+```
+
+A unit whose context clause is `with String_Types;` alone gets only the
+strings surface — no command-line, no environment, no directories, no
+Text_IO. The OS units (`Ada.Command_Line`, `Ada.Environment_Variables`,
+`Ada.Directories`, `Ada.Text_IO`, `Ada.Wide_Text_IO`, `Ada.Wide_Wide_Text_IO`)
+are **not** in the semantic dependence closure.
+
+## Facade-isolation guarantee
+
+Requirements `FUNC-FACADE-004` (cmdline) and `NFR-FACADE-002` (env / dirs /
+Text_IO) make this a hard contract:
+
+> A user compilation unit whose context clause is `with String_Types;` alone
+> SHALL NOT have `Ada.Command_Line`, `Ada.Environment_Variables`,
+> `Ada.Directories`, `Ada.Text_IO`, `Ada.Wide_Text_IO`, or
+> `Ada.Wide_Wide_Text_IO` in its semantic dependence closure.
+
+The witness is built and verified on every backend by
+`examples/run_all_backends_demo.sh`, which compiles
+`examples/src/anystrings_facade_isolation.adb` (a one-liner whose only context
+clause is `with String_Types;`) and greps the resulting `.ali` file for any
+forbidden unit name. The script prints `FACADE-ISOLATION PASS` per backend.
+
+## Backend-native text model — read before indexing
+
+> ⚠️ **`Length`, `Element`, and `Slice` on a `String_Type` are backend-native.**
+> They count **bytes** on `standard`, **`Wide_Character` code units** on
+> `wide_string`, **`Wide_Wide_Character` slots** on `wide_wide_string`, and
+> **Unicode code points** on `uxstring` and `vss`. None of the backends
+> count graphemes, terminal cells, or UTF-8 bytes uniformly.
+
+Before you index, slice, or compare lengths in code that may run against
+more than one backend, read **`docs/text-model.md`**. It gives the full
+per-backend table, the portable byte-budget pattern via `To_UTF_8`, and a
+list of common mistakes.
 
 ## Architecture
 
-The string abstraction consists of three layers:
+The facade is built in four layers:
 
-1. **`Anystrings`** - Generic signature package defining all required string operations
-2. **`*_Operations`** - Operations package providing implementations for a specific string type
-3. **`*_Strings`** - Instantiation of `Anystrings` with the operations
-4. **`String_Types`** - Configuration package that re-exports from the chosen instantiation
+1. **`Anystrings`** — generic signature package (`src/anystrings.ads`).
+   Defines the formal subprograms each backend must supply (e.g. `Length`,
+   `Element`, `Slice`, `Concat_Strings`, the character classifiers).
+2. **`<prefix>_String_Operations`** — concrete implementations of those
+   formals for a single backend (`src/strings/<backend>/<prefix>_string_operations.{ads,adb}`).
+3. **`<Prefix>_Strings`** — instantiation of `Anystrings` with the
+   operations package (`<prefix>_strings.ads`).
+4. **`String_Types`** + child packages — the user-facing facade
+   (`string_types.ads` and `string_types-{command_line,environment,directories,text_io}.ads`).
+   Pure renames; no logic. The child packages are the result of the
+   FACADE-SPLIT refactor (Layer 1 / Layer 2; see
+   `docs/tech-specs/facade-split.md`).
 
-## Available String Types
+The package name `String_Types` is identical across all backend dirs by
+design — that is how `STRING_TYPE` is a pure directory swap with zero
+consumer-side change.
 
-### Default: Unbounded_String (src/)
+## How to use a different string type (consumer side)
 
-- **Type**: `Ada.Strings.Unbounded.Unbounded_String`
-- **Character Type**: `Character`
-- **Files**: `standard_string_operations.ads/adb`, `standard_strings.ads`
-- **Notes**: UTF-8 encoded, Length/Element operate on bytes
+### Method 1 — `STRING_TYPE` environment variable
 
-### UXStrings (src/strings/uxstring/)
+When building this crate (or any consumer that pins to it via Alire), set
+`STRING_TYPE` to one of `standard`, `wide_string`, `wide_wide_string`,
+`uxstring`, `vss`, or `custom`. The parent `anystrings.gpr` selects the
+matching `src/strings/<dir>/` source directory.
 
-- **Type**: `UXStrings.UXString`
-- **Character Type**: `UXStrings.Unicode_Character`
-- **Files**: `uxstring_operations.ads/adb`, `uxstrings.ads`
-- **Notes**: Full Unicode support, Length/Element operate on code points
-- **Dependency**: Requires UXStrings library
+### Method 2 — GPR `Source_Dirs` override in your own project
 
-## How to Use a Different String Type
-
-### Method 1: GPR Source Directory Override
-
-Add the alternative string type directory to your GPR file's Source_Dirs:
+If you vendor or fork the crate, add the desired backend dir to
+`Source_Dirs`:
 
 ```gpr
 project My_App is
@@ -76,56 +163,36 @@ project My_App is
 end My_App;
 ```
 
-The alternative `string_types.ads` in the selected implementation directory overrides the default one.
+The backend's `string_types.ads` is now the one that shows up to your code.
 
-### Method 2: Create Your Own Implementation
+## Adding a sixth backend
 
-1. Create an operations package that implements all required functions
-2. Create an instantiation of `Anystrings` with those operations
-3. Create a `String_Types` package that re-exports from that instantiation
-4. Use GPR to include your implementation directory
+Add three files in a new `src/strings/<name>/` directory (plus the four
+child-package spec files):
 
-## Required Operations
+1. `<name>_string_operations.{ads,adb}` — implementations of every formal in
+   `src/anystrings.ads`. Use `standard/standard_string_operations.adb` as the
+   reference implementation.
+2. `<name>_strings.ads` — `package <Name>_Strings is new Anystrings (...);`.
+   Pure instantiation, no logic.
+3. `string_types.ads` — package name MUST be `String_Types` (not
+   `<Name>_String_Types`). Re-export everything the other backends re-export;
+   the LHS must match byte-for-byte.
+4. `string_types-{command_line,environment,directories,text_io}.ads` — child
+   facades. Same parity rule: LHS byte-identical to the other backends; only
+   rename targets differ.
+5. Plus the per-addon implementation packages
+   (`<name>_command_line`, `<name>_environment`, `<name>_directories`,
+   `<name>_text_io`, `<name>_utf_8_bridge`, `<name>_utf_8_results`).
 
-To implement a new string type, you must provide these operations:
+Then add a `when "<name>" => ...` branch to the `String_Type_Choice` case in
+the root `anystrings.gpr`, and a status row in this README.
 
-### Core Operations
-- `Length(Source) -> Natural`
-- `Is_Empty(Source) -> Boolean`
-- `Element(Source, Index) -> Character_Type`
-- `Concat_Strings(Left, Right) -> String_Type`
-- `Concat_String_Character(Left, Right) -> String_Type`
-- `Concat_Character_String(Left, Right) -> String_Type`
+Run the full validation gate before declaring it done:
 
-### Comparison Operations
-- `"="`, `"<"`, `"<="`, `">"`, `">="` for String_Type
+```bash
+bash examples/run_all_backends_demo.sh   # includes facade-isolation grep
+( cd tests && bash ./run_all_backends.sh )
+```
 
-### Conversion Operations
-- `To_String_Type(String) -> String_Type` (from Latin-1)
-- `To_Latin_1(String_Type) -> String` (to Latin-1, replacing non-Latin-1 code points as needed)
-
-### Extended Operations
-- `Hash(Key) -> Hash_Type`
-- `Slice(Source, Low, High) -> String_Type`
-- `Index(Source, Pattern) -> Natural`
-- `Index_Latin_1(Source, Pattern : String) -> Natural`
-- `To_Lower(Source) -> String_Type`
-- `To_Upper(Source) -> String_Type`
-- `Starts_With(Source, Prefix) -> Boolean`
-- `Starts_With_Latin_1(Source, Prefix : String) -> Boolean`
-- `Ends_With(Source, Suffix) -> Boolean`
-- `Trim(Source) -> String_Type`
-- `From_Character(C) -> String_Type`
-
-### Latin-1 Concatenation
-- `Concat_String_Latin_1(String_Type, String) -> String_Type`
-- `Concat_Latin_1_String(String, String_Type) -> String_Type`
-
-## Example: Adding VSS Support
-
-To add support for VSS (Virtual String Subsystem):
-
-1. Create `src/strings/vss/vss_operations.ads` with all required operations
-2. Create `src/strings/vss/vss_strings.ads` instantiating `Anystrings`
-3. Create `src/strings/vss/string_types.ads` re-exporting from the VSS instantiation
-4. Use GPR to select: `for Source_Dirs use ("src", "src/strings/vss")`
+Both must print `ALL-BACKENDS-PASS` / `ALL BACKENDS: PASS`.

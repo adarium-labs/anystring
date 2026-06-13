@@ -68,7 +68,7 @@ for BACKEND in "${BACKENDS[@]}"; do
     iso_ali=$(find "$SCRIPT_DIR/obj/$BACKEND" -name "anystrings_facade_isolation.ali" -type f 2>/dev/null | head -1)
     if [ -z "$iso_ali" ]; then
         printf '  FACADE-ISOLATION  [SKIP] anystrings_facade_isolation.ali not found under %s/obj/%s/\n' "$SCRIPT_DIR" "$BACKEND"
-    elif grep -qiE 'ada\.command_line|a-comlin|ada\.environment_variables|a-envvar|ada\.directories|a-direct|ada\.text_io|a-textio|ada\.wide_text_io|a-witeio|ada\.wide_wide_text_io|a-ztexio' "$iso_ali"; then
+    elif grep -qiE 'ada\.command_line|a-comlin|ada\.environment_variables|a-envvar|ada\.directories|a-direct|ada\.text_io|a-textio|ada\.wide_text_io|a-witeio|ada\.wide_wide_text_io|a-ztexio|(^|[^a-z0-9_])umwi([^a-z0-9_.]|$)|(^|[^a-z0-9_])umwi\.' "$iso_ali"; then
         printf '  FACADE-ISOLATION  FAIL  forbidden OS unit (cmdline/env/dirs/text_io) leaked into closure of with-String_Types-only program\n'
         all_pass=false
     else
@@ -76,6 +76,28 @@ for BACKEND in "${BACKENDS[@]}"; do
     fi
 
     printf '  argv hex: %s\n\n' "$argv_hex"
+
+    # ---- Width demo (ANYSTRING_WITH_WIDTH=true) — NFR-WIDTH-001, FUNC-WIDTH-002 ----
+    if ( cd "$SCRIPT_DIR" && STRING_TYPE="$BACKEND" ANYSTRING_WITH_WIDTH=true alr build >"$build_log" 2>&1 ); then
+        WIDTH_BIN=$(find "$SCRIPT_DIR/bin/$BACKEND" -name "anystrings_width_demo" -type f 2>/dev/null | head -1)
+        if [ -z "$WIDTH_BIN" ]; then
+            printf '  WIDTH-DEMO  [SKIP] binary not found under %s/bin/%s/\n\n' "$SCRIPT_DIR" "$BACKEND"
+        else
+            width_out=$(mktemp)
+            "$WIDTH_BIN" >"$width_out" 2>&1 || true
+            if grep -q "anystrings_width_demo: ALL-OK" "$width_out"; then
+                printf '  WIDTH-DEMO  PASS\n\n'
+            else
+                printf '  WIDTH-DEMO  FAIL  (ALL-OK sentinel not found in output)\n\n'
+                all_pass=false
+            fi
+            rm -f "$width_out"
+        fi
+    else
+        printf '  WIDTH-DEMO  [BUILD FAILED with ANYSTRING_WITH_WIDTH=true]\n\n'
+        sed 's/^/    /' "$build_log"
+        all_pass=false
+    fi
 done
 
 if $all_pass; then
