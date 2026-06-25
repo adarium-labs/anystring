@@ -42,6 +42,10 @@ package String_Types.Text_IO with SPARK_Mode is
    procedure Set_Input (File : File_Type) renames Wide_Wide_Text_IO.Set_Input;
    procedure Set_Output (File : File_Type) renames Wide_Wide_Text_IO.Set_Output;
 
+   function Standard_Input return File_Type renames Wide_Wide_Text_IO.Standard_Input;
+   function Standard_Output return File_Type renames Wide_Wide_Text_IO.Standard_Output;
+   function Standard_Error return File_Type renames Wide_Wide_Text_IO.Standard_Error;
+
    procedure Put (Item : String_Type) renames Wide_Wide_Text_IO.Put;
    procedure Put (File : File_Type; Item : String_Type) renames Wide_Wide_Text_IO.Put;
    procedure Put_Line (Item : String_Type) renames Wide_Wide_Text_IO.Put_Line;

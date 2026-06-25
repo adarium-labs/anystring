@@ -35,6 +35,10 @@ package Wide_Text_IO with SPARK_Mode is
    procedure Set_Input (File : File_Type) renames Ada.Wide_Text_IO.Set_Input;
    procedure Set_Output (File : File_Type) renames Ada.Wide_Text_IO.Set_Output;
 
+   function Standard_Input return File_Type renames Ada.Wide_Text_IO.Standard_Input;
+   function Standard_Output return File_Type renames Ada.Wide_Text_IO.Standard_Output;
+   function Standard_Error return File_Type renames Ada.Wide_Text_IO.Standard_Error;
+
    procedure Put (Item : String_Type);
    procedure Put (File : File_Type; Item : String_Type);
    procedure Put_Line (Item : String_Type);
