@@ -61,7 +61,7 @@ package body UTF8_Round_Trip_Test is
      (T : in out AUnit.Test_Cases.Test_Case'Class)
    is
       pragma Unreferenced (T);
-      Empty : constant String_Type := To_String_Type ("");
+      Empty : constant String_Type := To_String_Type (String'(""));
    begin
       Assert_Round_Trip (Empty, "Empty string");
    end Test_Round_Trip_Empty_String;
@@ -72,7 +72,7 @@ package body UTF8_Round_Trip_Test is
      (T : in out AUnit.Test_Cases.Test_Case'Class)
    is
       pragma Unreferenced (T);
-      Source : constant String_Type := To_String_Type ("Hello, World!");
+      Source : constant String_Type := To_String_Type (String'("Hello, World!"));
    begin
       Assert_Round_Trip (Source, "ASCII 'Hello, World!'");
    end Test_Round_Trip_ASCII_Hello;

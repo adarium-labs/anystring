@@ -35,6 +35,8 @@ package Wide_Wide_Strings is new Anystrings
    UTF_8                    => Wide_Wide_UTF_8_Results,
    To_UTF_8                 => Wide_Wide_String_Operations.To_UTF_8,
    From_UTF_8               => Wide_Wide_UTF_8_Bridge.From_UTF_8_Wide_Wide,
+   To_Wide_Wide_String      => Wide_Wide_String_Operations.To_Wide_Wide_String,
+   From_Wide_Wide_String    => Wide_Wide_String_Operations.From_Wide_Wide_String,
    Hash                     => Wide_Wide_String_Operations.Hash,
    Slice                    => Wide_Wide_String_Operations.Slice,
    Index                    => Wide_Wide_String_Operations.Index,

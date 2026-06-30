@@ -52,6 +52,8 @@ package Standard_Strings is new
      UTF_8                   => Standard_UTF_8_Results,
      To_UTF_8                => Standard_String_Operations.To_UTF_8,
      From_UTF_8              => Standard_UTF_8_Bridge.From_UTF_8_Standard,
+     To_Wide_Wide_String     => Standard_String_Operations.To_Wide_Wide_String,
+     From_Wide_Wide_String   => Standard_String_Operations.From_Wide_Wide_String,
      Hash                    => Standard_String_Operations.Hash,
      Slice                   => Standard_String_Operations.Slice,
      Index                   => Standard_String_Operations.Index,

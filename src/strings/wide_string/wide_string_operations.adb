@@ -10,6 +10,7 @@ with Ada.Strings;
 with Ada.Strings.Unbounded;
 with Ada.Strings.UTF_Encoding;
 with Ada.Strings.UTF_Encoding.Wide_Strings;
+with Ada.Strings.Wide_Wide_Unbounded;
 with Ada.Wide_Characters.Handling;
 with Anystrings_Conv;
 
@@ -216,6 +217,92 @@ package body Wide_String_Operations is
         Ada.Strings.UTF_Encoding.Wide_Strings.Encode
           (Item => Sanitised, Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8, Output_BOM => False);
    end To_UTF_8;
+
+   function To_Wide_Wide_String
+     (Source : Unbounded_Wide_String) return Wide_Wide_String
+   is
+      WS : constant Wide_String :=
+        Ada.Strings.Wide_Unbounded.To_Wide_String (Source);
+      Out_Buf : Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String :=
+        Ada.Strings.Wide_Wide_Unbounded.Null_Unbounded_Wide_Wide_String;
+      Replacement : constant Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#);
+      I : Natural := WS'First;
+   begin
+      while I <= WS'Last loop
+         declare
+            CP : constant Natural := Wide_Character'Pos (WS (I));
+         begin
+            if CP in 16#D800# .. 16#DBFF# then
+               --  High surrogate; expect a low surrogate to follow.
+               if I + 1 <= WS'Last
+                 and then Wide_Character'Pos (WS (I + 1)) in 16#DC00# .. 16#DFFF#
+               then
+                  declare
+                     Low_CP : constant Natural :=
+                       Wide_Character'Pos (WS (I + 1));
+                     Scalar : constant Natural :=
+                       16#10000# + (CP - 16#D800#) * 16#400# + (Low_CP - 16#DC00#);
+                  begin
+                     Ada.Strings.Wide_Wide_Unbounded.Append
+                       (Out_Buf, Wide_Wide_Character'Val (Scalar));
+                  end;
+                  I := I + 2;
+               else
+                  --  Lone or mismatched high surrogate.
+                  Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Replacement);
+                  I := I + 1;
+               end if;
+            elsif CP in 16#DC00# .. 16#DFFF# then
+               --  Lone low surrogate.
+               Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Replacement);
+               I := I + 1;
+            else
+               --  Regular BMP code unit.
+               Ada.Strings.Wide_Wide_Unbounded.Append
+                 (Out_Buf, Wide_Wide_Character'Val (CP));
+               I := I + 1;
+            end if;
+         end;
+      end loop;
+      return Ada.Strings.Wide_Wide_Unbounded.To_Wide_Wide_String (Out_Buf);
+   end To_Wide_Wide_String;
+
+   function From_Wide_Wide_String
+     (Source : Wide_Wide_String) return Unbounded_Wide_String
+   is
+      Out_Buf : Unbounded_Wide_String :=
+        Ada.Strings.Wide_Unbounded.Null_Unbounded_Wide_String;
+      Replacement : constant Wide_Character := Wide_Character'Val (16#FFFD#);
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
+               --  Surrogate or out-of-range — emit one U+FFFD.
+               Ada.Strings.Wide_Unbounded.Append (Out_Buf, Replacement);
+            elsif CP <= 16#FFFF# then
+               --  BMP code-point fits in one Wide_Character.
+               Ada.Strings.Wide_Unbounded.Append
+                 (Out_Buf, Wide_Character'Val (CP));
+            else
+               --  Supplementary plane (U+10000..U+10FFFF): emit a
+               --  UTF-16 surrogate pair.
+               declare
+                  Offset : constant Natural := CP - 16#10000#;
+                  High   : constant Natural := 16#D800# + Offset / 16#400#;
+                  Low    : constant Natural := 16#DC00# + Offset mod 16#400#;
+               begin
+                  Ada.Strings.Wide_Unbounded.Append
+                    (Out_Buf, Wide_Character'Val (High));
+                  Ada.Strings.Wide_Unbounded.Append
+                    (Out_Buf, Wide_Character'Val (Low));
+               end;
+            end if;
+         end;
+      end loop;
+      return Out_Buf;
+   end From_Wide_Wide_String;
 
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping

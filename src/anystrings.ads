@@ -105,7 +105,20 @@ generic
    --  @relation FUNC-UTF8-008, FUNC-UTF8-010, NFR-UTF8-004
    with function From_UTF_8 (Source : String) return UTF_8.UTF_8_Decode_Result;
 
-   ---------------------------------------------------------------------------
+   --  Wide_Wide_String Boundary (code-point-indexed interchange)
+
+   --  Backend-specific encoder: each Unicode code-point of Source becomes
+   --  exactly one Wide_Wide_Character in the result. Invalid encodings
+   --  (malformed UTF-8 on the standard backend, lone UTF-16 surrogates on
+   --  the wide_string backend) are replaced with U+FFFD. Total, never raises.
+   with function To_Wide_Wide_String (Source : String_Type) return Wide_Wide_String;
+
+   --  Backend-specific decoder: each Wide_Wide_Character of Source becomes
+   --  a code-point in the result. Surrogate code-points (U+D800..U+DFFF)
+   --  and values greater than U+10FFFF are replaced with U+FFFD. Total,
+   --  never raises.
+   with function From_Wide_Wide_String (Source : Wide_Wide_String) return String_Type;
+
    --  Extended Operations (required by the framework)
    ---------------------------------------------------------------------------
 
@@ -324,7 +337,27 @@ is
    is (UTF_8.Is_Ok (From_UTF_8 (Source)))
    with Post => UTF_8_Is_Valid'Result = UTF_8.Is_Ok (From_UTF_8 (Source));
 
-   ---------------------------------------------------------------------------
+   --  Wide_Wide_String Boundary Wrappers (code-point-indexed interchange)
+
+   --  @summary Convert a Wide_Wide_String into a String_Type.
+   --
+   --  @description
+   --  Overload of To_String_Type for the code-point-indexed boundary.
+   --  Total; never raises. Each Wide_Wide_Character of Source becomes a
+   --  code-point in the output. Wide_Wide_Character values in the
+   --  surrogate range U+D800..U+DFFF and values greater than U+10FFFF
+   --  are replaced with U+FFFD (REPLACEMENT CHARACTER) before being
+   --  embedded in the result. The String version of To_String_Type
+   --  (interpreting bytes as Latin-1) is provided as a generic formal
+   --  above.
+   --
+   --  @param Source  A Wide_Wide_String whose elements are Unicode
+   --                 code-points (one Wide_Wide_Character per code-point).
+   --  @return        A String_Type equivalent to Source under the
+   --                 backend's code-point semantics.
+   function To_String_Type (Source : Wide_Wide_String) return String_Type
+   is (From_Wide_Wide_String (Source));
+
    --  Extended String Operations
    ---------------------------------------------------------------------------
 

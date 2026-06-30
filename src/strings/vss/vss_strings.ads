@@ -39,6 +39,8 @@ package VSS_Strings is new Anystrings
    UTF_8                    => VSS_UTF_8_Results,
    To_UTF_8                 => VSS_Operations.To_UTF_8,
    From_UTF_8               => VSS_UTF_8_Bridge.From_UTF_8_VSS,
+   To_Wide_Wide_String      => VSS_Operations.To_Wide_Wide_String,
+   From_Wide_Wide_String    => VSS_Operations.From_Wide_Wide_String,
    Hash                     => VSS_Operations.Hash,
    Slice                    => VSS_Operations.Slice,
    Index                    => VSS_Operations.Index,

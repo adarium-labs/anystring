@@ -49,7 +49,7 @@ package body UTF8_Wrapper_Sanity_Test is
      (T : in out AUnit.Test_Cases.Test_Case'Class)
    is
       pragma Unreferenced (T);
-      Source : constant String_Type := To_String_Type ("Test ASCII 123");
+      Source : constant String_Type := To_String_Type (String'("Test ASCII 123"));
    begin
       Assert (As_UTF_8 (Source) = To_UTF_8 (Source),
               "As_UTF_8 (S) shall equal To_UTF_8 (S) for ASCII input");

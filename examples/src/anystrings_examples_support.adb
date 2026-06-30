@@ -3,7 +3,7 @@ with String_Types; use String_Types;
 
 package body Anystrings_Examples_Support is
 
-   Env_Prefix                : constant String_Type := To_String_Type ("ANYSTRINGS_");
+   Env_Prefix                : constant String_Type := To_String_Type (String'("ANYSTRINGS_"));
    Expected_Regression_Name  : String_Type := Empty_String;
    Expected_Regression_Value : String_Type := Empty_String;
    Saw_Regression_Entry      : Boolean := False;

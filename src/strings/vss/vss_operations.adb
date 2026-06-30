@@ -310,6 +310,28 @@ package body VSS_Operations is
       return VSS.Strings.Conversions.To_UTF_8_String (Source);
    end To_UTF_8;
 
+   function To_Wide_Wide_String (Source : Virtual_String) return Wide_Wide_String is
+   begin
+      return VSS.Strings.Conversions.To_Wide_Wide_String (Source);
+   end To_Wide_Wide_String;
+
+   function From_Wide_Wide_String (Source : Wide_Wide_String) return Virtual_String is
+      Sanitised : Wide_Wide_String (Source'Range);
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
+               Sanitised (I) := Wide_Wide_Character'Val (FFFD_Code_Point);
+            else
+               Sanitised (I) := Source (I);
+            end if;
+         end;
+      end loop;
+      return VSS.Strings.To_Virtual_String (Sanitised);
+   end From_Wide_Wide_String;
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------

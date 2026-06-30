@@ -168,6 +168,27 @@ package VSS_Operations is
    --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-013
    function To_UTF_8 (Source : Virtual_String) return String;
 
+   --  Wide_Wide_String Boundary
+
+   --  @summary Extract the storage as a Wide_Wide_String of code-points.
+   --
+   --  @description
+   --  Total; never raises. Delegates to
+   --  VSS.Strings.Conversions.To_Wide_Wide_String. VSS forbids surrogate
+   --  code-points by construction, so the result contains only valid
+   --  Unicode scalar values.
+   function To_Wide_Wide_String (Source : Virtual_String) return Wide_Wide_String;
+
+   --  @summary Build a Virtual_String from a Wide_Wide_String.
+   --
+   --  @description
+   --  Total; never raises. Each Wide_Wide_Character is mapped to a
+   --  Virtual_Character. Wide_Wide_Character values in the surrogate
+   --  range U+D800..U+DFFF and values greater than U+10FFFF are
+   --  substituted with U+FFFD before being inserted, since the
+   --  Virtual_Character Static_Predicate forbids non-scalar code points.
+   function From_Wide_Wide_String (Source : Wide_Wide_String) return Virtual_String;
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------

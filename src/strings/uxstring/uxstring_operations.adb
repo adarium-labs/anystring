@@ -266,6 +266,35 @@ package body UXString_Operations is
       return To_String (Result);
    end To_UTF_8;
 
+   function To_Wide_Wide_String (Source : UXString) return Wide_Wide_String is
+      Len    : constant Natural := Length (Source);
+      Result : Wide_Wide_String (1 .. Len);
+   begin
+      for I in 1 .. Len loop
+         Result (I) := Wide_Wide_Character'Val
+           (Wide_Wide_Character'Pos (Element (Source, I)));
+      end loop;
+      return Result;
+   end To_Wide_Wide_String;
+
+   function From_Wide_Wide_String (Source : Wide_Wide_String) return UXString is
+      Result      : UXString := Null_UXString;
+      Replacement : constant Unicode_Character := Unicode_Character'Val (16#FFFD#);
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
+               Result := UXStrings."&" (Result, Replacement);
+            else
+               Result := UXStrings."&" (Result, Unicode_Character'Val (CP));
+            end if;
+         end;
+      end loop;
+      return Result;
+   end From_Wide_Wide_String;
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------

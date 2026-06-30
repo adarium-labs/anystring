@@ -194,7 +194,28 @@ package Standard_String_Operations is
    --            FUNC-CONV-003, FUNC-CONV-011, NFR-UTF8-007, NFR-UTF8-010
    function To_UTF_8 (Source : Unbounded_String) return String;
 
-   ---------------------------------------------------------------------------
+   --  Wide_Wide_String Boundary
+
+   --  @summary Decode the UTF-8 storage as a Wide_Wide_String of code-points.
+   --
+   --  @description
+   --  Total; never raises. Walks the stored UTF-8 bytes per RFC 3629 and
+   --  emits one Wide_Wide_Character per decoded scalar value. Malformed
+   --  sequences (invalid lead byte, truncated sequence, invalid
+   --  continuation, overlong encoding, surrogate code-point, value
+   --  greater than U+10FFFF) yield a single U+FFFD REPLACEMENT CHARACTER
+   --  and the decoder resynchronises on the next byte.
+   function To_Wide_Wide_String (Source : Unbounded_String) return Wide_Wide_String;
+
+   --  @summary Encode a Wide_Wide_String as UTF-8 storage.
+   --
+   --  @description
+   --  Total; never raises. Each Wide_Wide_Character is encoded as a 1..4
+   --  byte UTF-8 sequence per RFC 3629. Wide_Wide_Character values in the
+   --  surrogate range U+D800..U+DFFF and values greater than U+10FFFF are
+   --  substituted with U+FFFD before encoding.
+   function From_Wide_Wide_String (Source : Wide_Wide_String) return Unbounded_String;
+
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------
    --  Delegates to Ada.Characters.Handling. Length/Element on this backend

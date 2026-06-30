@@ -169,6 +169,31 @@ package Wide_String_Operations is
    --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007, NFR-UTF8-005
    function To_UTF_8 (Source : Unbounded_Wide_String) return String;
 
+   --  Wide_Wide_String Boundary
+
+   --  @summary Decode the UTF-16 storage as a Wide_Wide_String of code-points.
+   --
+   --  @description
+   --  Total; never raises. Walks UTF-16 code units, combining high
+   --  (U+D800..U+DBFF) and low (U+DC00..U+DFFF) surrogate pairs into a
+   --  single supplementary code-point. Lone or mismatched surrogates
+   --  yield U+FFFD.
+   function To_Wide_Wide_String
+     (Source : Unbounded_Wide_String) return Wide_Wide_String;
+
+   --  @summary Encode a Wide_Wide_String as the UTF-16 storage.
+   --
+   --  @description
+   --  Total; never raises. Each Wide_Wide_Character is encoded as:
+   --    * one Wide_Character when the code-point is in U+0000..U+FFFF
+   --      (excluding surrogates);
+   --    * a UTF-16 surrogate pair (two Wide_Characters) when the code
+   --      point is in U+10000..U+10FFFF;
+   --    * a single U+FFFD Wide_Character when the input is a surrogate
+   --      code-point (U+D800..U+DFFF) or > U+10FFFF.
+   function From_Wide_Wide_String
+     (Source : Wide_Wide_String) return Unbounded_Wide_String;
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------

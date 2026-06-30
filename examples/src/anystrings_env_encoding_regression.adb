@@ -112,7 +112,7 @@ begin
             if Character_Type'Pos (Character_Type'Last) >= Euro_Code_Point then
                declare
                   High_Value : constant String_Type :=
-                    To_String_Type ("wide-")
+                    To_String_Type (String'("wide-"))
                     & From_Character (Character_Type'Val (Euro_Code_Point));
                begin
                   Anystrings_Examples_Support.Assert

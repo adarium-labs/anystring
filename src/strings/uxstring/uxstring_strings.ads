@@ -38,6 +38,8 @@ package UXString_Strings is new Anystrings
    UTF_8                    => UXString_UTF_8_Results,
    To_UTF_8                 => UXString_Operations.To_UTF_8,
    From_UTF_8               => UXString_UTF_8_Bridge.From_UTF_8_UXString,
+   To_Wide_Wide_String      => UXString_Operations.To_Wide_Wide_String,
+   From_Wide_Wide_String    => UXString_Operations.From_Wide_Wide_String,
    Hash                     => UXString_Operations.Hash,
    Slice                    => UXString_Operations.Slice,
    Index                    => UXString_Operations.Index,

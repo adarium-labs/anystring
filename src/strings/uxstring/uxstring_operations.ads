@@ -177,6 +177,27 @@ package UXString_Operations is
    --            NFR-UTF8-005
    function To_UTF_8 (Source : UXString) return String;
 
+   --  Wide_Wide_String Boundary
+
+   --  @summary Extract the storage as a Wide_Wide_String of code-points.
+   --
+   --  @description
+   --  Total; never raises. Iterates over the UXString one Unicode code
+   --  point at a time and copies each into a Wide_Wide_Character.
+   --  Because UXString already stores validated Unicode scalar values,
+   --  no substitution is needed.
+   function To_Wide_Wide_String (Source : UXString) return Wide_Wide_String;
+
+   --  @summary Build a UXString from a Wide_Wide_String.
+   --
+   --  @description
+   --  Total; never raises. Each Wide_Wide_Character is appended as a
+   --  Unicode_Character. Wide_Wide_Character values in the surrogate
+   --  range U+D800..U+DFFF and values greater than U+10FFFF are
+   --  substituted with U+FFFD before being appended (UXString forbids
+   --  non-scalar code points by construction).
+   function From_Wide_Wide_String (Source : Wide_Wide_String) return UXString;
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------

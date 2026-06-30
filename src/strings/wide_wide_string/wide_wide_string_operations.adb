@@ -235,6 +235,33 @@ package body Wide_Wide_String_Operations is
           (Item => Sanitised, Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8, Output_BOM => False);
    end To_UTF_8;
 
+   function To_Wide_Wide_String
+     (Source : Unbounded_Wide_Wide_String) return Wide_Wide_String
+   is
+   begin
+      return Ada.Strings.Wide_Wide_Unbounded.To_Wide_Wide_String (Source);
+   end To_Wide_Wide_String;
+
+   function From_Wide_Wide_String
+     (Source : Wide_Wide_String) return Unbounded_Wide_Wide_String
+   is
+      Sanitised   : Wide_Wide_String (Source'Range);
+      Replacement : constant Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#);
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
+               Sanitised (I) := Replacement;
+            else
+               Sanitised (I) := Source (I);
+            end if;
+         end;
+      end loop;
+      return Ada.Strings.Wide_Wide_Unbounded.To_Unbounded_Wide_Wide_String (Sanitised);
+   end From_Wide_Wide_String;
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------

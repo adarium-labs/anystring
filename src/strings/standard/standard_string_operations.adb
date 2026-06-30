@@ -7,6 +7,7 @@
 
 with Ada.Strings;
 with Ada.Strings.Fixed;
+with Ada.Strings.Wide_Wide_Unbounded;
 
 package body Standard_String_Operations is
 
@@ -248,6 +249,132 @@ package body Standard_String_Operations is
          Value          => Out_Buf,
          Replaced_Count => Repls);
    end To_Latin_1_If_Possible;
+
+   function To_Wide_Wide_String (Source : Unbounded_String) return Wide_Wide_String is
+      Buf         : constant String := To_String (Source);
+      Out_Buf     : Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String :=
+        Ada.Strings.Wide_Wide_Unbounded.Null_Unbounded_Wide_Wide_String;
+      Replacement : constant Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#);
+
+      function Is_Cont (C : Character) return Boolean
+      is (Character'Pos (C) in 16#80# .. 16#BF#);
+
+      I : Natural := Buf'First;
+   begin
+      while I <= Buf'Last loop
+         declare
+            Lead : constant Natural := Character'Pos (Buf (I));
+         begin
+            if Lead <= 16#7F# then
+               --  1-byte ASCII.
+               Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Wide_Wide_Character'Val (Lead));
+               I := I + 1;
+
+            elsif Lead in 16#C2# .. 16#DF#
+              and then I + 1 <= Buf'Last
+              and then Is_Cont (Buf (I + 1))
+            then
+               --  2-byte sequence; encodes U+0080..U+07FF (overlong check
+               --  is unnecessary because C2 is the lowest valid lead).
+               Ada.Strings.Wide_Wide_Unbounded.Append
+                 (Out_Buf,
+                  Wide_Wide_Character'Val
+                    ((Lead mod 32) * 64
+                     + (Character'Pos (Buf (I + 1)) mod 64)));
+               I := I + 2;
+
+            elsif Lead in 16#E0# .. 16#EF#
+              and then I + 2 <= Buf'Last
+              and then Is_Cont (Buf (I + 1))
+              and then Is_Cont (Buf (I + 2))
+            then
+               --  3-byte sequence.
+               declare
+                  CP : constant Natural :=
+                    (Lead mod 16) * 4_096
+                    + (Character'Pos (Buf (I + 1)) mod 64) * 64
+                    + (Character'Pos (Buf (I + 2)) mod 64);
+               begin
+                  if CP < 16#0800# or else CP in 16#D800# .. 16#DFFF# then
+                     --  Overlong or surrogate code-point.
+                     Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Replacement);
+                  else
+                     Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Wide_Wide_Character'Val (CP));
+                  end if;
+               end;
+               I := I + 3;
+
+            elsif Lead in 16#F0# .. 16#F4#
+              and then I + 3 <= Buf'Last
+              and then Is_Cont (Buf (I + 1))
+              and then Is_Cont (Buf (I + 2))
+              and then Is_Cont (Buf (I + 3))
+            then
+               --  4-byte sequence.
+               declare
+                  CP : constant Natural :=
+                    (Lead mod 8) * 262_144
+                    + (Character'Pos (Buf (I + 1)) mod 64) * 4_096
+                    + (Character'Pos (Buf (I + 2)) mod 64) * 64
+                    + (Character'Pos (Buf (I + 3)) mod 64);
+               begin
+                  if CP < 16#10000# or else CP > 16#10_FFFF# then
+                     --  Overlong or out-of-range.
+                     Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Replacement);
+                  else
+                     Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Wide_Wide_Character'Val (CP));
+                  end if;
+               end;
+               I := I + 4;
+
+            else
+               --  Invalid lead byte, truncated multi-byte sequence, bare
+               --  continuation byte (0x80..0xBF), overlong starter
+               --  (0xC0/0xC1), or out-of-range lead (0xF5..0xFF). Emit one
+               --  U+FFFD and resync by a single byte.
+               Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Replacement);
+               I := I + 1;
+            end if;
+         end;
+      end loop;
+      return Ada.Strings.Wide_Wide_Unbounded.To_Wide_Wide_String (Out_Buf);
+   end To_Wide_Wide_String;
+
+   function From_Wide_Wide_String (Source : Wide_Wide_String) return Unbounded_String is
+      Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
+
+      procedure Encode_Code_Point (CP : Natural) is
+      begin
+         if CP <= 16#7F# then
+            Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (CP));
+         elsif CP <= 16#7FF# then
+            Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#C0# + CP / 64));
+            Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + CP mod 64));
+         elsif CP <= 16#FFFF# then
+            Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#E0# + CP / 4_096));
+            Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + (CP / 64) mod 64));
+            Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + CP mod 64));
+         else
+            Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#F0# + CP / 262_144));
+            Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + (CP / 4_096) mod 64));
+            Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + (CP / 64) mod 64));
+            Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + CP mod 64));
+         end if;
+      end Encode_Code_Point;
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
+               Encode_Code_Point (16#FFFD#);
+            else
+               Encode_Code_Point (CP);
+            end if;
+         end;
+      end loop;
+      return Out_Buf;
+   end From_Wide_Wide_String;
 
    function Char_Is_Line_Terminator (C : Character) return Boolean is
       P : constant Natural := Character'Pos (C);

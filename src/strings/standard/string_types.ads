@@ -128,6 +128,20 @@ package String_Types is
 
    function From_UTF_8 (Source : String) return UTF_8_Decode_Result renames Standard_UTF_8_Bridge.From_UTF_8_Standard;
 
+   --  ----- Wide_Wide_String boundary (code-point interchange) -----
+
+   --  @summary Decode the storage as a Wide_Wide_String of code-points.
+   --  Total; never raises. Malformed UTF-8 sequences yield U+FFFD.
+   function To_Wide_Wide_String (Source : String_Type) return Wide_Wide_String
+     renames Standard_String_Operations.To_Wide_Wide_String;
+
+   --  @summary Encode a Wide_Wide_String into a String_Type.
+   --  Overload of To_String_Type for the code-point boundary. Total; never
+   --  raises. Surrogate code-points and values greater than U+10FFFF are
+   --  substituted with U+FFFD.
+   function To_String_Type (Source : Wide_Wide_String) return String_Type
+     renames Standard_String_Operations.From_Wide_Wide_String;
+
    function Is_Ok (R : UTF_8_Decode_Result) return Boolean renames Standard_UTF_8_Results.Is_Ok;
 
    function Get_Value (R : UTF_8_Decode_Result) return String_Type renames Standard_UTF_8_Results.Get_Value;

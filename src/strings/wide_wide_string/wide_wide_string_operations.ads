@@ -161,6 +161,29 @@ package Wide_Wide_String_Operations is
    --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007, NFR-UTF8-005
    function To_UTF_8 (Source : Unbounded_Wide_Wide_String) return String;
 
+   --  Wide_Wide_String Boundary
+
+   --  @summary Extract the storage as a Wide_Wide_String.
+   --
+   --  @description
+   --  Total; never raises. Identity-shaped conversion: each
+   --  Wide_Wide_Character of the storage becomes one Wide_Wide_Character
+   --  in the result. The storage is already code-point-indexed, so no
+   --  transcoding is needed.
+   function To_Wide_Wide_String
+     (Source : Unbounded_Wide_Wide_String) return Wide_Wide_String;
+
+   --  @summary Build storage from a Wide_Wide_String.
+   --
+   --  @description
+   --  Total; never raises. Each Wide_Wide_Character is copied into the
+   --  storage. Wide_Wide_Character values in the surrogate range
+   --  U+D800..U+DFFF and values greater than U+10FFFF are substituted
+   --  with U+FFFD so that the storage only contains valid Unicode
+   --  scalar values (matches the cross-backend semantics).
+   function From_Wide_Wide_String
+     (Source : Wide_Wide_String) return Unbounded_Wide_Wide_String;
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------
