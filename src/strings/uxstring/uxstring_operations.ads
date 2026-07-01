@@ -198,6 +198,20 @@ package UXString_Operations is
    --  non-scalar code points by construction).
    function From_Wide_Wide_String (Source : Wide_Wide_String) return UXString;
 
+   --  Wide_Wide_String Boundary - Per-call invalid-code-point policy (Tier 2)
+
+   --  @summary Build a UXString from a Wide_Wide_String, substituting
+   --  caller-supplied Substitute for invalid code-points. Total; never
+   --  raises. Substitute is assumed to be a valid Unicode scalar.
+   function From_Wide_Wide_String_With_Substitute
+     (Source     : Wide_Wide_String;
+      Substitute : Wide_Wide_Character) return UXString;
+
+   --  @summary Build a UXString from a Wide_Wide_String, dropping
+   --  invalid code-points. Total; never raises.
+   function From_Wide_Wide_String_Skip_Invalid
+     (Source : Wide_Wide_String) return UXString;
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------

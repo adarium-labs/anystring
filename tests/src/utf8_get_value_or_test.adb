@@ -61,7 +61,7 @@ package body UTF8_Get_Value_Or_Test is
    is
       pragma Unreferenced (T);
       --  Arrange
-      Fallback : constant String_Type         := To_String_Type (String'("fallback"));
+      Fallback : constant String_Type         := To_String_Type ("fallback");
       R        : constant UTF_8_Decode_Result := From_UTF_8 (ASCII_UTF8);
    begin
       --  Pre-condition: this result must be a success
@@ -80,7 +80,7 @@ package body UTF8_Get_Value_Or_Test is
    is
       pragma Unreferenced (T);
       --  Arrange
-      Fallback : constant String_Type         := To_String_Type (String'("default"));
+      Fallback : constant String_Type         := To_String_Type ("default");
       R        : constant UTF_8_Decode_Result := From_UTF_8 (Malformed_UTF8);
    begin
       --  Pre-condition: the malformed input must yield a failure result
@@ -100,8 +100,8 @@ package body UTF8_Get_Value_Or_Test is
    is
       pragma Unreferenced (T);
       --  Arrange: two different fallback values — both must come back intact
-      Fallback_A : constant String_Type         := To_String_Type (String'("alpha"));
-      Fallback_B : constant String_Type         := To_String_Type (String'("beta"));
+      Fallback_A : constant String_Type         := To_String_Type ("alpha");
+      Fallback_B : constant String_Type         := To_String_Type ("beta");
       R          : constant UTF_8_Decode_Result := From_UTF_8 (Malformed_UTF8);
    begin
       Assert (not Is_Ok (R),
@@ -126,7 +126,7 @@ package body UTF8_Get_Value_Or_Test is
    is
       pragma Unreferenced (T);
       --  Arrange: one success result and one failure result
-      Fallback   : constant String_Type         := To_String_Type (String'("none"));
+      Fallback   : constant String_Type         := To_String_Type ("none");
       R_Ok       : constant UTF_8_Decode_Result := From_UTF_8 (ASCII_UTF8);
       R_Err      : constant UTF_8_Decode_Result := From_UTF_8 (Malformed_UTF8);
       --  Act: call Get_Value_Or on both results in an unconditional expression,
@@ -155,7 +155,7 @@ package body UTF8_Get_Value_Or_Test is
       --  Arrange: a well-formed multi-byte UTF-8 sequence (U+00E9, é)
       E_Acute_UTF8 : constant String :=
         Character'Val (16#C3#) & Character'Val (16#A9#);
-      Fallback     : constant String_Type         := To_String_Type (String'(""));
+      Fallback     : constant String_Type         := To_String_Type ("");
       R            : constant UTF_8_Decode_Result := From_UTF_8 (E_Acute_UTF8);
    begin
       Assert (Is_Ok (R),

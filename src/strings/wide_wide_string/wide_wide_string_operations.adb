@@ -391,4 +391,42 @@ package body Wide_Wide_String_Operations is
          Replaced_Count => Repls);
    end To_Latin_1_If_Possible;
 
+   function From_Wide_Wide_String_With_Substitute
+     (Source     : Wide_Wide_String;
+      Substitute : Wide_Wide_Character) return Unbounded_Wide_Wide_String
+   is
+      Sanitised : Wide_Wide_String (Source'Range);
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
+               Sanitised (I) := Substitute;
+            else
+               Sanitised (I) := Source (I);
+            end if;
+         end;
+      end loop;
+      return Ada.Strings.Wide_Wide_Unbounded.To_Unbounded_Wide_Wide_String (Sanitised);
+   end From_Wide_Wide_String_With_Substitute;
+
+   function From_Wide_Wide_String_Skip_Invalid
+     (Source : Wide_Wide_String) return Unbounded_Wide_Wide_String
+   is
+      Out_Buf : Unbounded_Wide_Wide_String :=
+        Ada.Strings.Wide_Wide_Unbounded.Null_Unbounded_Wide_Wide_String;
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if not (CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF#) then
+               Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Source (I));
+            end if;
+         end;
+      end loop;
+      return Out_Buf;
+   end From_Wide_Wide_String_Skip_Invalid;
+
 end Wide_Wide_String_Operations;

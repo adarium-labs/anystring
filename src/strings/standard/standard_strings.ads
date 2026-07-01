@@ -30,6 +30,8 @@ with Anystrings;
 with Standard_String_Operations;
 with Standard_UTF_8_Results;
 with Standard_UTF_8_Bridge;
+with Standard_WWS_Decode_Results;
+with Standard_WWS_Bridge;
 
 package Standard_Strings is new
   Anystrings
@@ -54,6 +56,13 @@ package Standard_Strings is new
      From_UTF_8              => Standard_UTF_8_Bridge.From_UTF_8_Standard,
      To_Wide_Wide_String     => Standard_String_Operations.To_Wide_Wide_String,
      From_Wide_Wide_String   => Standard_String_Operations.From_Wide_Wide_String,
+     WWS                                   => Standard_WWS_Decode_Results,
+     From_Wide_Wide_String_With_Substitute =>
+       Standard_String_Operations.From_Wide_Wide_String_With_Substitute,
+     From_Wide_Wide_String_Skip_Invalid    =>
+       Standard_String_Operations.From_Wide_Wide_String_Skip_Invalid,
+     From_Wide_Wide_String_Checked         =>
+       Standard_WWS_Bridge.From_Wide_Wide_String_Standard_Checked,
      Hash                    => Standard_String_Operations.Hash,
      Slice                   => Standard_String_Operations.Slice,
      Index                   => Standard_String_Operations.Index,

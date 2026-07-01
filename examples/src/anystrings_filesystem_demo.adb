@@ -34,7 +34,7 @@ begin
    Section ("Exists / Kind: non-existent path");
    declare
       Bogus : constant String_Type :=
-         To_String_Type (String'("/tmp/anystrings-demo-does-not-exist-XYZ"));
+         To_String_Type ("/tmp/anystrings-demo-does-not-exist-XYZ");
    begin
       Ada.Text_IO.Put_Line ("Bogus exists?  " & Boolean'Image (Exists (Bogus)));
       Ada.Text_IO.Put_Line ("Bogus kind:    " & File_Kind'Image (Kind (Bogus)));
@@ -46,7 +46,7 @@ begin
    Section ("Create_Directory / Kind / cleanup");
    declare
       Dir : constant String_Type :=
-         To_String_Type (String'("/tmp/anystrings-demo-dir"));
+         To_String_Type ("/tmp/anystrings-demo-dir");
       OK  : Boolean;
    begin
       OK := Create_Directory (Dir);
@@ -63,14 +63,14 @@ begin
    Section ("Ordinary file: Kind / Rename / Delete");
    declare
       Src         : constant String_Type :=
-         To_String_Type (String'("/tmp/anystrings-demo-src.txt"));
+         To_String_Type ("/tmp/anystrings-demo-src.txt");
       Dst         : constant String_Type :=
-         To_String_Type (String'("/tmp/anystrings-demo-dst.txt"));
+         To_String_Type ("/tmp/anystrings-demo-dst.txt");
       File_Handle : File_Type;
       OK          : Boolean;
    begin
       Create (File_Handle, Out_File, To_Latin_1 (Src));
-      Put (File_Handle, To_String_Type (String'("hello from anystrings")));
+      Put (File_Handle, To_String_Type ("hello from anystrings"));
       Close (File_Handle);
 
       Ada.Text_IO.Put_Line ("Src exists? " & Boolean'Image (Exists (Src)));
@@ -99,7 +99,7 @@ begin
    Section ("UTF-8 path: café");
    declare
       Cafe_Dir : constant String_Type :=
-         To_String_Type (String'("/tmp/anystrings-demo-café-dir"));
+         To_String_Type ("/tmp/anystrings-demo-café-dir");
       OK       : Boolean;
    begin
       OK := Create_Directory (Cafe_Dir);

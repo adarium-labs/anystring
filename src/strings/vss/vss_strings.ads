@@ -18,6 +18,8 @@ with VSS.Strings;
 with VSS_Operations;
 with VSS_UTF_8_Bridge;
 with VSS_UTF_8_Results;
+with VSS_WWS_Decode_Results;
+with VSS_WWS_Bridge;
 
 package VSS_Strings is new Anystrings
   (String_Type              => VSS.Strings.Virtual_String,
@@ -41,6 +43,13 @@ package VSS_Strings is new Anystrings
    From_UTF_8               => VSS_UTF_8_Bridge.From_UTF_8_VSS,
    To_Wide_Wide_String      => VSS_Operations.To_Wide_Wide_String,
    From_Wide_Wide_String    => VSS_Operations.From_Wide_Wide_String,
+   WWS                                   => VSS_WWS_Decode_Results,
+   From_Wide_Wide_String_With_Substitute =>
+     VSS_Operations.From_Wide_Wide_String_With_Substitute,
+   From_Wide_Wide_String_Skip_Invalid    =>
+     VSS_Operations.From_Wide_Wide_String_Skip_Invalid,
+   From_Wide_Wide_String_Checked         =>
+     VSS_WWS_Bridge.From_Wide_Wide_String_VSS_Checked,
    Hash                     => VSS_Operations.Hash,
    Slice                    => VSS_Operations.Slice,
    Index                    => VSS_Operations.Index,

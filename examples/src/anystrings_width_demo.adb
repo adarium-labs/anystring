@@ -43,7 +43,7 @@ procedure Anystrings_Width_Demo is
    --  Decode a raw UTF-8 byte string into String_Type (portable across all backends).
    function From_Bytes (Bytes : String) return String_Type is
    begin
-      return Get_Value_Or (From_UTF_8 (Bytes), To_String_Type (String'("?")));
+      return Get_Value_Or (From_UTF_8 (Bytes), To_String_Type ("?"));
    end From_Bytes;
 
    ---------------------------------------------------------------------------

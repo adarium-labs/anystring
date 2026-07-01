@@ -16,6 +16,8 @@ with Anystrings;
 with UXString_Operations;
 with UXString_UTF_8_Results;
 with UXString_UTF_8_Bridge;
+with UXString_WWS_Decode_Results;
+with UXString_WWS_Bridge;
 with UXStrings;
 
 package UXString_Strings is new Anystrings
@@ -40,6 +42,13 @@ package UXString_Strings is new Anystrings
    From_UTF_8               => UXString_UTF_8_Bridge.From_UTF_8_UXString,
    To_Wide_Wide_String      => UXString_Operations.To_Wide_Wide_String,
    From_Wide_Wide_String    => UXString_Operations.From_Wide_Wide_String,
+   WWS                                   => UXString_WWS_Decode_Results,
+   From_Wide_Wide_String_With_Substitute =>
+     UXString_Operations.From_Wide_Wide_String_With_Substitute,
+   From_Wide_Wide_String_Skip_Invalid    =>
+     UXString_Operations.From_Wide_Wide_String_Skip_Invalid,
+   From_Wide_Wide_String_Checked         =>
+     UXString_WWS_Bridge.From_Wide_Wide_String_UXString_Checked,
    Hash                     => UXString_Operations.Hash,
    Slice                    => UXString_Operations.Slice,
    Index                    => UXString_Operations.Index,

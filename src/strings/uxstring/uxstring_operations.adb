@@ -295,6 +295,47 @@ package body UXString_Operations is
       return Result;
    end From_Wide_Wide_String;
 
+   function From_Wide_Wide_String_With_Substitute
+     (Source     : Wide_Wide_String;
+      Substitute : Wide_Wide_Character) return UXString
+   is
+      Result : UXString := Null_UXString;
+      Sub    : constant Unicode_Character :=
+        Unicode_Character'Val (Wide_Wide_Character'Pos (Substitute));
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
+               Result := UXStrings."&" (Result, Sub);
+            else
+               Result := UXStrings."&" (Result, Unicode_Character'Val (CP));
+            end if;
+         end;
+      end loop;
+      return Result;
+   end From_Wide_Wide_String_With_Substitute;
+
+   function From_Wide_Wide_String_Skip_Invalid
+     (Source : Wide_Wide_String) return UXString
+   is
+      Result : UXString := Null_UXString;
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if not (CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF#) then
+               Result := UXStrings."&" (Result, Unicode_Character'Val (CP));
+            end if;
+         end;
+      end loop;
+      return Result;
+   end From_Wide_Wide_String_Skip_Invalid;
+
+
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------

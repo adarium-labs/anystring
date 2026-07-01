@@ -110,7 +110,7 @@ begin
 
    --  ASCII fast-path (FUNC-UTF8-005): code points U+0000-U+007F
    declare
-      Ascii_Input : constant String_Type := To_String_Type (String'("Hello, world!"));
+      Ascii_Input : constant String_Type := To_String_Type ("Hello, world!");
       Utf8_Result : constant String := To_UTF_8 (Ascii_Input);
       Latin1_Out  : constant String := To_Latin_1 (Ascii_Input);
    begin
@@ -176,7 +176,7 @@ begin
 
    --  ASCII round-trip (FUNC-UTF8-011)
    declare
-      Source_Str   : constant String_Type := To_String_Type (String'("Hello, world!"));
+      Source_Str   : constant String_Type := To_String_Type ("Hello, world!");
       Encoded      : constant String := To_UTF_8 (Source_Str);
       Round_Result : constant UTF_8_Decode_Result := From_UTF_8 (Encoded);
    begin
@@ -409,7 +409,7 @@ begin
       --  Well-formed UTF-8 sequence for é (U+00E9)
       E_Acute_Utf8 : constant String :=
         String'(Character'Val (16#C3#), Character'Val (16#A9#));
-      Fallback     : constant String_Type := To_String_Type (String'("<unknown>"));
+      Fallback     : constant String_Type := To_String_Type ("<unknown>");
       Result       : constant UTF_8_Decode_Result := From_UTF_8 (E_Acute_Utf8);
       Value        : constant String_Type := Get_Value_Or (Result, Fallback);
    begin
@@ -426,7 +426,7 @@ begin
    --  6b. Failure path: Get_Value_Or returns Fallback unchanged
    declare
       Bad_Bytes : constant String := String'(1 => Character'Val (16#80#));
-      Fallback  : constant String_Type := To_String_Type (String'("<decode-error>"));
+      Fallback  : constant String_Type := To_String_Type ("<decode-error>");
       Result    : constant UTF_8_Decode_Result := From_UTF_8 (Bad_Bytes);
       Value     : constant String_Type := Get_Value_Or (Result, Fallback);
    begin

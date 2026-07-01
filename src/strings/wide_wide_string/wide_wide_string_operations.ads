@@ -184,6 +184,20 @@ package Wide_Wide_String_Operations is
    function From_Wide_Wide_String
      (Source : Wide_Wide_String) return Unbounded_Wide_Wide_String;
 
+   --  Wide_Wide_String Boundary - Per-call invalid-code-point policy (Tier 2)
+
+   --  @summary Copy a Wide_Wide_String into storage, substituting
+   --  caller-supplied Substitute for invalid code-points. Total; never
+   --  raises. Substitute is assumed to be a valid Unicode scalar.
+   function From_Wide_Wide_String_With_Substitute
+     (Source     : Wide_Wide_String;
+      Substitute : Wide_Wide_Character) return Unbounded_Wide_Wide_String;
+
+   --  @summary Copy a Wide_Wide_String into storage, dropping invalid
+   --  code-points. Total; never raises.
+   function From_Wide_Wide_String_Skip_Invalid
+     (Source : Wide_Wide_String) return Unbounded_Wide_Wide_String;
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------

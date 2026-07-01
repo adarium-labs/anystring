@@ -5,14 +5,14 @@
 
 --  @summary
 --  AUnit test suite: code-point-indexed boundary
---  (To_Wide_Wide_String / To_String_Type).
+--  (To_Wide_Wide_String / From_Wide_Wide_String).
 --
 --  @description
 --  Verifies the contract for the two new symmetric subprograms added to
 --  every backend:
 --
---    function To_Wide_Wide_String (Source : String_Type) return Wide_Wide_String;
---    function To_String_Type      (Source : Wide_Wide_String) return String_Type;
+--    function To_Wide_Wide_String   (Source : String_Type)      return Wide_Wide_String;
+--    function From_Wide_Wide_String (Source : Wide_Wide_String) return String_Type;
 --
 --  Both are total (never raise) and treat Wide_Wide_String as the canonical
 --  "one Wide_Wide_Character per Unicode code-point" interchange type.
@@ -21,8 +21,8 @@
 --    1. ASCII, BMP and supplementary-plane round-trip (W -> S -> W).
 --    2. Empty-string handling in both directions.
 --    3. Wide_Wide_String inputs containing surrogates or values > U+10FFFF
---       are normalised to U+FFFD when passed through To_String_Type and
---       then re-decoded with To_Wide_Wide_String.
+--       are normalised to U+FFFD when passed through From_Wide_Wide_String
+--       and then re-decoded with To_Wide_Wide_String.
 --    4. Truncating a multi-unit encoding via Slice (which yields a lone
 --       UTF-8 lead byte on the standard backend or a lone UTF-16 surrogate
 --       on the wide_string backend) decodes to U+FFFD. On code-point

@@ -254,7 +254,10 @@ package body Standard_String_Operations is
       Buf         : constant String := To_String (Source);
       Out_Buf     : Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String :=
         Ada.Strings.Wide_Wide_Unbounded.Null_Unbounded_Wide_Wide_String;
-      Replacement : constant Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#);
+      --  Backend-chosen substitute for malformed UTF-8 sequences; matches
+      --  the choice made by From_Wide_Wide_String for invalid input.
+      Replacement : constant Wide_Wide_Character :=
+        Wide_Wide_Character'Val (Character'Pos ('?'));
 
       function Is_Cont (C : Character) return Boolean
       is (Character'Pos (C) in 16#80# .. 16#BF#);
@@ -343,6 +346,12 @@ package body Standard_String_Operations is
    function From_Wide_Wide_String (Source : Wide_Wide_String) return Unbounded_String is
       Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
 
+      --  Backend-chosen substitute for surrogate / out-of-range code-points.
+      --  The standard backend stores UTF-8 bytes; using ASCII '?' matches the
+      --  existing To_Latin_1 lossy-transliteration substitute (FUNC-CONV-006)
+      --  and preserves length-invariants (1 code-point in, 1 byte out).
+      Default_Substitute : constant Natural := Character'Pos ('?');
+
       procedure Encode_Code_Point (CP : Natural) is
       begin
          if CP <= 16#7F# then
@@ -367,7 +376,7 @@ package body Standard_String_Operations is
             CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
          begin
             if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
-               Encode_Code_Point (16#FFFD#);
+               Encode_Code_Point (Default_Substitute);
             else
                Encode_Code_Point (CP);
             end if;
@@ -389,5 +398,74 @@ package body Standard_String_Operations is
       --  HT (0x09), LF (0x0A), VT (0x0B), FF (0x0C), CR (0x0D), SP (0x20).
       return P in 16#09# .. 16#0D# or else P = 16#20#;
    end Char_Is_Whitespace;
+
+   --  Encode a Unicode scalar code-point as 1..4 UTF-8 bytes appended to
+   --  Out_Buf. Local helper factored out to keep the three Tier-2
+   --  From_Wide_Wide_String_* variants DRY. Caller is responsible for
+   --  ensuring CP is a valid Unicode scalar (0 .. 0x10FFFF, not a
+   --  surrogate); the three variants check this before every call.
+   procedure Encode_UTF_8_Code_Point
+     (CP      : Natural;
+      Out_Buf : in out Ada.Strings.Unbounded.Unbounded_String);
+
+   procedure Encode_UTF_8_Code_Point
+     (CP      : Natural;
+      Out_Buf : in out Ada.Strings.Unbounded.Unbounded_String)
+   is
+   begin
+      if CP <= 16#7F# then
+         Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (CP));
+      elsif CP <= 16#7FF# then
+         Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#C0# + CP / 64));
+         Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + CP mod 64));
+      elsif CP <= 16#FFFF# then
+         Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#E0# + CP / 4_096));
+         Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + (CP / 64) mod 64));
+         Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + CP mod 64));
+      else
+         Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#F0# + CP / 262_144));
+         Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + (CP / 4_096) mod 64));
+         Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + (CP / 64) mod 64));
+         Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (16#80# + CP mod 64));
+      end if;
+   end Encode_UTF_8_Code_Point;
+
+   function From_Wide_Wide_String_With_Substitute
+     (Source     : Wide_Wide_String;
+      Substitute : Wide_Wide_Character) return Unbounded_String
+   is
+      Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
+      Sub_CP  : constant Natural := Wide_Wide_Character'Pos (Substitute);
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
+               Encode_UTF_8_Code_Point (Sub_CP, Out_Buf);
+            else
+               Encode_UTF_8_Code_Point (CP, Out_Buf);
+            end if;
+         end;
+      end loop;
+      return Out_Buf;
+   end From_Wide_Wide_String_With_Substitute;
+
+   function From_Wide_Wide_String_Skip_Invalid
+     (Source : Wide_Wide_String) return Unbounded_String
+   is
+      Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if not (CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF#) then
+               Encode_UTF_8_Code_Point (CP, Out_Buf);
+            end if;
+         end;
+      end loop;
+      return Out_Buf;
+   end From_Wide_Wide_String_Skip_Invalid;
 
 end Standard_String_Operations;

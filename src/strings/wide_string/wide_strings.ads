@@ -9,6 +9,8 @@ with Anystrings;
 with Wide_String_Operations;
 with Wide_UTF_8_Results;
 with Wide_UTF_8_Bridge;
+with Wide_WWS_Decode_Results;
+with Wide_WWS_Bridge;
 
 package Wide_Strings is new Anystrings
   (String_Type              => Wide_String_Operations.Unbounded_Wide_String,
@@ -32,6 +34,13 @@ package Wide_Strings is new Anystrings
    From_UTF_8               => Wide_UTF_8_Bridge.From_UTF_8_Wide,
    To_Wide_Wide_String      => Wide_String_Operations.To_Wide_Wide_String,
    From_Wide_Wide_String    => Wide_String_Operations.From_Wide_Wide_String,
+   WWS                                   => Wide_WWS_Decode_Results,
+   From_Wide_Wide_String_With_Substitute =>
+     Wide_String_Operations.From_Wide_Wide_String_With_Substitute,
+   From_Wide_Wide_String_Skip_Invalid    =>
+     Wide_String_Operations.From_Wide_Wide_String_Skip_Invalid,
+   From_Wide_Wide_String_Checked         =>
+     Wide_WWS_Bridge.From_Wide_Wide_String_Wide_Checked,
    Hash                     => Wide_String_Operations.Hash,
    Slice                    => Wide_String_Operations.Slice,
    Index                    => Wide_String_Operations.Index,

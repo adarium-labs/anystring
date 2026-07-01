@@ -332,6 +332,48 @@ package body VSS_Operations is
       return VSS.Strings.To_Virtual_String (Sanitised);
    end From_Wide_Wide_String;
 
+   function From_Wide_Wide_String_With_Substitute
+     (Source     : Wide_Wide_String;
+      Substitute : Wide_Wide_Character) return Virtual_String
+   is
+      Sanitised : Wide_Wide_String (Source'Range);
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
+               Sanitised (I) := Substitute;
+            else
+               Sanitised (I) := Source (I);
+            end if;
+         end;
+      end loop;
+      return VSS.Strings.To_Virtual_String (Sanitised);
+   end From_Wide_Wide_String_With_Substitute;
+
+   function From_Wide_Wide_String_Skip_Invalid
+     (Source : Wide_Wide_String) return Virtual_String
+   is
+      Buf   : Wide_Wide_String (Source'Range);
+      Count : Natural := 0;
+   begin
+      for I in Source'Range loop
+         declare
+            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
+         begin
+            if not (CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF#) then
+               Count := Count + 1;
+               Buf (Buf'First + Count - 1) := Source (I);
+            end if;
+         end;
+      end loop;
+      return VSS.Strings.To_Virtual_String
+        (Buf (Buf'First .. Buf'First + Count - 1));
+   end From_Wide_Wide_String_Skip_Invalid;
+
+
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------

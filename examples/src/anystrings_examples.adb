@@ -6,9 +6,9 @@ with String_Types.Environment; use String_Types.Environment;
 with String_Types.Text_IO; use String_Types.Text_IO;
 
 procedure Anystrings_Examples is
-   S           : constant String_Type := To_String_Type (String'("Bepo"));
-   Env_Name    : constant String_Type := To_String_Type (String'("ANYSTRINGS_EXAMPLE_ENV"));
-   Env_Default : constant String_Type := To_String_Type (String'("<unset>"));
+   S           : constant String_Type := To_String_Type ("Bepo");
+   Env_Name    : constant String_Type := To_String_Type ("ANYSTRINGS_EXAMPLE_ENV");
+   Env_Default : constant String_Type := To_String_Type ("<unset>");
    File_Name   : constant String := "anystrings_examples_io.txt";
    File_Handle : File_Type;
    Read_Back   : String_Type := Empty_String;
@@ -32,7 +32,7 @@ begin
 
    Ada.Text_IO.Put_Line
      ("Set result: "
-      & Boolean'Image (Set_Env (Env_Name, To_String_Type (String'("bonjour")))));
+      & Boolean'Image (Set_Env (Env_Name, To_String_Type ("bonjour"))));
    Ada.Text_IO.Put_Line
      ("ANYSTRINGS_EXAMPLE_ENV exists:" & Boolean'Image (Env_Exists (Env_Name)));
    Ada.Text_IO.Put_Line

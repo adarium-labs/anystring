@@ -37,6 +37,7 @@ with UTF8_Non_Raising_Test;
 with UTF8_Wrapper_Sanity_Test;
 with UTF8_Get_Value_Or_Test;
 with WWS_Boundary_Test;
+with WWS_Policy_Test;
 with Char_Classification_Test;
 with Cmdline_Test;
 with Filesystem_Test;
@@ -64,6 +65,7 @@ procedure Anystrings_Test_Runner is
       S.Add_Test (new UTF8_Wrapper_Sanity_Test.Test_Case);
       S.Add_Test (new UTF8_Get_Value_Or_Test.Test_Case);
       S.Add_Test (new WWS_Boundary_Test.Test_Case);
+      S.Add_Test (new WWS_Policy_Test.Test_Case);
       S.Add_Test (new Char_Classification_Test.Test_Case);
       S.Add_Test (new String_Extension_Test.Test_Case);
       S.Add_Test (new Cmdline_Test.Test_Case);

@@ -21,7 +21,9 @@
 --  providing the required formal parameters (types and operations).
 
 with Ada.Containers;
+with Anystrings_Invalid_Policy;
 with Anystrings_UTF_8_Results;
+with Anystrings_WWS_Decode_Results;
 
 generic
    --  The string type being abstracted
@@ -119,6 +121,41 @@ generic
    --  never raises.
    with function From_Wide_Wide_String (Source : Wide_Wide_String) return String_Type;
 
+   --  Wide_Wide_String Boundary - per-call invalid-code-point policy (Fix 2 Tier 2)
+
+   --  Formal package encapsulating the backend's WWS_Decode_Result type
+   --  and its accessors (Is_Ok, Get_Value, Get_Value_Or, Get_Error,
+   --  Make_Ok, Make_Error). Using a formal package guarantees that
+   --  String_Type, the result record and the accessors are consistent
+   --  within an instantiation.
+   with package WWS is new
+     Anystrings_WWS_Decode_Results (String_Type => String_Type, Null_String => Null_String);
+
+   --  @summary Wide_Wide_String -> String_Type with a caller-supplied
+   --  substitute for invalid code-points. Same behaviour as
+   --  From_Wide_Wide_String except that Substitute replaces the backend's
+   --  built-in Invalid_Substitute_Codepoint. Total, never raises.
+   --  Substitute must itself be a valid Unicode scalar; violating that is
+   --  a caller contract error, enforced by the wrapper exposed via
+   --  String_Types.
+   with function From_Wide_Wide_String_With_Substitute
+     (Source     : Wide_Wide_String;
+      Substitute : Wide_Wide_Character) return String_Type;
+
+   --  @summary Wide_Wide_String -> String_Type dropping invalid
+   --  code-points instead of substituting. Output length may shrink
+   --  relative to input. Total, never raises.
+   with function From_Wide_Wide_String_Skip_Invalid
+     (Source : Wide_Wide_String) return String_Type;
+
+   --  @summary Wide_Wide_String -> String_Type reporting invalid
+   --  code-points as a structured failure. On the first invalid
+   --  code-point, returns Is_Ok = False with the failure descriptor.
+   --  On success, returns Is_Ok = True with the decoded value. Total,
+   --  never raises.
+   with function From_Wide_Wide_String_Checked
+     (Source : Wide_Wide_String) return WWS.WWS_Decode_Result;
+
    --  Extended Operations (required by the framework)
    ---------------------------------------------------------------------------
 
@@ -202,6 +239,11 @@ generic
 
 package Anystrings with SPARK_Mode
 is
+
+   --  Make "=" / "/=" on the policy enum directly visible so the
+   --  From_Wide_Wide_String_Policy expression function and its
+   --  precondition can use the operators without full qualification.
+   use type Anystrings_Invalid_Policy.Invalid_Codepoint_Policy;
 
    ---------------------------------------------------------------------------
    --  Constants
@@ -337,26 +379,32 @@ is
    is (UTF_8.Is_Ok (From_UTF_8 (Source)))
    with Post => UTF_8_Is_Valid'Result = UTF_8.Is_Ok (From_UTF_8 (Source));
 
-   --  Wide_Wide_String Boundary Wrappers (code-point-indexed interchange)
+   --  Wide_Wide_String Boundary - per-call invalid-code-point policy (Tier 2)
 
-   --  @summary Convert a Wide_Wide_String into a String_Type.
+   --  @summary Convenience dispatch over the three non-erroring policies.
    --
    --  @description
-   --  Overload of To_String_Type for the code-point-indexed boundary.
-   --  Total; never raises. Each Wide_Wide_Character of Source becomes a
-   --  code-point in the output. Wide_Wide_Character values in the
-   --  surrogate range U+D800..U+DFFF and values greater than U+10FFFF
-   --  are replaced with U+FFFD (REPLACEMENT CHARACTER) before being
-   --  embedded in the result. The String version of To_String_Type
-   --  (interpreting bytes as Latin-1) is provided as a generic formal
-   --  above.
-   --
-   --  @param Source  A Wide_Wide_String whose elements are Unicode
-   --                 code-points (one Wide_Wide_Character per code-point).
-   --  @return        A String_Type equivalent to Source under the
-   --                 backend's code-point semantics.
-   function To_String_Type (Source : Wide_Wide_String) return String_Type
-   is (From_Wide_Wide_String (Source));
+   --  For Report_As_Error, call From_Wide_Wide_String_Checked directly.
+   --  Precondition rules out Report_As_Error and, when Policy =
+   --  Substitute_With, requires that Substitute is a valid Unicode
+   --  scalar (not a surrogate and <= U+10FFFF). Violating the substitute
+   --  constraint is a caller contract error, not an invalid input to be
+   --  substituted.
+   function From_Wide_Wide_String_Policy
+     (Source     : Wide_Wide_String;
+      Policy     : Anystrings_Invalid_Policy.Invalid_Codepoint_Policy;
+      Substitute : Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#)) return String_Type
+   is
+     (if Policy = Anystrings_Invalid_Policy.Backend_Default then
+         From_Wide_Wide_String (Source)
+      elsif Policy = Anystrings_Invalid_Policy.Substitute_With then
+         From_Wide_Wide_String_With_Substitute (Source, Substitute)
+      else
+         From_Wide_Wide_String_Skip_Invalid (Source))
+   with Pre =>
+     Policy /= Anystrings_Invalid_Policy.Report_As_Error
+     and then (if Policy = Anystrings_Invalid_Policy.Substitute_With then
+                 Anystrings_Invalid_Policy.Is_Valid_Scalar (Substitute));
 
    --  Extended String Operations
    ---------------------------------------------------------------------------

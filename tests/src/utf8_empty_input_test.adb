@@ -41,7 +41,7 @@ package body UTF8_Empty_Input_Test is
    is
       pragma Unreferenced (T);
       --  Arrange
-      Empty : constant String_Type := To_String_Type (String'(""));
+      Empty : constant String_Type := To_String_Type ("");
       --  Act
       Result : constant String := To_UTF_8 (Empty);
    begin
@@ -70,7 +70,7 @@ package body UTF8_Empty_Input_Test is
    is
       pragma Unreferenced (T);
       --  Arrange
-      Empty    : constant String_Type := To_String_Type (String'(""));
+      Empty    : constant String_Type := To_String_Type ("");
       --  Act
       Result   : constant UTF_8_Decode_Result := From_UTF_8 ("");
       Decoded  : constant String_Type := Get_Value (Result);

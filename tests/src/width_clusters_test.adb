@@ -135,9 +135,9 @@ package body Width_Clusters_Test is
       G1 : constant Grapheme    := Cluster_Element (S, 1);
       G5 : constant Grapheme    := Cluster_Element (S, 5);
    begin
-      Assert (G1.Slice = To_String_Type (String'("h")),
+      Assert (G1.Slice = To_String_Type ("h"),
               "Cluster_Element (hello, 1).Slice must be 'h'");
-      Assert (G5.Slice = To_String_Type (String'("o")),
+      Assert (G5.Slice = To_String_Type ("o"),
               "Cluster_Element (hello, 5).Slice must be 'o'");
       Assert (G1.Width = 1,
               "ASCII 'h' must have display width 1");
@@ -171,7 +171,7 @@ package body Width_Clusters_Test is
       Assert (Sub = S,
               "Cluster_Slice (S, 1, Cluster_Length) must equal S");
       --  Middle slice: clusters 2..4 of "hello" = "ell"
-      Assert (Cluster_Slice (S, 2, 4) = To_String_Type (String'("ell")),
+      Assert (Cluster_Slice (S, 2, 4) = To_String_Type ("ell"),
               "Cluster_Slice (hello, 2, 4) must be 'ell'");
    end Test_Cluster_Slice_Full_Range_Equals_Input;
 

@@ -9,16 +9,18 @@ with String_Types;     use String_Types;
 
 package body WWS_Boundary_Test is
 
-   --  U+FFFD REPLACEMENT CHARACTER.
-   FFFD : constant Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#);
+   --  The backend's chosen substitute for surrogate / out-of-range /
+   --  malformed inputs (U+FFFD on Unicode-capable backends; ASCII '?' on
+   --  the byte-oriented standard backend).
+   Sub : constant Wide_Wide_Character := Invalid_Substitute_Codepoint;
 
    --  Round-trip a Wide_Wide_String through the backend and assert equality.
    procedure Assert_Round_Trip (W : Wide_Wide_String; Label : String) is
-      S       : constant String_Type      := To_String_Type (W);
+      S       : constant String_Type      := From_Wide_Wide_String (W);
       Decoded : constant Wide_Wide_String := To_Wide_Wide_String (S);
    begin
       Assert (Decoded = W,
-              Label & ": To_Wide_Wide_String (To_String_Type (W)) shall equal W");
+              Label & ": To_Wide_Wide_String (From_Wide_Wide_String (W)) shall equal W");
    end Assert_Round_Trip;
 
    overriding function Name (T : Test_Case) return AUnit.Message_String is
@@ -130,18 +132,21 @@ package body WWS_Boundary_Test is
         & Wide_Wide_Character'Val (16#DC00#);
 
       Decoded_High : constant Wide_Wide_String :=
-        To_Wide_Wide_String (To_String_Type (W_With_High_Surrogate));
+        To_Wide_Wide_String (From_Wide_Wide_String (W_With_High_Surrogate));
       Decoded_Low  : constant Wide_Wide_String :=
-        To_Wide_Wide_String (To_String_Type (W_With_Low_Surrogate));
+        To_Wide_Wide_String (From_Wide_Wide_String (W_With_Low_Surrogate));
       Decoded_Pair : constant Wide_Wide_String :=
-        To_Wide_Wide_String (To_String_Type (W_With_Pair));
+        To_Wide_Wide_String (From_Wide_Wide_String (W_With_Pair));
    begin
-      Assert (Decoded_High = [FFFD],
-              "High surrogate U+D800 in WW input shall normalise to U+FFFD");
-      Assert (Decoded_Low = [FFFD],
-              "Low surrogate U+DFFF in WW input shall normalise to U+FFFD");
-      Assert (Decoded_Pair = (FFFD & FFFD),
-              "Surrogate pair in WW input shall normalise to two U+FFFD");
+      Assert (Decoded_High = [Sub],
+              "High surrogate U+D800 in WW input shall normalise to the "
+              & "backend substitute");
+      Assert (Decoded_Low = [Sub],
+              "Low surrogate U+DFFF in WW input shall normalise to the "
+              & "backend substitute");
+      Assert (Decoded_Pair = (Sub & Sub),
+              "Surrogate pair in WW input shall normalise to two backend "
+              & "substitutes");
    end Test_Surrogate_In_Wide_Wide_Becomes_FFFD;
 
    procedure Test_Out_Of_Range_Wide_Wide_Becomes_FFFD
@@ -155,10 +160,11 @@ package body WWS_Boundary_Test is
         [Wide_Wide_Character'Val (16#11_0000#)];
 
       Decoded : constant Wide_Wide_String :=
-        To_Wide_Wide_String (To_String_Type (W_Out_Of_Range));
+        To_Wide_Wide_String (From_Wide_Wide_String (W_Out_Of_Range));
    begin
-      Assert (Decoded = [FFFD],
-              "Wide_Wide_Character > U+10FFFF shall normalise to U+FFFD");
+      Assert (Decoded = [Sub],
+              "Wide_Wide_Character > U+10FFFF shall normalise to the "
+              & "backend substitute");
    end Test_Out_Of_Range_Wide_Wide_Becomes_FFFD;
 
    procedure Test_Empty_Wide_Wide_String_Round_Trip
@@ -188,7 +194,7 @@ package body WWS_Boundary_Test is
       --  supplementary code-point already fits in one unit; the test is
       --  vacuously satisfied and skipped.
       W : constant Wide_Wide_String := [Wide_Wide_Character'Val (16#1F30D#)];
-      S : constant String_Type      := To_String_Type (W);
+      S : constant String_Type      := From_Wide_Wide_String (W);
    begin
       if Length (S) = 1 then
          Assert (True,
@@ -199,8 +205,9 @@ package body WWS_Boundary_Test is
             Truncated : constant String_Type      := Slice (S, 1, 1);
             Decoded   : constant Wide_Wide_String := To_Wide_Wide_String (Truncated);
          begin
-            Assert (Decoded'Length = 1 and then Decoded (Decoded'First) = FFFD,
-                    "Truncated multi-unit encoding shall decode to a single U+FFFD");
+            Assert (Decoded'Length = 1 and then Decoded (Decoded'First) = Sub,
+                    "Truncated multi-unit encoding shall decode to a single "
+                    & "backend substitute");
          end;
       end if;
    end Test_Truncated_Multi_Unit_Encoding_Decodes_To_FFFD;

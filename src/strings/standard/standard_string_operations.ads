@@ -216,6 +216,30 @@ package Standard_String_Operations is
    --  substituted with U+FFFD before encoding.
    function From_Wide_Wide_String (Source : Wide_Wide_String) return Unbounded_String;
 
+   --  Wide_Wide_String Boundary - Per-call invalid-code-point policy (Tier 2)
+
+   --  @summary Encode a Wide_Wide_String as UTF-8 storage, substituting
+   --  caller-supplied Substitute for invalid code-points.
+   --
+   --  @description
+   --  Total; never raises. Same encoding logic as From_Wide_Wide_String
+   --  but replaces the backend default substitute ('?') with Substitute.
+   --  Substitute is assumed to be a valid Unicode scalar; the wrapper in
+   --  string_types.ads enforces this via precondition.
+   function From_Wide_Wide_String_With_Substitute
+     (Source     : Wide_Wide_String;
+      Substitute : Wide_Wide_Character) return Unbounded_String;
+
+   --  @summary Encode a Wide_Wide_String as UTF-8 storage, dropping
+   --  invalid code-points.
+   --
+   --  @description
+   --  Total; never raises. Iterates Source and encodes only valid
+   --  code-points; surrogates and values > U+10FFFF are dropped. Output
+   --  length may be shorter than Source.
+   function From_Wide_Wide_String_Skip_Invalid
+     (Source : Wide_Wide_String) return Unbounded_String;
+
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------
    --  Delegates to Ada.Characters.Handling. Length/Element on this backend

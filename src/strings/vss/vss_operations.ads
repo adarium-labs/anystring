@@ -189,6 +189,21 @@ package VSS_Operations is
    --  Virtual_Character Static_Predicate forbids non-scalar code points.
    function From_Wide_Wide_String (Source : Wide_Wide_String) return Virtual_String;
 
+   --  Wide_Wide_String Boundary - Per-call invalid-code-point policy (Tier 2)
+
+   --  @summary Build a Virtual_String from a Wide_Wide_String,
+   --  substituting caller-supplied Substitute for invalid code-points.
+   --  Total; never raises. Substitute is assumed to be a valid Unicode
+   --  scalar.
+   function From_Wide_Wide_String_With_Substitute
+     (Source     : Wide_Wide_String;
+      Substitute : Wide_Wide_Character) return Virtual_String;
+
+   --  @summary Build a Virtual_String from a Wide_Wide_String, dropping
+   --  invalid code-points. Total; never raises.
+   function From_Wide_Wide_String_Skip_Invalid
+     (Source : Wide_Wide_String) return Virtual_String;
+
    ---------------------------------------------------------------------------
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------

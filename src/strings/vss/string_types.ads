@@ -17,12 +17,15 @@
 --  To use this variant, set `STRING_TYPE` environment variable to `vss`.
 
 with Ada.Containers;
+with Anystrings_Invalid_Policy;
 with Anystrings_UTF_8;
 with VSS.Strings;
 with VSS_Operations;
 with VSS_Strings;
 with VSS_UTF_8_Bridge;
 with VSS_UTF_8_Results;
+with VSS_WWS_Bridge;
+with VSS_WWS_Decode_Results;
 package String_Types is
 
    subtype String_Type is VSS.Strings.Virtual_String;
@@ -163,12 +166,86 @@ package String_Types is
    function To_Wide_Wide_String (Source : String_Type) return Wide_Wide_String
      renames VSS_Operations.To_Wide_Wide_String;
 
-   --  @summary Build a String_Type from a Wide_Wide_String. Overload of
-   --  To_String_Type for the code-point boundary. Total; never raises.
-   --  Surrogate code-points and values greater than U+10FFFF are
-   --  substituted with U+FFFD.
-   function To_String_Type (Source : Wide_Wide_String) return String_Type
+   --  @summary Build a String_Type from a Wide_Wide_String. Total; never
+   --  raises. Surrogate code-points and values greater than U+10FFFF are
+   --  substituted with `Invalid_Substitute_Codepoint` before being
+   --  embedded in the result.
+   function From_Wide_Wide_String (Source : Wide_Wide_String) return String_Type
      renames VSS_Operations.From_Wide_Wide_String;
+
+   --  @summary The Unicode code-point this backend emits for invalid input
+   --  code-points (surrogates or values > U+10FFFF). The vss backend uses
+   --  U+FFFD REPLACEMENT CHARACTER.
+   Invalid_Substitute_Codepoint : constant Wide_Wide_Character :=
+     Wide_Wide_Character'Val (16#FFFD#);
+
+   --  ----- Wide_Wide_String boundary - per-call invalid-code-point policy -----
+   --  (Fix 2 Tier 2)
+
+   subtype Invalid_Codepoint_Policy is Anystrings_Invalid_Policy.Invalid_Codepoint_Policy;
+
+   Backend_Default : constant Invalid_Codepoint_Policy := Anystrings_Invalid_Policy.Backend_Default;
+   Substitute_With : constant Invalid_Codepoint_Policy := Anystrings_Invalid_Policy.Substitute_With;
+   Skip            : constant Invalid_Codepoint_Policy := Anystrings_Invalid_Policy.Skip;
+   Report_As_Error : constant Invalid_Codepoint_Policy := Anystrings_Invalid_Policy.Report_As_Error;
+
+   function "=" (Left, Right : Invalid_Codepoint_Policy) return Boolean
+     renames Anystrings_Invalid_Policy."=";
+
+   subtype WWS_Error_Kind is Anystrings_Invalid_Policy.WWS_Error_Kind;
+
+   Surrogate_Codepoint    : constant WWS_Error_Kind := Anystrings_Invalid_Policy.Surrogate_Codepoint;
+   Out_Of_Range_Codepoint : constant WWS_Error_Kind := Anystrings_Invalid_Policy.Out_Of_Range_Codepoint;
+
+   function "=" (Left, Right : WWS_Error_Kind) return Boolean
+     renames Anystrings_Invalid_Policy."=";
+
+   subtype WWS_Failure is Anystrings_Invalid_Policy.WWS_Failure;
+
+   subtype WWS_Decode_Result is VSS_WWS_Decode_Results.WWS_Decode_Result;
+
+   function Is_Ok (R : WWS_Decode_Result) return Boolean
+     renames VSS_WWS_Decode_Results.Is_Ok;
+
+   function Get_Value (R : WWS_Decode_Result) return String_Type
+     renames VSS_WWS_Decode_Results.Get_Value;
+
+   function Get_Value_Or
+     (R        : WWS_Decode_Result;
+      Fallback : String_Type) return String_Type
+     renames VSS_WWS_Decode_Results.Get_Value_Or;
+
+   function Get_Error (R : WWS_Decode_Result) return WWS_Failure
+     renames VSS_WWS_Decode_Results.Get_Error;
+
+   function From_Wide_Wide_String_With_Substitute
+     (Source     : Wide_Wide_String;
+      Substitute : Wide_Wide_Character) return String_Type
+   is (VSS_Operations.From_Wide_Wide_String_With_Substitute (Source, Substitute))
+   with Pre => Anystrings_Invalid_Policy.Is_Valid_Scalar (Substitute);
+
+   function From_Wide_Wide_String_Skip_Invalid
+     (Source : Wide_Wide_String) return String_Type
+     renames VSS_Operations.From_Wide_Wide_String_Skip_Invalid;
+
+   function From_Wide_Wide_String_Checked
+     (Source : Wide_Wide_String) return WWS_Decode_Result
+     renames VSS_WWS_Bridge.From_Wide_Wide_String_VSS_Checked;
+
+   function From_Wide_Wide_String_Policy
+     (Source     : Wide_Wide_String;
+      Policy     : Invalid_Codepoint_Policy;
+      Substitute : Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#)) return String_Type
+   is
+     (if Policy = Backend_Default then
+         From_Wide_Wide_String (Source)
+      elsif Policy = Substitute_With then
+         From_Wide_Wide_String_With_Substitute (Source, Substitute)
+      else
+         From_Wide_Wide_String_Skip_Invalid (Source))
+   with Pre =>
+     Policy /= Report_As_Error
+     and then (if Policy = Substitute_With then Anystrings_Invalid_Policy.Is_Valid_Scalar (Substitute));
 
    function Is_Ok (R : UTF_8_Decode_Result) return Boolean
      renames VSS_UTF_8_Results.Is_Ok;
