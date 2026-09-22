@@ -26,3 +26,8 @@ UXS_VARIANT.set = "UXS1"
 
 [[pins]]
 umwi = { path='../umwi' }
+# vss_text 26.0.0/26.2.0 do not compile with GNAT >= 16 (RM 6.4.1(6.4) now
+# enforced in VSS.Strings.Cursors.Iterators.Characters). Commit 7dd4c48 is
+# v26.0.0 + 9 commits and contains the upstream fix. Drop this pin once a
+# vss_text release including it is published in the Alire index.
+vss_text = { url = "https://github.com/AdaCore/vss-text", commit = "7dd4c487cac67b822104f65160c97aa252055c96" }
