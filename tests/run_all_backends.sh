@@ -32,15 +32,23 @@ overall_status=0
 #  Compute the executable path for a given backend. The wide_string and
 #  wide_wide_string backends append an encoding suffix selected at build
 #  time via ANYSTRING_WIDE_ENV_ENCODING (defaults to utf_8 in the GPR).
+#  The main follows ANYSTRING_WITH_WIDTH like anystrings_tests.gpr: the full
+#  runner only when it is "true", anystrings_test_runner_no_width otherwise
+#  (the default), so a stale runner from another configuration or platform
+#  is never picked up.
 binary_path() {
     local backend="$1"
+    local runner="anystrings_test_runner_no_width"
+    if [ "${ANYSTRING_WITH_WIDTH:-false}" = "true" ]; then
+        runner="anystrings_test_runner"
+    fi
     case "${backend}" in
         wide_string|wide_wide_string)
             local enc="${ANYSTRING_WIDE_ENV_ENCODING:-utf_8}"
-            echo "${SCRIPT_DIR}/bin/${backend}/${enc}/anystrings_test_runner"
+            echo "${SCRIPT_DIR}/bin/${backend}/${enc}/${runner}"
             ;;
         *)
-            echo "${SCRIPT_DIR}/bin/${backend}/anystrings_test_runner"
+            echo "${SCRIPT_DIR}/bin/${backend}/${runner}"
             ;;
     esac
 }
