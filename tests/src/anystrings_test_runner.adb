@@ -41,6 +41,7 @@ with WWS_Policy_Test;
 with Char_Classification_Test;
 with Cmdline_Test;
 with Filesystem_Test;
+with Text_IO_Test;
 with String_Extension_Test;
 with Width_Core_Test;
 with Width_Clusters_Test;
@@ -70,6 +71,7 @@ procedure Anystrings_Test_Runner is
       S.Add_Test (new String_Extension_Test.Test_Case);
       S.Add_Test (new Cmdline_Test.Test_Case);
       S.Add_Test (new Filesystem_Test.Test_Case);
+      S.Add_Test (new Text_IO_Test.Test_Case);
       S.Add_Test (new Width_Core_Test.Test_Case);
       S.Add_Test (new Width_Clusters_Test.Test_Case);
       S.Add_Test (new Width_Helpers_Test.Test_Case);

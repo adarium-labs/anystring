@@ -57,7 +57,11 @@ project Anystrings_Tests is
    end Compiler;
 
    package Binder is
-      for Switches ("Ada") use ("-Es"); --  Symbolic traceback
+      --  -Es: symbolic traceback.
+      --  -Wb: GNAT's default wide-character file encoding (brackets) instead
+      --  of the -gnatW8 inherited from the main, so Text_IO_Test proves the
+      --  String_Types.Text_IO bridges emit UTF-8 on their own.
+      for Switches ("Ada") use ("-Es", "-Wb");
    end Binder;
 
    package Format is

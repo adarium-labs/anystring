@@ -1,43 +1,55 @@
 -------------------------------------------------------------------------------
---  Wide_Text_IO - Ada.Wide_Text_IO bridge for the wide_string backend
+--  Wide_Text_IO - UTF-8 Text_IO bridge for the wide_string backend
 --
 --  Copyright (c) 2025
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
 --  @summary
---  Stand-alone Ada.Wide_Text_IO bridge for the wide_string backend.
+--  Stand-alone Text_IO bridge for the wide_string backend.
 --  Spec SPARK_Mode On; body SPARK_Mode Off.
+--
+--  @description
+--  Files are plain Ada.Text_IO files and the text on the wire is UTF-8, like
+--  the vss and uxstring bridges: Put encodes the (UTF-16) value to UTF-8 and
+--  Get_Line decodes UTF-8 (characters outside the BMP become surrogate
+--  pairs). The result therefore no longer depends on the wide character
+--  encoding GNAT picks for Ada.Wide_Text_IO files (the main program's
+--  -gnatW / binder -W switch, brackets by default).
+--
+--  Put never raises on content: an unpaired surrogate is written as U+FFFD.
+--  Get_Line never raises on content either: a line that is not valid UTF-8
+--  is decoded byte by byte as Latin-1.
 --
 --  @relation FUNC-FACADE-009, NFR-FACADE-002
 
 with Ada.Strings.Wide_Unbounded;
-with Ada.Wide_Text_IO;
+with Ada.Text_IO;
 
 package Wide_Text_IO with SPARK_Mode is
 
    subtype String_Type is Ada.Strings.Wide_Unbounded.Unbounded_Wide_String;
 
-   subtype File_Type is Ada.Wide_Text_IO.File_Type;
-   subtype File_Mode is Ada.Wide_Text_IO.File_Mode;
+   subtype File_Type is Ada.Text_IO.File_Type;
+   subtype File_Mode is Ada.Text_IO.File_Mode;
 
-   In_File     : constant File_Mode := Ada.Wide_Text_IO.In_File;
-   Out_File    : constant File_Mode := Ada.Wide_Text_IO.Out_File;
-   Append_File : constant File_Mode := Ada.Wide_Text_IO.Append_File;
+   In_File     : constant File_Mode := Ada.Text_IO.In_File;
+   Out_File    : constant File_Mode := Ada.Text_IO.Out_File;
+   Append_File : constant File_Mode := Ada.Text_IO.Append_File;
 
    procedure Create (File : in out File_Type; Mode : File_Mode := Out_File; Name : String := "");
    procedure Open (File : in out File_Type; Mode : File_Mode; Name : String);
-   procedure Close (File : in out File_Type) renames Ada.Wide_Text_IO.Close;
-   function Is_Open (File : File_Type) return Boolean renames Ada.Wide_Text_IO.Is_Open;
+   procedure Close (File : in out File_Type) renames Ada.Text_IO.Close;
+   function Is_Open (File : File_Type) return Boolean renames Ada.Text_IO.Is_Open;
 
-   function Current_Input return File_Type renames Ada.Wide_Text_IO.Current_Input;
-   function Current_Output return File_Type renames Ada.Wide_Text_IO.Current_Output;
-   procedure Set_Input (File : File_Type) renames Ada.Wide_Text_IO.Set_Input;
-   procedure Set_Output (File : File_Type) renames Ada.Wide_Text_IO.Set_Output;
+   function Current_Input return File_Type renames Ada.Text_IO.Current_Input;
+   function Current_Output return File_Type renames Ada.Text_IO.Current_Output;
+   procedure Set_Input (File : File_Type) renames Ada.Text_IO.Set_Input;
+   procedure Set_Output (File : File_Type) renames Ada.Text_IO.Set_Output;
 
-   function Standard_Input return File_Type renames Ada.Wide_Text_IO.Standard_Input;
-   function Standard_Output return File_Type renames Ada.Wide_Text_IO.Standard_Output;
-   function Standard_Error return File_Type renames Ada.Wide_Text_IO.Standard_Error;
+   function Standard_Input return File_Type renames Ada.Text_IO.Standard_Input;
+   function Standard_Output return File_Type renames Ada.Text_IO.Standard_Output;
+   function Standard_Error return File_Type renames Ada.Text_IO.Standard_Error;
 
    procedure Put (Item : String_Type);
    procedure Put (File : File_Type; Item : String_Type);
@@ -52,7 +64,7 @@ package Wide_Text_IO with SPARK_Mode is
    procedure New_Line;
    procedure New_Line (File : File_Type);
 
-   function End_Of_File return Boolean renames Ada.Wide_Text_IO.End_Of_File;
-   function End_Of_File (File : File_Type) return Boolean renames Ada.Wide_Text_IO.End_Of_File;
+   function End_Of_File return Boolean renames Ada.Text_IO.End_Of_File;
+   function End_Of_File (File : File_Type) return Boolean renames Ada.Text_IO.End_Of_File;
 
 end Wide_Text_IO;

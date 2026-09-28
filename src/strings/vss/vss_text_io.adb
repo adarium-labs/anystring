@@ -49,14 +49,31 @@ package body VSS_Text_IO with SPARK_Mode => Off is
       Ada.Text_IO.Put_Line (File, VSS.Strings.Conversions.To_UTF_8_String (Item));
    end Put_Line;
 
+   --  Code points of a UTF-8 line; an invalid line (VSS raises
+   --  Constraint_Error "Ill-formed UTF-8 data") is taken as Latin-1.
+   function From_UTF_8 (Line : String) return String_Type is
+   begin
+      return VSS.Strings.Conversions.To_Virtual_String (Line);
+   exception
+      when Constraint_Error =>
+         declare
+            Result : Wide_Wide_String (Line'Range);
+         begin
+            for I in Line'Range loop
+               Result (I) := Wide_Wide_Character'Val (Character'Pos (Line (I)));
+            end loop;
+            return VSS.Strings.To_Virtual_String (Result);
+         end;
+   end From_UTF_8;
+
    function Get_Line return String_Type is
    begin
-      return VSS.Strings.Conversions.To_Virtual_String (Ada.Text_IO.Get_Line);
+      return From_UTF_8 (Ada.Text_IO.Get_Line);
    end Get_Line;
 
    function Get_Line (File : File_Type) return String_Type is
    begin
-      return VSS.Strings.Conversions.To_Virtual_String (Ada.Text_IO.Get_Line (File));
+      return From_UTF_8 (Ada.Text_IO.Get_Line (File));
    end Get_Line;
 
    procedure Get_Line (Item : out String_Type) is
