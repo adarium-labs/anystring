@@ -30,4 +30,7 @@ umwi = { path='../umwi' }
 # enforced in VSS.Strings.Cursors.Iterators.Characters). Commit 7dd4c48 is
 # v26.0.0 + 9 commits and contains the upstream fix. Drop this pin once a
 # vss_text release including it is published in the Alire index.
-vss_text = { url = "https://github.com/AdaCore/vss-text", commit = "7dd4c487cac67b822104f65160c97aa252055c96" }
+# Path pin to a sibling clone (https://github.com/AdaCore/vss-text at that
+# commit): a url pin is cloned into every dependent crate, and the shared
+# anystrings objects then recompile each time another crate builds them.
+vss_text = { path = '../vss_text' }
