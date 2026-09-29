@@ -5,9 +5,12 @@
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
+with Anystrings_Byte_Output;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
-package body Standard_Text_IO with SPARK_Mode => Off is
+package body Standard_Text_IO
+  with SPARK_Mode => Off
+is
 
    procedure Create (File : in out File_Type; Mode : File_Mode := Out_File; Name : String := "") is
    begin
@@ -31,22 +34,22 @@ package body Standard_Text_IO with SPARK_Mode => Off is
 
    procedure Put (Item : String_Type) is
    begin
-      Ada.Text_IO.Put (To_String (Item));
+      Anystrings_Byte_Output.Put (To_String (Item));
    end Put;
 
    procedure Put (File : File_Type; Item : String_Type) is
    begin
-      Ada.Text_IO.Put (File, To_String (Item));
+      Anystrings_Byte_Output.Put (File, To_String (Item));
    end Put;
 
    procedure Put_Line (Item : String_Type) is
    begin
-      Ada.Text_IO.Put_Line (To_String (Item));
+      Anystrings_Byte_Output.Put_Line (To_String (Item));
    end Put_Line;
 
    procedure Put_Line (File : File_Type; Item : String_Type) is
    begin
-      Ada.Text_IO.Put_Line (File, To_String (Item));
+      Anystrings_Byte_Output.Put_Line (File, To_String (Item));
    end Put_Line;
 
    function Get_Line return String_Type is

@@ -5,10 +5,13 @@
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
+with Anystrings_Byte_Output;
 with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Strings.Wide_Unbounded; use Ada.Strings.Wide_Unbounded;
 
-package body Wide_Text_IO with SPARK_Mode => Off is
+package body Wide_Text_IO
+  with SPARK_Mode => Off
+is
 
    package UTF renames Ada.Strings.UTF_Encoding;
    package WS renames Ada.Strings.UTF_Encoding.Wide_Strings;
@@ -80,22 +83,22 @@ package body Wide_Text_IO with SPARK_Mode => Off is
 
    procedure Put (Item : String_Type) is
    begin
-      Ada.Text_IO.Put (To_UTF_8 (Item));
+      Anystrings_Byte_Output.Put (To_UTF_8 (Item));
    end Put;
 
    procedure Put (File : File_Type; Item : String_Type) is
    begin
-      Ada.Text_IO.Put (File, To_UTF_8 (Item));
+      Anystrings_Byte_Output.Put (File, To_UTF_8 (Item));
    end Put;
 
    procedure Put_Line (Item : String_Type) is
    begin
-      Ada.Text_IO.Put_Line (To_UTF_8 (Item));
+      Anystrings_Byte_Output.Put_Line (To_UTF_8 (Item));
    end Put_Line;
 
    procedure Put_Line (File : File_Type; Item : String_Type) is
    begin
-      Ada.Text_IO.Put_Line (File, To_UTF_8 (Item));
+      Anystrings_Byte_Output.Put_Line (File, To_UTF_8 (Item));
    end Put_Line;
 
    function Get_Line return String_Type is
