@@ -2,8 +2,11 @@
 ###############################################################################
 #  tools/prove.sh
 #
-#  Run GNATprove on anystrings.gpr for the backend selected by STRING_TYPE
-#  and fail on any unproved check or SPARK legality error.
+#  Run GNATprove for the backend selected by STRING_TYPE and fail on any
+#  unproved check or SPARK legality error. Two projects are proved:
+#    1. anystrings.gpr      - the library (String_Types facade and its bodies)
+#    2. proof/prove_client.gpr - a proof-only SPARK client that relies on the
+#                                length contracts and nothing else
 #
 #  Usage:
 #    STRING_TYPE=standard tools/prove.sh
@@ -15,13 +18,13 @@
 #                 release under ~/.local/share/alire). It runs inside
 #                 `alr exec` so that the dependency GPR_PROJECT_PATH resolves.
 #
-#  Scope: --no-subprojects analyzes only the root project. The dependency
-#  crates (uxstrings, vss_text) are not SPARK-clean and are out of scope.
-#  Backends whose facade depends on them therefore abort here; see
-#  src/strings/AGENTS.md ("Proof boundaries").
+#  Scope: --no-subprojects analyzes only the root project of each run.
+#  Dependency crates are never analyzed. Units of this crate that are not
+#  part of the String_Types length surface are SPARK_Mode => Off; see
+#  docs/proof-boundaries.md.
 #
-#  Exit code: 0 if every check is proved and there are no SPARK errors,
-#  1 otherwise.
+#  Exit code: 0 if every check of both projects is proved and there are no
+#  SPARK errors, 1 otherwise.
 ###############################################################################
 set -euo pipefail
 
@@ -33,30 +36,42 @@ GNATPROVE="${GNATPROVE:-${HOME}/.local/share/alire/releases/gnatprove_15.1.0_aad
 
 LOG_DIR="${REPO_ROOT}/obj/prove"
 mkdir -p "${LOG_DIR}"
-LOG_FILE="${LOG_DIR}/${STRING_TYPE}.log"
 
-echo "=== GNATprove: backend ${STRING_TYPE} ==="
+# prove <label> <project.gpr>
+# Runs gnatprove on one project and returns non-zero on any failure.
+prove() {
+    local label="$1" project="$2"
+    local log_file="${LOG_DIR}/${STRING_TYPE}_${label}.log"
+    local status=0
+
+    echo "=== GNATprove: ${label} (${project}), backend ${STRING_TYPE} ==="
+
+    alr exec -- "${GNATPROVE}" \
+        -P "${project}" \
+        --no-subprojects \
+        --mode=all \
+        --level=2 \
+        -j0 \
+        --checks-as-errors=on \
+        --report=all > "${log_file}" 2>&1 || status=$?
+
+    if [ "${status}" -ne 0 ]; then
+        echo "FAIL [${STRING_TYPE}/${label}]: gnatprove exited with ${status} (log: ${log_file})"
+        grep -E ': (error|high|medium|low): ' "${log_file}" | sort -u | head -50 || true
+        return 1
+    fi
+
+    if grep -q ': error: ' "${log_file}"; then
+        echo "FAIL [${STRING_TYPE}/${label}]: SPARK legality errors (log: ${log_file})"
+        grep ': error: ' "${log_file}" | sort -u | head -50
+        return 1
+    fi
+
+    echo "PASS [${STRING_TYPE}/${label}]: all checks proved (log: ${log_file})"
+}
 
 status=0
-alr exec -- "${GNATPROVE}" \
-    -P anystrings.gpr \
-    --no-subprojects \
-    --mode=all \
-    --level=2 \
-    -j0 \
-    --checks-as-errors=on \
-    --report=all > "${LOG_FILE}" 2>&1 || status=$?
+prove library anystrings.gpr || status=1
+prove client proof/prove_client.gpr || status=1
 
-if [ "${status}" -ne 0 ]; then
-    echo "FAIL [${STRING_TYPE}]: gnatprove exited with ${status} (log: ${LOG_FILE})"
-    grep -E ': (error|high|medium|low): ' "${LOG_FILE}" | sort -u | head -50 || true
-    exit 1
-fi
-
-if grep -q ': error: ' "${LOG_FILE}"; then
-    echo "FAIL [${STRING_TYPE}]: SPARK legality errors (log: ${LOG_FILE})"
-    grep ': error: ' "${LOG_FILE}" | sort -u | head -50
-    exit 1
-fi
-
-echo "PASS [${STRING_TYPE}]: all checks proved (log: ${LOG_FILE})"
+exit "${status}"

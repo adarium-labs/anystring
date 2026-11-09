@@ -1,0 +1,35 @@
+--  Proof-only SPARK client of the String_Types length contracts.
+--
+--  Not part of the library build: tools/prove.sh runs GNATprove on this
+--  project after the library's own gate. --no-subprojects keeps the library
+--  out of the analysis, so the client is proved from the contracts alone.
+
+with "../anystrings.gpr";
+
+project Prove_Client is
+
+   type String_Type_Choice is
+     ("standard", "wide_string", "wide_wide_string", "uxstring", "vss", "custom");
+   String_Type : String_Type_Choice := external ("STRING_TYPE", "standard");
+
+   for Source_Dirs use ("src");
+   for Object_Dir use "../obj/prove_client";
+   for Create_Missing_Dirs use "True";
+
+   --  Latin-1 egress length is only contracted on some backends
+   --  (docs/proof-boundaries.md). The check is left out where it is not stated.
+   Latin_1_Excluded := ();
+   case String_Type is
+      when "wide_string" | "wide_wide_string" | "vss" =>
+         null;
+      when others =>
+         Latin_1_Excluded := ("latin_1_client.ads", "latin_1_client.adb");
+   end case;
+
+   for Excluded_Source_Files use Latin_1_Excluded;
+
+   package Compiler is
+      for Default_Switches ("Ada") use ("-gnat2022");
+   end Compiler;
+
+end Prove_Client;
