@@ -31,8 +31,6 @@ is
    subtype String_Type is Standard_String_Operations.Unbounded_String;
    subtype Character_Type is Character;
 
-   Empty_String : constant String_Type := Standard_Strings.Empty_String;
-
    function Length (Source : String_Type) return Natural
    is (Ada.Strings.Unbounded.Length (Source))
    with Global => null;
@@ -40,6 +38,12 @@ is
    function Is_Empty (Source : String_Type) return Boolean
    is (Length (Source) = 0)
    with Global => null, Post => Is_Empty'Result = (Length (Source) = 0);
+
+   function Null_String_Value return String_Type
+   is (Ada.Strings.Unbounded.To_Unbounded_String (""))
+   with Global => null, Post => Length (Null_String_Value'Result) = 0;
+
+   Empty_String : constant String_Type := Null_String_Value;
 
    function Get_Length (Source : String_Type) return Natural renames Standard_Strings.Get_Length;
 

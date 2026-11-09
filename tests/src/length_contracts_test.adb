@@ -61,6 +61,7 @@ package body Length_Contracts_Test is
       pragma Unreferenced (T);
    begin
       Assert (Length (Empty_String) = 0, "Length (Empty_String) must be 0");
+      Assert (Length (Null_String_Value) = 0, "Null_String_Value must have length 0");
       Assert (Is_Empty (Empty_String), "Is_Empty (Empty_String) must be True");
       Assert (not Is_Empty (To_String_Type ("a")), "Is_Empty of non-empty must be False");
    end Test_Empty_String;

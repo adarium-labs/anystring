@@ -48,6 +48,9 @@ is
    function Prepend_Character (Left : Character_Type; Right : String_Type) return String_Type
    is (Left & Right);
 
+   function Null_String_Value return String_Type
+   is (VSS_Operations.To_Virtual_String (""));
+
    procedure Append (Source : in out String_Type; New_Item : String_Type) is
    begin
       Source := Source & New_Item;

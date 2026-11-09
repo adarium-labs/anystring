@@ -48,6 +48,9 @@ is
    function Prepend_Character (Left : Character_Type; Right : String_Type) return String_Type
    is (Left & Right);
 
+   function Null_String_Value return String_Type
+   is (Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String (String'("")));
+
    procedure Append (Source : in out String_Type; New_Item : String_Type) is
    begin
       Source := Source & New_Item;
