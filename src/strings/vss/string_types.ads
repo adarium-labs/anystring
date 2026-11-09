@@ -26,7 +26,7 @@ with VSS_UTF_8_Bridge;
 with VSS_UTF_8_Results;
 with VSS_WWS_Bridge;
 with VSS_WWS_Decode_Results;
-package String_Types is
+package String_Types with SPARK_Mode is
 
    subtype String_Type is VSS.Strings.Virtual_String;
    subtype Character_Type is Wide_Wide_Character;
@@ -34,10 +34,12 @@ package String_Types is
    Empty_String : constant String_Type := VSS_Strings.Empty_String;
 
    function Length (Source : String_Type) return Natural
-     renames VSS_Operations.Length;
+   with Global => null;
 
    function Is_Empty (Source : String_Type) return Boolean
-     renames VSS_Operations.Is_Empty;
+   with
+     Global => null,
+     Post   => Is_Empty'Result = (Length (Source) = 0);
 
    function Get_Length (Source : String_Type) return Natural
      renames VSS_Strings.Get_Length;
@@ -65,45 +67,75 @@ package String_Types is
    function Contains (Source : String_Type; Pattern : String_Type) return Boolean
      renames VSS_Strings.Contains;
 
-   function Concat
-     (Left  : String_Type;
-      Right : String_Type) return String_Type
-     renames VSS_Strings.Concat;
-
-   function Append_Character
-     (Left  : String_Type;
-      Right : Character_Type) return String_Type
-     renames VSS_Strings.Append_Character;
-
-   function Prepend_Character
-     (Left  : Character_Type;
-      Right : String_Type) return String_Type
-     renames VSS_Strings.Prepend_Character;
-
    function "&"
      (Left  : String_Type;
       Right : String_Type) return String_Type
-     renames VSS_Operations.Concat_Strings;
+   with
+     Global => null,
+     Pre    => Length (Right) <= Natural'Last - Length (Left),
+     Post   => Length ("&"'Result) = Length (Left) + Length (Right);
 
    function "&"
      (Left  : String_Type;
       Right : Character_Type) return String_Type
-     renames VSS_Operations.Concat_String_Character;
+   with
+     Global => null,
+     Pre    => Length (Left) < Natural'Last,
+     Post   => Length ("&"'Result) = Length (Left) + 1;
 
    function "&"
      (Left  : Character_Type;
       Right : String_Type) return String_Type
-     renames VSS_Operations.Concat_Character_String;
+   with
+     Global => null,
+     Pre    => Length (Right) < Natural'Last,
+     Post   => Length ("&"'Result) = 1 + Length (Right);
 
    function "&"
      (Left  : String_Type;
       Right : String) return String_Type
-     renames VSS_Operations.Concat_String_Latin_1;
+   with
+     Global => null,
+     Pre    => Right'Length <= Natural'Last - Length (Left),
+     Post   => Length ("&"'Result) = Length (Left) + Right'Length;
 
    function "&"
      (Left  : String;
       Right : String_Type) return String_Type
-     renames VSS_Operations.Concat_Latin_1_String;
+   with
+     Global => null,
+     Pre    => Left'Length <= Natural'Last - Length (Right),
+     Post   => Length ("&"'Result) = Left'Length + Length (Right);
+
+   function Concat
+     (Left  : String_Type;
+      Right : String_Type) return String_Type
+   with
+     Global => null,
+     Pre    => Length (Right) <= Natural'Last - Length (Left),
+     Post   => Length (Concat'Result) = Length (Left) + Length (Right);
+
+   function Append_Character
+     (Left  : String_Type;
+      Right : Character_Type) return String_Type
+   with
+     Global => null,
+     Pre    => Length (Left) < Natural'Last,
+     Post   => Length (Append_Character'Result) = Length (Left) + 1;
+
+   function Prepend_Character
+     (Left  : Character_Type;
+      Right : String_Type) return String_Type
+   with
+     Global => null,
+     Pre    => Length (Right) < Natural'Last,
+     Post   => Length (Prepend_Character'Result) = 1 + Length (Right);
+
+   procedure Append (Source : in out String_Type; New_Item : String_Type)
+   with
+     Global => null,
+     Pre    => Length (New_Item) <= Natural'Last - Length (Source),
+     Post   => Length (Source) = Length (Source'Old) + Length (New_Item);
 
    function "=" (Left, Right : String_Type) return Boolean
      renames VSS_Strings.Equal;
@@ -121,10 +153,14 @@ package String_Types is
      renames VSS_Strings.Greater_Or_Equal;
 
    function To_String_Type (Source : String) return String_Type
-     renames VSS_Operations.To_Virtual_String;
+   with
+     Global => null,
+     Post   => Length (To_String_Type'Result) = Source'Length;
 
    function To_Latin_1 (Source : String_Type) return String
-     renames VSS_Operations.To_String;
+   with
+     Global => null,
+     Post   => To_Latin_1'Result'First = 1 and then To_Latin_1'Result'Length = Length (Source);
 
    --  ----- UTF-8 boundary (FUNC-UTF8-001..013, NFR-UTF8-006) -----
 
@@ -222,7 +258,7 @@ package String_Types is
      (Source     : Wide_Wide_String;
       Substitute : Wide_Wide_Character) return String_Type
    is (VSS_Operations.From_Wide_Wide_String_With_Substitute (Source, Substitute))
-   with Pre => Anystrings_Invalid_Policy.Is_Valid_Scalar (Substitute);
+   with Pre => Anystrings_Invalid_Policy.Is_Valid_Scalar (Substitute), SPARK_Mode => Off;
 
    function From_Wide_Wide_String_Skip_Invalid
      (Source : Wide_Wide_String) return String_Type
@@ -245,7 +281,8 @@ package String_Types is
          From_Wide_Wide_String_Skip_Invalid (Source))
    with Pre =>
      Policy /= Report_As_Error
-     and then (if Policy = Substitute_With then Anystrings_Invalid_Policy.Is_Valid_Scalar (Substitute));
+     and then (if Policy = Substitute_With then Anystrings_Invalid_Policy.Is_Valid_Scalar (Substitute)),
+     SPARK_Mode => Off;
 
    function Is_Ok (R : UTF_8_Decode_Result) return Boolean
      renames VSS_UTF_8_Results.Is_Ok;
@@ -278,7 +315,10 @@ package String_Types is
      (Source : String_Type;
       Low    : Positive;
       High   : Natural) return String_Type
-     renames VSS_Operations.Slice;
+   with
+     Global => null,
+     Pre    => Low - 1 <= Length (Source) and then High <= Length (Source),
+     Post   => Length (Slice'Result) = (if High < Low then 0 else High - Low + 1);
 
    function Index
      (Source  : String_Type;
@@ -301,7 +341,8 @@ package String_Types is
       Pattern     : String;
       Starting_At : Positive) return Natural
    is (VSS_Operations.Index_From
-         (Source, VSS_Operations.To_Virtual_String (Pattern), Starting_At));
+         (Source, VSS_Operations.To_Virtual_String (Pattern), Starting_At))
+   with SPARK_Mode => Off;
 
    function Index_Reverse (Source : String_Type; Pattern : String_Type) return Natural
      renames VSS_Operations.Index_Reverse;
@@ -316,13 +357,15 @@ package String_Types is
      (Source  : String_Type;
       Pattern : String;
       By      : String_Type) return String_Type
-   is (VSS_Strings.Replace (Source, VSS_Operations.To_Virtual_String (Pattern), By));
+   is (VSS_Strings.Replace (Source, VSS_Operations.To_Virtual_String (Pattern), By))
+   with SPARK_Mode => Off;
 
    function Replace
      (Source  : String_Type;
       Pattern : String_Type;
       By      : String) return String_Type
-   is (VSS_Strings.Replace (Source, Pattern, VSS_Operations.To_Virtual_String (By)));
+   is (VSS_Strings.Replace (Source, Pattern, VSS_Operations.To_Virtual_String (By)))
+   with SPARK_Mode => Off;
 
    function Head (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
      renames VSS_Strings.Head;

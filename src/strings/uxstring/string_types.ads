@@ -24,7 +24,7 @@ with UXString_WWS_Bridge;
 with UXStrings;
 with Anystrings_UTF_8;
 with Anystrings_Invalid_Policy;
-package String_Types is
+package String_Types with SPARK_Mode is
 
    subtype String_Type is UXStrings.UXString;
    subtype Character_Type is UXStrings.Unicode_Character;
@@ -32,10 +32,12 @@ package String_Types is
    Empty_String : constant String_Type := UXString_Strings.Empty_String;
 
    function Length (Source : String_Type) return Natural
-     renames UXString_Operations.Length;
+   with Global => null;
 
    function Is_Empty (Source : String_Type) return Boolean
-     renames UXString_Operations.Is_Empty;
+   with
+     Global => null,
+     Post   => Is_Empty'Result = (Length (Source) = 0);
 
    function Get_Length (Source : String_Type) return Natural
      renames UXString_Strings.Get_Length;
@@ -66,42 +68,72 @@ package String_Types is
    function Concat
      (Left  : String_Type;
       Right : String_Type) return String_Type
-     renames UXString_Strings.Concat;
-
-   function Append_Character
-     (Left  : String_Type;
-      Right : Character_Type) return String_Type
-     renames UXString_Strings.Append_Character;
-
-   function Prepend_Character
-     (Left  : Character_Type;
-      Right : String_Type) return String_Type
-     renames UXString_Strings.Prepend_Character;
+   with
+     Global => null,
+     Pre    => Length (Right) <= Natural'Last - Length (Left),
+     Post   => Length (Concat'Result) = Length (Left) + Length (Right);
 
    function "&"
      (Left  : String_Type;
       Right : String_Type) return String_Type
-     renames UXString_Operations.Concat_Strings;
+   with
+     Global => null,
+     Pre    => Length (Right) <= Natural'Last - Length (Left),
+     Post   => Length ("&"'Result) = Length (Left) + Length (Right);
 
    function "&"
      (Left  : String_Type;
       Right : Character_Type) return String_Type
-     renames UXString_Operations.Concat_String_Character;
+   with
+     Global => null,
+     Pre    => Length (Left) < Natural'Last,
+     Post   => Length ("&"'Result) = Length (Left) + 1;
 
    function "&"
      (Left  : Character_Type;
       Right : String_Type) return String_Type
-     renames UXString_Operations.Concat_Character_String;
+   with
+     Global => null,
+     Pre    => Length (Right) < Natural'Last,
+     Post   => Length ("&"'Result) = 1 + Length (Right);
 
    function "&"
      (Left  : String_Type;
       Right : String) return String_Type
-     renames UXString_Operations.Concat_String_Latin_1;
+   with
+     Global => null,
+     Pre    => Right'Length <= Natural'Last - Length (Left),
+     Post   => Length ("&"'Result) = Length (Left) + Right'Length;
 
    function "&"
      (Left  : String;
       Right : String_Type) return String_Type
-     renames UXString_Operations.Concat_Latin_1_String;
+   with
+     Global => null,
+     Pre    => Left'Length <= Natural'Last - Length (Right),
+     Post   => Length ("&"'Result) = Left'Length + Length (Right);
+
+   function Append_Character
+     (Left  : String_Type;
+      Right : Character_Type) return String_Type
+   with
+     Global => null,
+     Pre    => Length (Left) < Natural'Last,
+     Post   => Length (Append_Character'Result) = Length (Left) + 1;
+
+   function Prepend_Character
+     (Left  : Character_Type;
+      Right : String_Type) return String_Type
+   with
+     Global => null,
+     Pre    => Length (Right) < Natural'Last,
+     Post   => Length (Prepend_Character'Result) = 1 + Length (Right);
+
+   procedure Append (Source : in out String_Type; New_Item : String_Type)
+   with
+     Global => null,
+     Pre    => Length (New_Item) <= Natural'Last - Length (Source),
+     Post   => Length (Source) = Length (Source'Old) + Length (New_Item);
 
    function "=" (Left, Right : String_Type) return Boolean
      renames UXString_Strings.Equal;
@@ -276,7 +308,10 @@ package String_Types is
      (Source : String_Type;
       Low    : Positive;
       High   : Natural) return String_Type
-     renames UXString_Operations.Slice;
+   with
+     Global => null,
+     Pre    => Low - 1 <= Length (Source) and then High <= Length (Source),
+     Post   => Length (Slice'Result) = (if High < Low then 0 else High - Low + 1);
 
    function Index
      (Source  : String_Type;

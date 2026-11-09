@@ -13,6 +13,7 @@
 --  It uses Ada.Strings.Unbounded.Unbounded_String as the underlying type.
 
 with Ada.Containers;
+with Ada.Strings.Unbounded;
 with Standard_Strings;
 with Standard_String_Operations;
 with Standard_UTF_8_Results;
@@ -22,16 +23,22 @@ with Standard_WWS_Bridge;
 with Anystrings_UTF_8;
 with Anystrings_Conv;
 with Anystrings_Invalid_Policy;
-package String_Types is
+package String_Types with SPARK_Mode is
 
    subtype String_Type is Standard_String_Operations.Unbounded_String;
    subtype Character_Type is Character;
 
    Empty_String : constant String_Type := Standard_Strings.Empty_String;
 
-   function Length (Source : String_Type) return Natural renames Standard_String_Operations.Length;
+   function Length (Source : String_Type) return Natural
+   is (Ada.Strings.Unbounded.Length (Source))
+   with Global => null;
 
-   function Is_Empty (Source : String_Type) return Boolean renames Standard_String_Operations.Is_Empty;
+   function Is_Empty (Source : String_Type) return Boolean
+   is (Length (Source) = 0)
+   with
+     Global => null,
+     Post   => Is_Empty'Result = (Length (Source) = 0);
 
    function Get_Length (Source : String_Type) return Natural renames Standard_Strings.Get_Length;
 
@@ -50,28 +57,67 @@ package String_Types is
 
    function Contains (Source : String_Type; Pattern : String_Type) return Boolean renames Standard_Strings.Contains;
 
-   function Concat (Left : String_Type; Right : String_Type) return String_Type renames Standard_Strings.Concat;
-
-   function Append_Character (Left : String_Type; Right : Character_Type) return String_Type
-   renames Standard_Strings.Append_Character;
-
-   function Prepend_Character (Left : Character_Type; Right : String_Type) return String_Type
-   renames Standard_Strings.Prepend_Character;
-
    function "&" (Left : String_Type; Right : String_Type) return String_Type
-   renames Standard_String_Operations.Concat_Strings;
+   is (Ada.Strings.Unbounded."&" (Left, Right))
+   with
+     Global => null,
+     Pre    => Length (Right) <= Natural'Last - Length (Left),
+     Post   => Length ("&"'Result) = Length (Left) + Length (Right);
 
    function "&" (Left : String_Type; Right : Character_Type) return String_Type
-   renames Standard_String_Operations.Concat_String_Character;
+   is (Ada.Strings.Unbounded."&" (Left, Right))
+   with
+     Global => null,
+     Pre    => Length (Left) < Natural'Last,
+     Post   => Length ("&"'Result) = Length (Left) + 1;
 
    function "&" (Left : Character_Type; Right : String_Type) return String_Type
-   renames Standard_String_Operations.Concat_Character_String;
+   is (Ada.Strings.Unbounded."&" (Left, Right))
+   with
+     Global => null,
+     Pre    => Length (Right) < Natural'Last,
+     Post   => Length ("&"'Result) = 1 + Length (Right);
 
    function "&" (Left : String_Type; Right : String) return String_Type
-   renames Standard_String_Operations.Concat_String_Latin_1;
+   is (Ada.Strings.Unbounded."&" (Left, Right))
+   with
+     Global => null,
+     Pre    => Right'Length <= Natural'Last - Length (Left),
+     Post   => Length ("&"'Result) = Length (Left) + Right'Length;
 
    function "&" (Left : String; Right : String_Type) return String_Type
-   renames Standard_String_Operations.Concat_Latin_1_String;
+   is (Ada.Strings.Unbounded."&" (Left, Right))
+   with
+     Global => null,
+     Pre    => Left'Length <= Natural'Last - Length (Right),
+     Post   => Length ("&"'Result) = Left'Length + Length (Right);
+
+   function Concat (Left : String_Type; Right : String_Type) return String_Type
+   is (Left & Right)
+   with
+     Global => null,
+     Pre    => Length (Right) <= Natural'Last - Length (Left),
+     Post   => Length (Concat'Result) = Length (Left) + Length (Right);
+
+   function Append_Character (Left : String_Type; Right : Character_Type) return String_Type
+   is (Left & Right)
+   with
+     Global => null,
+     Pre    => Length (Left) < Natural'Last,
+     Post   => Length (Append_Character'Result) = Length (Left) + 1;
+
+   function Prepend_Character (Left : Character_Type; Right : String_Type) return String_Type
+   is (Left & Right)
+   with
+     Global => null,
+     Pre    => Length (Right) < Natural'Last,
+     Post   => Length (Prepend_Character'Result) = 1 + Length (Right);
+
+   procedure Append (Source : in out String_Type; New_Item : String_Type)
+   with
+     Global => null,
+     Pre    => Length (New_Item) <= Natural'Last - Length (Source),
+     Post   => Length (Source) = Length (Source'Old) + Length (New_Item);
 
    function "=" (Left, Right : String_Type) return Boolean renames Standard_Strings.Equal;
 
@@ -83,7 +129,11 @@ package String_Types is
 
    function ">=" (Left, Right : String_Type) return Boolean renames Standard_Strings.Greater_Or_Equal;
 
-   function To_String_Type (Source : String) return String_Type renames Standard_String_Operations.To_Unbounded_String;
+   function To_String_Type (Source : String) return String_Type
+   is (Ada.Strings.Unbounded.To_Unbounded_String (Source))
+   with
+     Global => null,
+     Post   => Length (To_String_Type'Result) = Source'Length;
 
    function To_Latin_1 (Source : String_Type) return String renames Standard_String_Operations.To_Latin_1;
 
@@ -246,7 +296,11 @@ package String_Types is
    function Hash (Key : String_Type) return Ada.Containers.Hash_Type renames Standard_String_Operations.Hash;
 
    function Slice (Source : String_Type; Low : Positive; High : Natural) return String_Type
-   renames Standard_String_Operations.Slice;
+   is (Ada.Strings.Unbounded.Unbounded_Slice (Source, Low, High))
+   with
+     Global => null,
+     Pre    => Low - 1 <= Length (Source) and then High <= Length (Source),
+     Post   => Length (Slice'Result) = (if High < Low then 0 else High - Low + 1);
 
    function Index (Source : String_Type; Pattern : String_Type) return Natural renames Standard_String_Operations.Index;
 
