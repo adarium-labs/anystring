@@ -20,6 +20,10 @@ package Length_Client
   with SPARK_Mode
 is
 
+   --  Length (Empty_String) = 0 and Is_Empty (Empty_String).
+   procedure Empty_Has_Zero_Length
+   with Global => null;
+
    --  Length (A & B) = Length (A) + Length (B) for bounded operands.
    procedure Concat_Adds_Lengths (A, B : String_Type)
    with Global => null, Pre => Length (A) <= 1_000 and then Length (B) <= 1_000;

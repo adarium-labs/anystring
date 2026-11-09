@@ -9,6 +9,12 @@ package body Length_Client
   with SPARK_Mode
 is
 
+   procedure Empty_Has_Zero_Length is
+   begin
+      pragma Assert (Length (Empty_String) = 0);
+      pragma Assert (Is_Empty (Empty_String));
+   end Empty_Has_Zero_Length;
+
    procedure Concat_Adds_Lengths (A, B : String_Type) is
       R : constant String_Type := A & B;
    begin
