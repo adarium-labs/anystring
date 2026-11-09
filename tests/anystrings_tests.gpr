@@ -53,7 +53,7 @@ project Anystrings_Tests is
 
    package Compiler is
       for Default_Switches ("Ada") use
-        Anystrings_Tests_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2022");
+        Anystrings_Tests_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2022", "-gnata");
    end Compiler;
 
    package Binder is

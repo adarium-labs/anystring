@@ -13,6 +13,10 @@
 ###############################################################################
 set -uo pipefail
 
+#  Assertions on: the library's SPARK_Mode => Off bodies check their length
+#  contracts (Pre/Post) at run time, see anystrings.gpr.
+export ANYSTRING_ASSERTIONS=enabled
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
 

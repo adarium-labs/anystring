@@ -32,6 +32,7 @@ with Cmdline_Test;
 with Filesystem_Test;
 with Text_IO_Test;
 with String_Extension_Test;
+with Length_Contracts_Test;
 
 procedure Anystrings_Test_Runner_No_Width is
 
@@ -52,6 +53,7 @@ procedure Anystrings_Test_Runner_No_Width is
       S.Add_Test (new WWS_Policy_Test.Test_Case);
       S.Add_Test (new Char_Classification_Test.Test_Case);
       S.Add_Test (new String_Extension_Test.Test_Case);
+      S.Add_Test (new Length_Contracts_Test.Test_Case);
       S.Add_Test (new Cmdline_Test.Test_Case);
       S.Add_Test (new Filesystem_Test.Test_Case);
       S.Add_Test (new Text_IO_Test.Test_Case);
