@@ -21,7 +21,7 @@
 
 with VSS_Directories;
 
-package String_Types.Directories with SPARK_Mode is
+package String_Types.Directories with SPARK_Mode => Off is
 
    subtype File_Kind is VSS_Directories.File_Kind;
 

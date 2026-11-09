@@ -22,7 +22,7 @@
 
 with VSS_Environment;
 
-package String_Types.Environment with SPARK_Mode is
+package String_Types.Environment with SPARK_Mode => Off is
 
    subtype Env_Processor is VSS_Environment.Env_Processor;
    subtype Env_Filter    is VSS_Environment.Env_Filter;

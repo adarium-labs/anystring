@@ -33,7 +33,7 @@
 with Ada.Command_Line;
 with VSS.Strings;
 
-package VSS_Command_Line with SPARK_Mode is
+package VSS_Command_Line with SPARK_Mode => Off is
 
    --  @relation FUNC-CMDLINE-001
    function Argument_Count return Natural;

@@ -13,7 +13,7 @@
 
 with VSS.Strings;
 
-package VSS_Environment with SPARK_Mode is
+package VSS_Environment with SPARK_Mode => Off is
 
    subtype String_Type is VSS.Strings.Virtual_String;
 

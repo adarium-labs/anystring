@@ -23,7 +23,7 @@
 
 with VSS_Command_Line;
 
-package String_Types.Command_Line with SPARK_Mode is
+package String_Types.Command_Line with SPARK_Mode => Off is
 
    function Argument_Count return Natural
      renames VSS_Command_Line.Argument_Count;

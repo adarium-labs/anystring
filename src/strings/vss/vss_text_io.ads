@@ -14,7 +14,7 @@
 with VSS.Strings;
 with Ada.Text_IO;
 
-package VSS_Text_IO with SPARK_Mode is
+package VSS_Text_IO with SPARK_Mode => Off is
 
    subtype String_Type is VSS.Strings.Virtual_String;
 

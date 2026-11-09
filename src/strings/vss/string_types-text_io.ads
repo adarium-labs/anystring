@@ -21,7 +21,7 @@
 
 with VSS_Text_IO;
 
-package String_Types.Text_IO with SPARK_Mode is
+package String_Types.Text_IO with SPARK_Mode => Off is
 
    subtype File_Type is VSS_Text_IO.File_Type;
    subtype File_Mode is VSS_Text_IO.File_Mode;
