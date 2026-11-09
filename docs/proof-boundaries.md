@@ -16,7 +16,7 @@ Both use `--no-subprojects`, so dependency crates are never analysed.
 |-------------|----------|
 | `Length (Source)` | `Global => null` |
 | `Null_String_Value` | `Global => null`; `Post => Length (Null_String_Value'Result) = 0` |
-| `Empty_String` | `Empty_String : constant String_Type := Null_String_Value;` on standard, wide_string, wide_wide_string, vss, so `Length (Empty_String) = 0` is provable. On uxstring `Empty_String` is a function with `Post => Length (Empty_String'Result) = 0` (same call syntax), see below |
+| `Empty_String` | `Empty_String : constant String_Type := Null_String_Value;` on every backend, so `Length (Empty_String) = 0` is provable. On uxstring `String_Type` and `Null_String_Value` come from `UXString_Wrapper` (see below) |
 | `Is_Empty (Source)` | `Post => Is_Empty'Result = (Length (Source) = 0)` |
 | `"&"` String & String | `Pre => Length (Right) <= Natural'Last - Length (Left)`; `Post => Length ("&"'Result) = Length (Left) + Length (Right)` |
 | `"&"` String & Character, Character & String | `Pre => Length < Natural'Last`; `Post` adds 1 |
@@ -74,17 +74,34 @@ type visible in SPARK to be globals-free. Even
 `--mode=check` does not report it. The crate must not be modified here.
 
 What fixes it, and why it is not hiding anything. On uxstring `String_Type` is a
-private type; its full view (a record holding a `UXStrings.UXString`) is in the
-`SPARK_Mode => Off` private part of `String_Types`. SPARK clients see an
+private type declared in `UXString_Wrapper`; its full view (a record holding a
+`UXStrings.UXString`) is in that package's `SPARK_Mode => Off` private part. SPARK clients see an
 abstract private type plus the declared contracts, and never see
 `UXStrings.UXString`. This is the same trust model as the other backends'
 Off bodies: the contracts are declared in SPARK, the implementation is outside
 SPARK, and the tests (built with `-gnata`) check the contracts at run time.
 
+Why the type lives in its own package. `String_Types.Empty_String` must be a
+constant. A constant of a private type cannot be initialised in the visible
+part of the package that declares the type, and a deferred constant would hide
+its value from SPARK. As a function (the first version of this change) it broke
+consumers at run time: a record component such as
+`Msg : Failure_Text := Empty_String`, with `Failure_Text` a subtype with a
+`Dynamic_Predicate`, copied the function result into the component without
+`Adjust` and then finalized the temporary, so the `UXString` buffer was freed
+twice (`malloc(): unaligned fastbin chunk detected`, found with an
+AddressSanitizer build of aclida). `UXString_Wrapper` (with `Elaborate_Body`)
+declares the private type, `Length` and `Null_String_Value`;
+`String_Types.Empty_String` is `constant := Null_String_Value`, like the other
+backends. `UXString_Wrapper.Convert` (SPARK Off) gives the bodies of
+`String_Types` and its children the conversions to and from `UXStrings.UXString`.
+The regression test is `tests/src/empty_string_default_test.adb`.
+
 Units that mention `UXStrings.UXString` and are therefore `SPARK_Mode => Off`
 (a leading `pragma SPARK_Mode (Off);` on the instance units, an aspect on the
 others):
-- `uxstring_operations.ads`, `uxstring_strings.ads` (the `Anystrings`
+- `uxstring_wrapper.ads` (private part only), `uxstring_wrapper-convert.ads`,
+  `uxstring_operations.ads`, `uxstring_strings.ads` (the `Anystrings`
   instance), `uxstring_utf_8_results.ads`, `uxstring_wws_decode_results.ads`
   (result instances), `uxstring_utf_8_bridge.ads`, `uxstring_wws_bridge.ads`
 - the OS-boundary units `uxstring_environment.ads`, `uxstring_text_io.ads`,
@@ -106,7 +123,6 @@ stop compiling and must go through `String_Types`:
 | a string literal `"abc"` as a `String_Type` | `To_String_Type ("abc")` |
 | `UTF_8_Decode_Result` / `WWS_Decode_Result` as plain records | private; use `Is_Ok`, `Get_Value`, `Get_Value_Or`, `Get_Error` |
 | `Env_Processor` / `Env_Filter` callbacks taking a `UXString` | same names, callbacks take `String_Types.String_Type` |
-| `Empty_String` constant | parameterless function `Empty_String` (a constant of a private type cannot be initialised in the visible part, and a deferred constant would hide its value from SPARK); source-compatible for reads, not for renamings |
 | `String_Types.Width.Grapheme.Slice`, `Width_Slice_Result.Result` of type `UXString` | same fields, now `String_Type` |
 
 `String_Types.Command_Line`, `.Directories`, `.Environment`, `.Text_IO` and

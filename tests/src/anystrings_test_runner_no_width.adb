@@ -32,13 +32,13 @@ with Cmdline_Test;
 with Filesystem_Test;
 with Text_IO_Test;
 with String_Extension_Test;
+with Empty_String_Default_Test;
 with Length_Contracts_Test;
 
 procedure Anystrings_Test_Runner_No_Width is
 
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
-      S : constant AUnit.Test_Suites.Access_Test_Suite :=
-        AUnit.Test_Suites.New_Suite;
+      S : constant AUnit.Test_Suites.Access_Test_Suite := AUnit.Test_Suites.New_Suite;
    begin
       S.Add_Test (new UTF8_Empty_Input_Test.Test_Case);
       S.Add_Test (new UTF8_ASCII_Fast_Path_Test.Test_Case);
@@ -54,6 +54,7 @@ procedure Anystrings_Test_Runner_No_Width is
       S.Add_Test (new Char_Classification_Test.Test_Case);
       S.Add_Test (new String_Extension_Test.Test_Case);
       S.Add_Test (new Length_Contracts_Test.Test_Case);
+      S.Add_Test (new Empty_String_Default_Test.Test_Case);
       S.Add_Test (new Cmdline_Test.Test_Case);
       S.Add_Test (new Filesystem_Test.Test_Case);
       S.Add_Test (new Text_IO_Test.Test_Case);
@@ -71,7 +72,7 @@ begin
    Ada.Text_IO.Put_Line ("Backend: STRING_TYPE (selected at build time)");
    Ada.Text_IO.New_Line;
 
-   Status     := Run (Reporter);
+   Status := Run (Reporter);
    All_Passed := AUnit."=" (Status, AUnit.Success);
 
    Ada.Text_IO.New_Line;
