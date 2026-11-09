@@ -5,7 +5,9 @@
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
-package body String_Types with SPARK_Mode is
+package body String_Types
+  with SPARK_Mode
+is
 
    procedure Append (Source : in out String_Type; New_Item : String_Type) is
    begin

@@ -15,10 +15,12 @@ with Wide_Wide_WWS_Bridge;
 with Anystrings_UTF_8;
 with Anystrings_Conv;
 with Anystrings_Invalid_Policy;
-package String_Types with SPARK_Mode is
 
-   subtype String_Type is
-     Wide_Wide_String_Operations.Unbounded_Wide_Wide_String;
+package String_Types
+  with SPARK_Mode
+is
+
+   subtype String_Type is Wide_Wide_String_Operations.Unbounded_Wide_Wide_String;
    subtype Character_Type is Wide_Wide_Character;
    Empty_String : constant String_Type := Wide_Wide_Strings.Empty_String;
 
@@ -26,97 +28,61 @@ package String_Types with SPARK_Mode is
    with Global => null;
 
    function Is_Empty (Source : String_Type) return Boolean
-   with
-     Global => null,
-     Post   => Is_Empty'Result = (Length (Source) = 0);
+   with Global => null, Post => Is_Empty'Result = (Length (Source) = 0);
 
-   function Get_Length (Source : String_Type) return Natural
-     renames Wide_Wide_Strings.Get_Length;
+   function Get_Length (Source : String_Type) return Natural renames Wide_Wide_Strings.Get_Length;
 
-   function Is_Null_Or_Empty (Source : String_Type) return Boolean
-     renames Wide_Wide_Strings.Is_Null_Or_Empty;
+   function Is_Null_Or_Empty (Source : String_Type) return Boolean renames Wide_Wide_Strings.Is_Null_Or_Empty;
 
-   function Element
-     (Source : String_Type;
-      Index  : Positive) return Character_Type
-     renames Wide_Wide_String_Operations.Element;
+   function Element (Source : String_Type; Index : Positive) return Character_Type
+   renames Wide_Wide_String_Operations.Element;
 
-   function Get_Element
-     (Source : String_Type;
-      Index  : Positive) return Character_Type
-     renames Wide_Wide_Strings.Get_Element;
+   function Get_Element (Source : String_Type; Index : Positive) return Character_Type
+   renames Wide_Wide_Strings.Get_Element;
 
-   function First_Index (Source : String_Type) return Positive
-     renames Wide_Wide_Strings.First_Index;
+   function First_Index (Source : String_Type) return Positive renames Wide_Wide_Strings.First_Index;
 
-   function Last_Index (Source : String_Type) return Natural
-     renames Wide_Wide_Strings.Last_Index;
+   function Last_Index (Source : String_Type) return Natural renames Wide_Wide_Strings.Last_Index;
 
+   function Contains (Source : String_Type; Pattern : String_Type) return Boolean renames Wide_Wide_Strings.Contains;
 
-   function Contains
-     (Source : String_Type;
-      Pattern : String_Type) return Boolean
-     renames Wide_Wide_Strings.Contains;
-
-   function "&"
-     (Left  : String_Type;
-      Right : String_Type) return String_Type
+   function "&" (Left : String_Type; Right : String_Type) return String_Type
    with
      Global => null,
      Pre    => Length (Right) <= Natural'Last - Length (Left),
      Post   => Length ("&"'Result) = Length (Left) + Length (Right);
 
-   function "&"
-     (Left  : String_Type;
-      Right : Character_Type) return String_Type
-   with
-     Global => null,
-     Pre    => Length (Left) < Natural'Last,
-     Post   => Length ("&"'Result) = Length (Left) + 1;
+   function "&" (Left : String_Type; Right : Character_Type) return String_Type
+   with Global => null, Pre => Length (Left) < Natural'Last, Post => Length ("&"'Result) = Length (Left) + 1;
 
-   function "&"
-     (Left  : Character_Type;
-      Right : String_Type) return String_Type
-   with
-     Global => null,
-     Pre    => Length (Right) < Natural'Last,
-     Post   => Length ("&"'Result) = 1 + Length (Right);
+   function "&" (Left : Character_Type; Right : String_Type) return String_Type
+   with Global => null, Pre => Length (Right) < Natural'Last, Post => Length ("&"'Result) = 1 + Length (Right);
 
-   function "&"
-     (Left  : String_Type;
-      Right : String) return String_Type
+   function "&" (Left : String_Type; Right : String) return String_Type
    with
      Global => null,
      Pre    => Right'Length <= Natural'Last - Length (Left),
      Post   => Length ("&"'Result) = Length (Left) + Right'Length;
 
-   function "&"
-     (Left  : String;
-      Right : String_Type) return String_Type
+   function "&" (Left : String; Right : String_Type) return String_Type
    with
      Global => null,
      Pre    => Left'Length <= Natural'Last - Length (Right),
      Post   => Length ("&"'Result) = Left'Length + Length (Right);
 
-   function Concat
-     (Left  : String_Type;
-      Right : String_Type) return String_Type
+   function Concat (Left : String_Type; Right : String_Type) return String_Type
    with
      Global => null,
      Pre    => Length (Right) <= Natural'Last - Length (Left),
      Post   => Length (Concat'Result) = Length (Left) + Length (Right);
 
-   function Append_Character
-     (Left  : String_Type;
-      Right : Character_Type) return String_Type
+   function Append_Character (Left : String_Type; Right : Character_Type) return String_Type
    with
      Global => null,
      Pre    => Length (Left) < Natural'Last,
      Post   => Length (Append_Character'Result) = Length (Left) + 1;
 
-   function Prepend_Character
-     (Left  : Character_Type;
-      Right : String_Type) return String_Type
+   function Prepend_Character (Left : Character_Type; Right : String_Type) return String_Type
    with
      Global => null,
      Pre    => Length (Right) < Natural'Last,
@@ -128,30 +94,21 @@ package String_Types with SPARK_Mode is
      Pre    => Length (New_Item) <= Natural'Last - Length (Source),
      Post   => Length (Source) = Length (Source'Old) + Length (New_Item);
 
-   function "=" (Left, Right : String_Type) return Boolean
-     renames Wide_Wide_Strings.Equal;
+   function "=" (Left, Right : String_Type) return Boolean renames Wide_Wide_Strings.Equal;
 
-   function "<" (Left, Right : String_Type) return Boolean
-     renames Wide_Wide_Strings.Less_Than;
+   function "<" (Left, Right : String_Type) return Boolean renames Wide_Wide_Strings.Less_Than;
 
-   function "<=" (Left, Right : String_Type) return Boolean
-     renames Wide_Wide_Strings.Less_Or_Equal;
+   function "<=" (Left, Right : String_Type) return Boolean renames Wide_Wide_Strings.Less_Or_Equal;
 
-   function ">" (Left, Right : String_Type) return Boolean
-     renames Wide_Wide_Strings.Greater_Than;
+   function ">" (Left, Right : String_Type) return Boolean renames Wide_Wide_Strings.Greater_Than;
 
-   function ">=" (Left, Right : String_Type) return Boolean
-     renames Wide_Wide_Strings.Greater_Or_Equal;
+   function ">=" (Left, Right : String_Type) return Boolean renames Wide_Wide_Strings.Greater_Or_Equal;
 
    function To_String_Type (Source : String) return String_Type
-   with
-     Global => null,
-     Post   => Length (To_String_Type'Result) = Source'Length;
+   with Global => null, Post => Length (To_String_Type'Result) = Source'Length;
 
    function To_Latin_1 (Source : String_Type) return String
-   with
-     Global => null,
-     Post   => To_Latin_1'Result'First = 1 and then To_Latin_1'Result'Length = Length (Source);
+   with Global => null, Post => To_Latin_1'Result'First = 1 and then To_Latin_1'Result'Length = Length (Source);
 
    --  ----- Lossy-detection Latin-1 conversion (FUNC-CONV-008..010) -----
 
@@ -166,11 +123,10 @@ package String_Types with SPARK_Mode is
 
    function Is_Ok (R : Latin_1_Conv_Result) return Boolean renames Anystrings_Conv.Is_Ok;
    function Get_Value (R : Latin_1_Conv_Result) return String renames Anystrings_Conv.Get_Value;
-   function Get_Replaced_Count (R : Latin_1_Conv_Result) return Natural
-     renames Anystrings_Conv.Get_Replaced_Count;
+   function Get_Replaced_Count (R : Latin_1_Conv_Result) return Natural renames Anystrings_Conv.Get_Replaced_Count;
 
    function To_Latin_1_If_Possible (Source : String_Type) return Latin_1_Conv_Result
-     renames Wide_Wide_String_Operations.To_Latin_1_If_Possible;
+   renames Wide_Wide_String_Operations.To_Latin_1_If_Possible;
 
    --  ----- UTF-8 boundary (FUNC-UTF8-001..013, NFR-UTF8-006) -----
 
@@ -180,49 +136,39 @@ package String_Types with SPARK_Mode is
 
    --  Re-export enum literals so that "use String_Types" makes them
    --  directly visible to callers (a subtype alone does not do this in Ada).
-   Invalid_Lead_Byte      : constant UTF_8_Decode_Error :=
-     Anystrings_UTF_8.Invalid_Lead_Byte;
-   Truncated_Sequence     : constant UTF_8_Decode_Error :=
-     Anystrings_UTF_8.Truncated_Sequence;
-   Invalid_Continuation   : constant UTF_8_Decode_Error :=
-     Anystrings_UTF_8.Invalid_Continuation;
-   Overlong_Encoding      : constant UTF_8_Decode_Error :=
-     Anystrings_UTF_8.Overlong_Encoding;
-   Surrogate_Code_Point   : constant UTF_8_Decode_Error :=
-     Anystrings_UTF_8.Surrogate_Code_Point;
-   Code_Point_Out_Of_Range : constant UTF_8_Decode_Error :=
-     Anystrings_UTF_8.Code_Point_Out_Of_Range;
+   Invalid_Lead_Byte       : constant UTF_8_Decode_Error := Anystrings_UTF_8.Invalid_Lead_Byte;
+   Truncated_Sequence      : constant UTF_8_Decode_Error := Anystrings_UTF_8.Truncated_Sequence;
+   Invalid_Continuation    : constant UTF_8_Decode_Error := Anystrings_UTF_8.Invalid_Continuation;
+   Overlong_Encoding       : constant UTF_8_Decode_Error := Anystrings_UTF_8.Overlong_Encoding;
+   Surrogate_Code_Point    : constant UTF_8_Decode_Error := Anystrings_UTF_8.Surrogate_Code_Point;
+   Code_Point_Out_Of_Range : constant UTF_8_Decode_Error := Anystrings_UTF_8.Code_Point_Out_Of_Range;
 
-   function "=" (Left, Right : UTF_8_Decode_Error) return Boolean
-     renames Anystrings_UTF_8."=";
+   function "=" (Left, Right : UTF_8_Decode_Error) return Boolean renames Anystrings_UTF_8."=";
 
    subtype UTF_8_Decode_Result is Wide_Wide_UTF_8_Results.UTF_8_Decode_Result;
 
-   function To_UTF_8 (Source : String_Type) return String
-     renames Wide_Wide_String_Operations.To_UTF_8;
+   function To_UTF_8 (Source : String_Type) return String renames Wide_Wide_String_Operations.To_UTF_8;
 
-   function From_UTF_8 (Source : String) return UTF_8_Decode_Result
-     renames Wide_Wide_UTF_8_Bridge.From_UTF_8_Wide_Wide;
+   function From_UTF_8 (Source : String) return UTF_8_Decode_Result renames Wide_Wide_UTF_8_Bridge.From_UTF_8_Wide_Wide;
 
    --  ----- Wide_Wide_String boundary (code-point interchange) -----
 
    --  @summary Extract the storage as a Wide_Wide_String. Identity-shaped
    --  conversion (the storage is already code-point-indexed).
    function To_Wide_Wide_String (Source : String_Type) return Wide_Wide_String
-     renames Wide_Wide_String_Operations.To_Wide_Wide_String;
+   renames Wide_Wide_String_Operations.To_Wide_Wide_String;
 
    --  @summary Build a String_Type from a Wide_Wide_String. Total; never
    --  raises. Surrogate code-points and values greater than U+10FFFF are
    --  substituted with `Invalid_Substitute_Codepoint` before being
    --  embedded in the result.
    function From_Wide_Wide_String (Source : Wide_Wide_String) return String_Type
-     renames Wide_Wide_String_Operations.From_Wide_Wide_String;
+   renames Wide_Wide_String_Operations.From_Wide_Wide_String;
 
    --  @summary The Unicode code-point this backend emits for invalid input
    --  code-points (surrogates or values > U+10FFFF). The wide_wide_string
    --  backend uses U+FFFD REPLACEMENT CHARACTER.
-   Invalid_Substitute_Codepoint : constant Wide_Wide_Character :=
-     Wide_Wide_Character'Val (16#FFFD#);
+   Invalid_Substitute_Codepoint : constant Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#);
 
    --  ----- Wide_Wide_String boundary - per-call invalid-code-point policy -----
    --  (Fix 2 Tier 2)
@@ -234,178 +180,124 @@ package String_Types with SPARK_Mode is
    Skip            : constant Invalid_Codepoint_Policy := Anystrings_Invalid_Policy.Skip;
    Report_As_Error : constant Invalid_Codepoint_Policy := Anystrings_Invalid_Policy.Report_As_Error;
 
-   function "=" (Left, Right : Invalid_Codepoint_Policy) return Boolean
-     renames Anystrings_Invalid_Policy."=";
+   function "=" (Left, Right : Invalid_Codepoint_Policy) return Boolean renames Anystrings_Invalid_Policy."=";
 
    subtype WWS_Error_Kind is Anystrings_Invalid_Policy.WWS_Error_Kind;
 
    Surrogate_Codepoint    : constant WWS_Error_Kind := Anystrings_Invalid_Policy.Surrogate_Codepoint;
    Out_Of_Range_Codepoint : constant WWS_Error_Kind := Anystrings_Invalid_Policy.Out_Of_Range_Codepoint;
 
-   function "=" (Left, Right : WWS_Error_Kind) return Boolean
-     renames Anystrings_Invalid_Policy."=";
+   function "=" (Left, Right : WWS_Error_Kind) return Boolean renames Anystrings_Invalid_Policy."=";
 
    subtype WWS_Failure is Anystrings_Invalid_Policy.WWS_Failure;
 
    subtype WWS_Decode_Result is Wide_Wide_WWS_Decode_Results.WWS_Decode_Result;
 
-   function Is_Ok (R : WWS_Decode_Result) return Boolean
-     renames Wide_Wide_WWS_Decode_Results.Is_Ok;
+   function Is_Ok (R : WWS_Decode_Result) return Boolean renames Wide_Wide_WWS_Decode_Results.Is_Ok;
 
-   function Get_Value (R : WWS_Decode_Result) return String_Type
-     renames Wide_Wide_WWS_Decode_Results.Get_Value;
+   function Get_Value (R : WWS_Decode_Result) return String_Type renames Wide_Wide_WWS_Decode_Results.Get_Value;
 
-   function Get_Value_Or
-     (R        : WWS_Decode_Result;
-      Fallback : String_Type) return String_Type
-     renames Wide_Wide_WWS_Decode_Results.Get_Value_Or;
+   function Get_Value_Or (R : WWS_Decode_Result; Fallback : String_Type) return String_Type
+   renames Wide_Wide_WWS_Decode_Results.Get_Value_Or;
 
-   function Get_Error (R : WWS_Decode_Result) return WWS_Failure
-     renames Wide_Wide_WWS_Decode_Results.Get_Error;
+   function Get_Error (R : WWS_Decode_Result) return WWS_Failure renames Wide_Wide_WWS_Decode_Results.Get_Error;
 
    function From_Wide_Wide_String_With_Substitute
-     (Source     : Wide_Wide_String;
-      Substitute : Wide_Wide_Character) return String_Type
+     (Source : Wide_Wide_String; Substitute : Wide_Wide_Character) return String_Type
    is (Wide_Wide_String_Operations.From_Wide_Wide_String_With_Substitute (Source, Substitute))
    with Pre => Anystrings_Invalid_Policy.Is_Valid_Scalar (Substitute);
 
-   function From_Wide_Wide_String_Skip_Invalid
-     (Source : Wide_Wide_String) return String_Type
-     renames Wide_Wide_String_Operations.From_Wide_Wide_String_Skip_Invalid;
+   function From_Wide_Wide_String_Skip_Invalid (Source : Wide_Wide_String) return String_Type
+   renames Wide_Wide_String_Operations.From_Wide_Wide_String_Skip_Invalid;
 
-   function From_Wide_Wide_String_Checked
-     (Source : Wide_Wide_String) return WWS_Decode_Result
-     renames Wide_Wide_WWS_Bridge.From_Wide_Wide_String_Wide_Wide_Checked;
+   function From_Wide_Wide_String_Checked (Source : Wide_Wide_String) return WWS_Decode_Result
+   renames Wide_Wide_WWS_Bridge.From_Wide_Wide_String_Wide_Wide_Checked;
 
    function From_Wide_Wide_String_Policy
      (Source     : Wide_Wide_String;
       Policy     : Invalid_Codepoint_Policy;
       Substitute : Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#)) return String_Type
-   is
-     (if Policy = Backend_Default then
-         From_Wide_Wide_String (Source)
-      elsif Policy = Substitute_With then
-         From_Wide_Wide_String_With_Substitute (Source, Substitute)
-      else
-         From_Wide_Wide_String_Skip_Invalid (Source))
-   with Pre =>
-     Policy /= Report_As_Error
-     and then (if Policy = Substitute_With then Anystrings_Invalid_Policy.Is_Valid_Scalar (Substitute));
+   is (if Policy = Backend_Default
+       then From_Wide_Wide_String (Source)
+       elsif Policy = Substitute_With
+       then From_Wide_Wide_String_With_Substitute (Source, Substitute)
+       else From_Wide_Wide_String_Skip_Invalid (Source))
+   with
+     Pre =>
+       Policy /= Report_As_Error
+       and then (if Policy = Substitute_With then Anystrings_Invalid_Policy.Is_Valid_Scalar (Substitute));
 
-   function Is_Ok (R : UTF_8_Decode_Result) return Boolean
-     renames Wide_Wide_UTF_8_Results.Is_Ok;
+   function Is_Ok (R : UTF_8_Decode_Result) return Boolean renames Wide_Wide_UTF_8_Results.Is_Ok;
 
-   function Get_Value (R : UTF_8_Decode_Result) return String_Type
-      renames Wide_Wide_UTF_8_Results.Get_Value;
+   function Get_Value (R : UTF_8_Decode_Result) return String_Type renames Wide_Wide_UTF_8_Results.Get_Value;
 
    --  @relation FUNC-UTF8-014, NFR-UTF8-002
-   function Get_Value_Or
-     (R        : UTF_8_Decode_Result;
-      Fallback : String_Type) return String_Type
-     renames Wide_Wide_UTF_8_Results.Get_Value_Or;
+   function Get_Value_Or (R : UTF_8_Decode_Result; Fallback : String_Type) return String_Type
+   renames Wide_Wide_UTF_8_Results.Get_Value_Or;
 
-   function Get_Error (R : UTF_8_Decode_Result) return UTF_8_Decode_Error
-      renames Wide_Wide_UTF_8_Results.Get_Error;
+   function Get_Error (R : UTF_8_Decode_Result) return UTF_8_Decode_Error renames Wide_Wide_UTF_8_Results.Get_Error;
 
-   function As_UTF_8 (Source : String_Type) return String
-     renames Wide_Wide_Strings.As_UTF_8;
+   function As_UTF_8 (Source : String_Type) return String renames Wide_Wide_Strings.As_UTF_8;
 
-   function Decode_UTF_8 (Source : String) return UTF_8_Decode_Result
-     renames Wide_Wide_Strings.Decode_UTF_8;
+   function Decode_UTF_8 (Source : String) return UTF_8_Decode_Result renames Wide_Wide_Strings.Decode_UTF_8;
 
-   function UTF_8_Is_Valid (Source : String) return Boolean
-     renames Wide_Wide_Strings.UTF_8_Is_Valid;
+   function UTF_8_Is_Valid (Source : String) return Boolean renames Wide_Wide_Strings.UTF_8_Is_Valid;
 
-   function Hash (Key : String_Type) return Ada.Containers.Hash_Type
-     renames Wide_Wide_String_Operations.Hash;
+   function Hash (Key : String_Type) return Ada.Containers.Hash_Type renames Wide_Wide_String_Operations.Hash;
 
-   function Slice
-     (Source : String_Type;
-      Low    : Positive;
-      High   : Natural) return String_Type
+   function Slice (Source : String_Type; Low : Positive; High : Natural) return String_Type
    with
      Global => null,
      Pre    => Low - 1 <= Length (Source) and then High <= Length (Source),
      Post   => Length (Slice'Result) = (if High < Low then 0 else High - Low + 1);
 
-   function Index
-     (Source  : String_Type;
-      Pattern : String_Type) return Natural
-     renames Wide_Wide_String_Operations.Index;
+   function Index (Source : String_Type; Pattern : String_Type) return Natural
+   renames Wide_Wide_String_Operations.Index;
 
-   function Index
-     (Source  : String_Type;
-      Pattern : String) return Natural
-     renames Wide_Wide_String_Operations.Index_Latin_1;
+   function Index (Source : String_Type; Pattern : String) return Natural
+   renames Wide_Wide_String_Operations.Index_Latin_1;
 
-   function Index_From
-     (Source      : String_Type;
-      Pattern     : String_Type;
-      Starting_At : Positive) return Natural
-     renames Wide_Wide_String_Operations.Index_From;
+   function Index_From (Source : String_Type; Pattern : String_Type; Starting_At : Positive) return Natural
+   renames Wide_Wide_String_Operations.Index_From;
 
-   function Index_From
-     (Source      : String_Type;
-      Pattern     : String;
-      Starting_At : Positive) return Natural
+   function Index_From (Source : String_Type; Pattern : String; Starting_At : Positive) return Natural
    is (Wide_Wide_String_Operations.Index_From
          (Source, Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String (Pattern), Starting_At));
 
    function Index_Reverse (Source : String_Type; Pattern : String_Type) return Natural
-     renames Wide_Wide_String_Operations.Index_Reverse;
+   renames Wide_Wide_String_Operations.Index_Reverse;
 
-   function Replace
-     (Source  : String_Type;
-      Pattern : String_Type;
-      By      : String_Type) return String_Type
-     renames Wide_Wide_Strings.Replace;
+   function Replace (Source : String_Type; Pattern : String_Type; By : String_Type) return String_Type
+   renames Wide_Wide_Strings.Replace;
 
-   function Replace
-     (Source  : String_Type;
-      Pattern : String;
-      By      : String_Type) return String_Type
-   is (Wide_Wide_Strings.Replace
-         (Source, Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String (Pattern), By));
+   function Replace (Source : String_Type; Pattern : String; By : String_Type) return String_Type
+   is (Wide_Wide_Strings.Replace (Source, Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String (Pattern), By));
 
-   function Replace
-     (Source  : String_Type;
-      Pattern : String_Type;
-      By      : String) return String_Type
-   is (Wide_Wide_Strings.Replace
-         (Source, Pattern, Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String (By)));
+   function Replace (Source : String_Type; Pattern : String_Type; By : String) return String_Type
+   is (Wide_Wide_Strings.Replace (Source, Pattern, Wide_Wide_String_Operations.To_Unbounded_Wide_Wide_String (By)));
 
    function Head (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
-     renames Wide_Wide_Strings.Head;
+   renames Wide_Wide_Strings.Head;
 
    function Tail (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
-     renames Wide_Wide_Strings.Tail;
+   renames Wide_Wide_Strings.Tail;
 
-   function To_Lower (Source : String_Type) return String_Type
-     renames Wide_Wide_String_Operations.To_Lower;
+   function To_Lower (Source : String_Type) return String_Type renames Wide_Wide_String_Operations.To_Lower;
 
-   function To_Upper (Source : String_Type) return String_Type
-     renames Wide_Wide_String_Operations.To_Upper;
+   function To_Upper (Source : String_Type) return String_Type renames Wide_Wide_String_Operations.To_Upper;
 
-   function Starts_With
-     (Source : String_Type;
-      Prefix : String_Type) return Boolean
-     renames Wide_Wide_String_Operations.Starts_With;
+   function Starts_With (Source : String_Type; Prefix : String_Type) return Boolean
+   renames Wide_Wide_String_Operations.Starts_With;
 
-   function Starts_With
-     (Source : String_Type;
-      Prefix : String) return Boolean
-     renames Wide_Wide_String_Operations.Starts_With_Latin_1;
+   function Starts_With (Source : String_Type; Prefix : String) return Boolean
+   renames Wide_Wide_String_Operations.Starts_With_Latin_1;
 
-   function Ends_With
-     (Source : String_Type;
-      Suffix : String_Type) return Boolean
-     renames Wide_Wide_String_Operations.Ends_With;
+   function Ends_With (Source : String_Type; Suffix : String_Type) return Boolean
+   renames Wide_Wide_String_Operations.Ends_With;
 
-   function Trim (Source : String_Type) return String_Type
-     renames Wide_Wide_String_Operations.Trim;
+   function Trim (Source : String_Type) return String_Type renames Wide_Wide_String_Operations.Trim;
 
-   function From_Character (C : Character_Type) return String_Type
-     renames Wide_Wide_String_Operations.From_Character;
+   function From_Character (C : Character_Type) return String_Type renames Wide_Wide_String_Operations.From_Character;
 
    function Is_Equals_Sign (C : Character_Type) return Boolean
    is (C = '=');
@@ -423,43 +315,31 @@ package String_Types with SPARK_Mode is
    --  defaults (classifiers return False, case mappers return the input).
 
    function Is_Alphanumeric (C : Character_Type) return Boolean
-     renames Wide_Wide_String_Operations.Char_Is_Alphanumeric;
+   renames Wide_Wide_String_Operations.Char_Is_Alphanumeric;
 
-   function Is_Control (C : Character_Type) return Boolean
-     renames Wide_Wide_String_Operations.Char_Is_Control;
+   function Is_Control (C : Character_Type) return Boolean renames Wide_Wide_String_Operations.Char_Is_Control;
 
-   function Is_Digit (C : Character_Type) return Boolean
-     renames Wide_Wide_String_Operations.Char_Is_Digit;
+   function Is_Digit (C : Character_Type) return Boolean renames Wide_Wide_String_Operations.Char_Is_Digit;
 
-   function Is_Graphic (C : Character_Type) return Boolean
-     renames Wide_Wide_String_Operations.Char_Is_Graphic;
+   function Is_Graphic (C : Character_Type) return Boolean renames Wide_Wide_String_Operations.Char_Is_Graphic;
 
-   function Is_Hex_Digit (C : Character_Type) return Boolean
-     renames Wide_Wide_String_Operations.Char_Is_Hex_Digit;
+   function Is_Hex_Digit (C : Character_Type) return Boolean renames Wide_Wide_String_Operations.Char_Is_Hex_Digit;
 
-   function Is_Letter (C : Character_Type) return Boolean
-     renames Wide_Wide_String_Operations.Char_Is_Letter;
+   function Is_Letter (C : Character_Type) return Boolean renames Wide_Wide_String_Operations.Char_Is_Letter;
 
    function Is_Line_Terminator (C : Character_Type) return Boolean
-     renames Wide_Wide_String_Operations.Char_Is_Line_Terminator;
+   renames Wide_Wide_String_Operations.Char_Is_Line_Terminator;
 
-   function Is_Lower (C : Character_Type) return Boolean
-     renames Wide_Wide_String_Operations.Char_Is_Lower;
+   function Is_Lower (C : Character_Type) return Boolean renames Wide_Wide_String_Operations.Char_Is_Lower;
 
-   function Is_Upper (C : Character_Type) return Boolean
-     renames Wide_Wide_String_Operations.Char_Is_Upper;
+   function Is_Upper (C : Character_Type) return Boolean renames Wide_Wide_String_Operations.Char_Is_Upper;
 
-   function Is_Whitespace (C : Character_Type) return Boolean
-     renames Wide_Wide_String_Operations.Char_Is_Whitespace;
+   function Is_Whitespace (C : Character_Type) return Boolean renames Wide_Wide_String_Operations.Char_Is_Whitespace;
 
-   function To_Lower (C : Character_Type) return Character_Type
-     renames Wide_Wide_String_Operations.Char_To_Lower;
+   function To_Lower (C : Character_Type) return Character_Type renames Wide_Wide_String_Operations.Char_To_Lower;
 
-   function To_Upper (C : Character_Type) return Character_Type
-     renames Wide_Wide_String_Operations.Char_To_Upper;
+   function To_Upper (C : Character_Type) return Character_Type renames Wide_Wide_String_Operations.Char_To_Upper;
 
    ---------------------------------------------------------------------------
-
-
 
 end String_Types;

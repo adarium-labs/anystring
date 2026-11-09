@@ -22,34 +22,28 @@ package Length_Contracts_Test is
 
    type Test_Case is new AUnit.Test_Cases.Test_Case with null record;
 
-   overriding function Name (T : Test_Case) return AUnit.Message_String;
+   overriding
+   function Name (T : Test_Case) return AUnit.Message_String;
 
-   overriding procedure Register_Tests (T : in out Test_Case);
+   overriding
+   procedure Register_Tests (T : in out Test_Case);
 
 private
 
-   procedure Test_Empty_String
-     (T : in out AUnit.Test_Cases.Test_Case'Class);
+   procedure Test_Empty_String (T : in out AUnit.Test_Cases.Test_Case'Class);
 
-   procedure Test_Concat_Lengths
-     (T : in out AUnit.Test_Cases.Test_Case'Class);
+   procedure Test_Concat_Lengths (T : in out AUnit.Test_Cases.Test_Case'Class);
 
-   procedure Test_Concat_Function_Forms
-     (T : in out AUnit.Test_Cases.Test_Case'Class);
+   procedure Test_Concat_Function_Forms (T : in out AUnit.Test_Cases.Test_Case'Class);
 
-   procedure Test_Append_Lengths
-     (T : in out AUnit.Test_Cases.Test_Case'Class);
+   procedure Test_Append_Lengths (T : in out AUnit.Test_Cases.Test_Case'Class);
 
-   procedure Test_Slice_Lengths
-     (T : in out AUnit.Test_Cases.Test_Case'Class);
+   procedure Test_Slice_Lengths (T : in out AUnit.Test_Cases.Test_Case'Class);
 
-   procedure Test_Slice_Out_Of_Range_Raises
-     (T : in out AUnit.Test_Cases.Test_Case'Class);
+   procedure Test_Slice_Out_Of_Range_Raises (T : in out AUnit.Test_Cases.Test_Case'Class);
 
-   procedure Test_To_String_Type_Length
-     (T : in out AUnit.Test_Cases.Test_Case'Class);
+   procedure Test_To_String_Type_Length (T : in out AUnit.Test_Cases.Test_Case'Class);
 
-   procedure Test_To_Latin_1_Length
-     (T : in out AUnit.Test_Cases.Test_Case'Class);
+   procedure Test_To_Latin_1_Length (T : in out AUnit.Test_Cases.Test_Case'Class);
 
 end Length_Contracts_Test;
