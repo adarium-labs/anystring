@@ -7,6 +7,7 @@
 
 with Ada.Containers;
 with Wide_Wide_Strings;
+with String_Empty_Value;
 with Wide_Wide_String_Operations;
 with Wide_Wide_UTF_8_Results;
 with Wide_Wide_UTF_8_Bridge;
@@ -24,12 +25,14 @@ is
    subtype Character_Type is Wide_Wide_Character;
 
    function Length (Source : String_Type) return Natural
+   is (String_Empty_Value.Length (Source))
    with Global => null;
 
    function Is_Empty (Source : String_Type) return Boolean
    with Global => null, Post => Is_Empty'Result = (Length (Source) = 0);
 
    function Null_String_Value return String_Type
+   is (String_Empty_Value.Null_String_Value)
    with Global => null, Post => Length (Null_String_Value'Result) = 0;
 
    Empty_String : constant String_Type := Null_String_Value;
