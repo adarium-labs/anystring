@@ -41,6 +41,21 @@ project Anystrings is
    With_Width : With_Width_Choice :=
      external ("ANYSTRING_WITH_WIDTH", "false");
 
+   --  Assertions (-gnata) enable the Pre/Post of the SPARK_Mode => Off bodies.
+   --  Off by default; run_all_backends.sh enables them so the tests check
+   --  the length contracts at run time.
+   type Assertions_Choice is ("enabled", "disabled");
+   Assertions : Assertions_Choice :=
+     external ("ANYSTRING_ASSERTIONS", "disabled");
+
+   Assertion_Switches := ();
+   case Assertions is
+      when "enabled" =>
+         Assertion_Switches := ("-gnata");
+      when "disabled" =>
+         null;
+   end case;
+
    String_Source_Dirs := ();
    case String_Type is
       when "standard" =>
@@ -108,7 +123,8 @@ project Anystrings is
    for Library_Kind use Library_Type;
 
    package Compiler is
-      for Default_Switches ("Ada") use Anystrings_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2022");
+      for Default_Switches ("Ada") use
+        Anystrings_Config.Ada_Compiler_Switches & ("-gnatyM120", "-gnat2022") & Assertion_Switches;
    end Compiler;
 
    package Binder is
