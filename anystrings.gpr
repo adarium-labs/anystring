@@ -99,7 +99,7 @@ project Anystrings is
             when "wide_wide_string" =>
                Width_Excluded := ("wide_wide_width.ads", "wide_wide_width.adb", "string_types-width.ads");
             when "uxstring" =>
-               Width_Excluded := ("uxstring_width.ads", "uxstring_width.adb", "string_types-width.ads");
+               Width_Excluded := ("uxstring_width.ads", "uxstring_width.adb", "string_types-width.ads", "string_types-width.adb");
             when "vss" =>
                Width_Excluded := ("vss_width.ads", "vss_width.adb", "string_types-width.ads");
             when "custom" =>

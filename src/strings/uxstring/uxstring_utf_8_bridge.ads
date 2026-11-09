@@ -45,6 +45,8 @@
 --  @relation FUNC-UTF8-008, FUNC-UTF8-009, FUNC-UTF8-010, FUNC-UTF8-011,
 --            FUNC-UTF8-013, NFR-UTF8-004, NFR-UTF8-005
 
+pragma SPARK_Mode (Off);
+
 with UXString_UTF_8_Results;
 
 package UXString_UTF_8_Bridge is

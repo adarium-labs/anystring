@@ -12,6 +12,8 @@
 --  This package provides the UXString string abstraction with full Unicode
 --  support. Length and Element operate on Unicode code points, not bytes.
 
+pragma SPARK_Mode (Off);
+
 with Anystrings;
 with UXString_Operations;
 with UXString_UTF_8_Results;

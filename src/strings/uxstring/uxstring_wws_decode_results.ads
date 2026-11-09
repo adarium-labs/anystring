@@ -6,6 +6,8 @@
 --  @summary
 --  Instantiation of Anystrings_WWS_Decode_Results for UXStrings.UXString.
 
+pragma SPARK_Mode (Off);
+
 with Anystrings_WWS_Decode_Results;
 with UXString_Operations;
 with UXStrings;

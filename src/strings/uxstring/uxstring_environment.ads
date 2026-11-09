@@ -13,15 +13,12 @@
 
 with UXStrings;
 
-package UXString_Environment with SPARK_Mode is
+package UXString_Environment with SPARK_Mode => Off is
 
    subtype String_Type is UXStrings.UXString;
 
-   type Env_Processor is not null access procedure
-     (Name : String_Type; Value : String_Type);
-
-   type Env_Filter is not null access function
-     (Name : String_Type; Value : String_Type) return Boolean;
+   --  Callbacks are anonymous access parameters so that callers can pass
+   --  nested subprograms (String_Types.Environment adapts its own callbacks).
 
    function Get_Env (Name : String_Type) return String_Type;
    function Get_Env (Name : String_Type; Default : String_Type) return String_Type;
@@ -29,7 +26,10 @@ package UXString_Environment with SPARK_Mode is
    function Set_Env (Name : String_Type; Value : String_Type) return Boolean;
    function Clear_Env (Name : String_Type) return Boolean;
    function Clear_Env return Boolean;
-   function Iterate_Env (Process : Env_Processor) return Boolean;
-   function Iterate_Env (Include : Env_Filter; Process : Env_Processor) return Boolean;
+   function Iterate_Env
+     (Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean;
+   function Iterate_Env
+     (Include : not null access function (Name : String_Type; Value : String_Type) return Boolean;
+      Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean;
 
 end UXString_Environment;

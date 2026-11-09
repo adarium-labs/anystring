@@ -22,6 +22,17 @@ strings/
 
 The package name collision on `string_types.ads` is intentional — it's how directory swap selects a backend without consumer-side changes.
 
+### Exception: `uxstring` has a private `String_Type`
+
+On the other four backends `String_Type` is a concrete type (`subtype` of the underlying string). On `uxstring` it is a **private type** whose full view, a record holding a `UXStrings.UXString`, sits in a `SPARK_Mode => Off` private part. `UXStrings.UXString` has an `Iterable` aspect whose functions read globals, which GNATprove rejects in any SPARK-On unit that mentions the type; hiding it behind the private type is what lets SPARK clients use the length contracts on this backend (see `docs/proof-boundaries.md`).
+
+Consequences for this layer:
+- `uxstring/string_types.ads` has real declarations for every operation (no renames of `UXString`-typed subprograms) and `string_types.adb` (SPARK Off) has the bodies: unwrap with `.Value`, call `UXString_Operations` / `UXString_Strings`, wrap. The operation set and signatures in terms of `String_Type` are still identical to the other backends.
+- `UTF_8_Decode_Result` and `WWS_Decode_Result` are private on uxstring too (they hold a `String_Type`); use `Is_Ok` / `Get_Value` / `Get_Value_Or` / `Get_Error`.
+- The children `String_Types.Command_Line`, `.Directories`, `.Environment`, `.Text_IO`, `.Width` are wrappers with bodies, because a child's visible part cannot see the parent's private full view but its body can. Their specs are `SPARK_Mode => Off`.
+- Every unit that mentions `UXStrings.UXString` (`uxstring_operations`, the `UXString_Strings` / result instances, the bridges, the OS-boundary units) must be `SPARK_Mode => Off`, otherwise `tools/prove.sh` aborts with the `Iterable` error. A leading `pragma SPARK_Mode (Off);` is how the instance units are marked.
+- Consumers on this backend must not use `UXStrings` operations, string literals, indexing or `for ... of` on a `String_Type`; go through `String_Types` (`To_String_Type`, `Element`, `Length`, ...).
+
 ### Character classification & case-mapping semantics
 
 The 12 character-level primitives have backend-specific behaviour because each backend's `Character_Type` has a different range:
@@ -65,7 +76,7 @@ There is no decode boundary for these operations — they only return `Boolean` 
 
 ## CONVENTIONS (specific to this layer)
 - Operation packages declare a **subtype/rename** of the underlying string type (e.g. `subtype Unbounded_String is Ada.Strings.Unbounded.Unbounded_String;`) so the instantiation file reads cleanly.
-- `string_types.ads` uses `renames` aggressively — no new logic lives there. The only inline expression functions allowed are `Is_Equals_Sign` / `Is_Dash` because they collapse trivially per character type.
+- `string_types.ads` uses `renames` aggressively (except on `uxstring`, where each operation is a real declaration with a wrapper body, see above) — no new logic lives there. The only inline expression functions allowed are `Is_Equals_Sign` / `Is_Dash` because they collapse trivially per character type.
 - `"&"` is **only** declared in `string_types.ads`, never in the operations package, to keep the generic signature free of operator pollution.
 
 ## ANTI-PATTERNS

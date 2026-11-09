@@ -14,7 +14,7 @@
 with UXStrings;
 with Ada.Text_IO;
 
-package UXString_Text_IO with SPARK_Mode is
+package UXString_Text_IO with SPARK_Mode => Off is
 
    subtype String_Type is UXStrings.UXString;
 

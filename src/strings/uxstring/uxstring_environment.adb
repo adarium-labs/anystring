@@ -92,7 +92,8 @@ package body UXString_Environment with SPARK_Mode => Off is
          return False;
    end Clear_Env;
 
-   function Iterate_Env (Process : Env_Processor) return Boolean is
+   function Iterate_Env
+     (Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean is
       Ok : Boolean := True;
 
       procedure Process_Item (Name, Value : String) is
@@ -111,7 +112,9 @@ package body UXString_Environment with SPARK_Mode => Off is
          return False;
    end Iterate_Env;
 
-   function Iterate_Env (Include : Env_Filter; Process : Env_Processor) return Boolean is
+   function Iterate_Env
+     (Include : not null access function (Name : String_Type; Value : String_Type) return Boolean;
+      Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean is
       Ok : Boolean := True;
 
       procedure Process_Item (Name, Value : String) is

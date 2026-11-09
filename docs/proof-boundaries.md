@@ -50,12 +50,12 @@ Both projects were proved with `--mode=all --level=2 --checks-as-errors=on`.
 | `wide_string` | 20 / 0 | 49 / 0 | Off bodies: spec-level checks only |
 | `wide_wide_string` | 20 / 0 | 49 / 0 | Off bodies: spec-level checks only |
 | `vss` | 10 / 0 | 42 / 0 | Off bodies and OS-boundary units, see below |
-| `uxstring` | aborts | aborts | Blocked: see "uxstring blocker" |
+| `uxstring` | 18 / 0 | 43 / 0 | `String_Type` is a private wrapper, see "uxstring: private wrapper type" |
 
-## uxstring blocker
+## uxstring: private wrapper type
 
-GNATprove cannot be run to completion on the uxstring backend without
-changing the dependency crate or the facade's type.
+`UXStrings.UXString` cannot be mentioned by any SPARK-On unit. GNATprove
+(`--mode=all`, the 15.1 default) aborts with
 
 ```
 uxstrings1.ads:44:58: error: function associated to aspect Iterable with dependency on globals is not allowed in SPARK
@@ -63,23 +63,57 @@ uxstrings1.ads:44:58: error: function associated to aspect Iterable with depende
   delayed type aspect on "UXString" is required to be in SPARK
 ```
 
-With-chain. `UXStrings.UXString` is a tagged private type whose `Iterable`
-functions read globals. In `--mode=all` any SPARK-On unit that mentions the
-type (even `subtype S is UXStrings.UXString;` alone) makes gnatprove require
-that delayed aspect to be SPARK. The facade `string_types.ads` must mention
-`String_Type` in its contracts, so it is on the chain. The SPARK-Off
-experiments that were tried (facade, `UXString_Operations`, all uxstring
-children) did not remove the message; `--mode=check` is clean.
+Cause. `UXStrings.UXString` is declared in a package that has no SPARK
+annotations (`uxstrings1.ads`). The functions named in its `Iterable` aspect
+(`First`, `Next`, `Has_Element`, `Element`) therefore get a conservative
+"reads globals" contract, and SPARK requires the delayed `Iterable` aspect of a
+type visible in SPARK to be globals-free. Even
+`subtype S is UXStrings.UXString;` in a SPARK-On unit triggers it;
+`--mode=check` does not report it. The crate must not be modified here.
 
-Options, none taken here:
-1. Upstream fix in `uxstrings` (make the `Iterable` functions SPARK-legal). The
-   crate must not be modified here.
-2. Change `String_Type` on uxstring to a private type. That breaks the
-   identical-interface rule, and a tagged-type derivation then needs
-   primitive overrides ("type must be declared abstract or "Set"
-   overridden").
-3. Keep uxstring SPARK Off at the facade. The contracts would then be
-   unusable from SPARK clients on this backend.
+What fixes it, and why it is not hiding anything. On uxstring `String_Type` is a
+private type; its full view (a record holding a `UXStrings.UXString`) is in the
+`SPARK_Mode => Off` private part of `String_Types`. SPARK clients see an
+abstract private type plus the declared contracts, and never see
+`UXStrings.UXString`. This is the same trust model as the other backends'
+Off bodies: the contracts are declared in SPARK, the implementation is outside
+SPARK, and the tests (built with `-gnata`) check the contracts at run time.
+
+Units that mention `UXStrings.UXString` and are therefore `SPARK_Mode => Off`
+(a leading `pragma SPARK_Mode (Off);` on the instance units, an aspect on the
+others):
+- `uxstring_operations.ads`, `uxstring_strings.ads` (the `Anystrings`
+  instance), `uxstring_utf_8_results.ads`, `uxstring_wws_decode_results.ads`
+  (result instances), `uxstring_utf_8_bridge.ads`, `uxstring_wws_bridge.ads`
+- the OS-boundary units `uxstring_environment.ads`, `uxstring_text_io.ads`,
+  `uxstring_command_line.ads`, `uxstring_directories.ads`, `uxstring_width.ads`
+
+Checked by removal, one at a time: the pragma on `uxstring_operations.ads`, on each of the three instance units, and on the two bridges (both together) is needed; without it gnatprove aborts with the message above. The OS-boundary units were not minimised individually.
+
+### Public API difference on the uxstring backend
+
+`String_Type` is no longer `subtype String_Type is UXStrings.UXString`.
+Consumers of `String_Types` that stay on its surface are unaffected. These
+stop compiling and must go through `String_Types`:
+
+| Before (uxstring only) | Now |
+|------------------------|-----|
+| passing a `String_Type` to a `UXStrings` subprogram | `To_UTF_8` / `To_Wide_Wide_String` and rebuild, or use the `String_Types` operation |
+| `for C of S loop` over a `String_Type` | `for I in 1 .. Length (S) loop ... Element (S, I)` |
+| `S (I)` (Constant_Indexing) | `Element (S, I)` |
+| a string literal `"abc"` as a `String_Type` | `To_String_Type ("abc")` |
+| `UTF_8_Decode_Result` / `WWS_Decode_Result` as plain records | private; use `Is_Ok`, `Get_Value`, `Get_Value_Or`, `Get_Error` |
+| `Env_Processor` / `Env_Filter` callbacks taking a `UXString` | same names, callbacks take `String_Types.String_Type` |
+| `String_Types.Width.Grapheme.Slice`, `Width_Slice_Result.Result` of type `UXString` | same fields, now `String_Type` |
+
+`String_Types.Command_Line`, `.Directories`, `.Environment`, `.Text_IO` and
+`.Width` are now thin wrappers (real declarations plus bodies) instead of
+renames, for the same reason. Their specs are `SPARK_Mode => Off`.
+
+The other four backends are unchanged. The interface-identity rule between
+`string_types.ads` files therefore holds for the operation set and signatures
+in terms of `String_Type`, but not for the representation of `String_Type`
+(a private type on uxstring, a concrete type elsewhere).
 
 ## Off units (trusted, checked at run time)
 
@@ -91,7 +125,8 @@ of these bodies are evaluated at run time.
 Length-contract bodies:
 - `wide_string/string_types.adb`
 - `wide_wide_string/string_types.adb`
-- `uxstring/string_types.adb`
+- `uxstring/string_types.adb` (every operation of the facade: unwrap, call the
+  `UXStrings`-typed implementation, wrap)
 - `vss/string_types.adb`
 
 OS-boundary units (not part of the length surface; SPARK Off so their

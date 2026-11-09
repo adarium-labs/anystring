@@ -14,6 +14,8 @@
 --  by the Strings generic package. UXString provides full Unicode
 --  support with proper code point handling.
 
+pragma SPARK_Mode (Off);
+
 with Ada.Containers;
 with UXStrings; use UXStrings;
 

@@ -31,6 +31,8 @@
 
 --  @relation FUNC-UTF8-002, FUNC-UTF8-013, NFR-UTF8-006, NFR-UTF8-009
 
+pragma SPARK_Mode (Off);
+
 with Anystrings_UTF_8_Results;
 with UXStrings; use UXStrings;
 

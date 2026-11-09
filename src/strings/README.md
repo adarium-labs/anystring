@@ -38,7 +38,7 @@ STRING_TYPE=custom STRING_PATH=/abs/path/to/my/strings alr build
 | `standard`         | Ready    | Default; `Unbounded_String`; `Length`/`Element` operate on **UTF-8 bytes**  |
 | `wide_string`      | Ready    | `Wide_Character` code units; BMP only                                       |
 | `wide_wide_string` | Ready    | `Wide_Wide_Character` slots; full Unicode                                   |
-| `uxstring`         | Ready    | Full Unicode; `Length`/`Element` operate on **code points**; pulls `uxstrings` |
+| `uxstring`         | Ready    | Full Unicode; `Length`/`Element` operate on **code points**; pulls `uxstrings`; `String_Type` is a **private** wrapper (not a `UXString`), see `docs/proof-boundaries.md` |
 | `vss`              | Ready    | Full Unicode via `VSS.Strings.Virtual_String`; pulls `vss_text`             |
 | `custom`           | Ready    | Pick your own directory via `STRING_PATH`                                   |
 

@@ -3,6 +3,8 @@
 --  Copyright (c) 2025
 --  SPDX-License-Identifier: Apache-2.0
 
+pragma SPARK_Mode (Off);
+
 with UXString_WWS_Decode_Results;
 
 package UXString_WWS_Bridge is

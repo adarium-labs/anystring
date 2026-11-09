@@ -63,7 +63,7 @@ The library’s entry point for consumers is **`String_Types`**, not `Anystrings
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - **Do not** `with Anystrings;` from user code — go through `String_Types`.
-- **Do not** add Unbounded_String-specific behaviour to `String_Types` of another backend; the four `string_types.ads` files must present an **identical** Ada interface (only the underlying types differ).
+- **Do not** add Unbounded_String-specific behaviour to `String_Types` of another backend; the `string_types.ads` files must present an **identical** operation set and signatures (only the underlying types differ). One known representation difference: on `uxstring`, `String_Type` (and the two decode-result types) is a **private** wrapper type, so SPARK clients can use the length contracts (see `src/strings/AGENTS.md` and `docs/proof-boundaries.md`).
 - **Do not** edit anything in `config/` or `lib/` — both are generated.
 - **Do not** assume `Length` counts characters: in the `standard` backend it counts **bytes**.
 - **Do not** break `SPARK_Mode` on `src/anystrings.ads` when adding new operations; keep them as expression functions with explicit `Pre`/`Post` where indices are involved.

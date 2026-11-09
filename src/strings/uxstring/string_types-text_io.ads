@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
---  String_Types.Text_IO - Text_IO bridge re-exports
+--  String_Types.Text_IO - Text_IO bridge
 --
 --  Copyright (c) 2025
 --  SPDX-License-Identifier: Apache-2.0
@@ -9,19 +9,21 @@
 --  Child package of String_Types exposing the Text_IO bridge.
 --
 --  @description
---  Pure renames of the per-backend UXString_Text_IO implementation
---  package, so that consumers can opt in to the Text I/O API with
---  `with String_Types.Text_IO;` without forcing Ada.Text_IO into the
---  dependency closure of every `with String_Types;`.
+--  Thin wrappers over the per-backend UXString_Text_IO implementation
+--  package (String_Type is a private wrapper on this backend, so the
+--  subprograms taking or returning it cannot be plain renames). Consumers
+--  opt in to the Text I/O API with `with String_Types.Text_IO;` without
+--  forcing Ada.Text_IO into the dependency closure of every
+--  `with String_Types;`.
 --
 --  Public surface is identical across all five backends
---  (FUNC-FACADE-003), only the rename targets differ.
+--  (FUNC-FACADE-003), only the implementation differs.
 --
 --  @relation FUNC-FACADE-002, FUNC-FACADE-003, FUNC-FACADE-009, NFR-FACADE-002
 
 with UXString_Text_IO;
 
-package String_Types.Text_IO with SPARK_Mode is
+package String_Types.Text_IO with SPARK_Mode => Off is
 
    subtype File_Type is UXString_Text_IO.File_Type;
    subtype File_Mode is UXString_Text_IO.File_Mode;
@@ -46,15 +48,15 @@ package String_Types.Text_IO with SPARK_Mode is
    function Standard_Output return File_Type renames UXString_Text_IO.Standard_Output;
    function Standard_Error return File_Type renames UXString_Text_IO.Standard_Error;
 
-   procedure Put (Item : String_Type) renames UXString_Text_IO.Put;
-   procedure Put (File : File_Type; Item : String_Type) renames UXString_Text_IO.Put;
-   procedure Put_Line (Item : String_Type) renames UXString_Text_IO.Put_Line;
-   procedure Put_Line (File : File_Type; Item : String_Type) renames UXString_Text_IO.Put_Line;
+   procedure Put (Item : String_Type);
+   procedure Put (File : File_Type; Item : String_Type);
+   procedure Put_Line (Item : String_Type);
+   procedure Put_Line (File : File_Type; Item : String_Type);
 
-   function Get_Line return String_Type renames UXString_Text_IO.Get_Line;
-   function Get_Line (File : File_Type) return String_Type renames UXString_Text_IO.Get_Line;
-   procedure Get_Line (Item : out String_Type) renames UXString_Text_IO.Get_Line;
-   procedure Get_Line (File : File_Type; Item : out String_Type) renames UXString_Text_IO.Get_Line;
+   function Get_Line return String_Type;
+   function Get_Line (File : File_Type) return String_Type;
+   procedure Get_Line (Item : out String_Type);
+   procedure Get_Line (File : File_Type; Item : out String_Type);
 
    procedure New_Line renames UXString_Text_IO.New_Line;
    procedure New_Line (File : File_Type) renames UXString_Text_IO.New_Line;
