@@ -22,7 +22,9 @@
 
 with UXString_Directories;
 
-package String_Types.Directories with SPARK_Mode => Off is
+package String_Types.Directories
+  with SPARK_Mode => Off
+is
 
    subtype File_Kind is UXString_Directories.File_Kind;
 
@@ -30,8 +32,7 @@ package String_Types.Directories with SPARK_Mode => Off is
    Ordinary_File : constant File_Kind := UXString_Directories.Ordinary_File;
    Special_File  : constant File_Kind := UXString_Directories.Special_File;
 
-   function "=" (Left, Right : File_Kind) return Boolean
-     renames UXString_Directories."=";
+   function "=" (Left, Right : File_Kind) return Boolean renames UXString_Directories."=";
 
    function Exists (Path : String_Type) return Boolean;
 

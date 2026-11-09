@@ -27,12 +27,14 @@
 
 with UXString_Width;
 
-package String_Types.Width with SPARK_Mode => Off is
+package String_Types.Width
+  with SPARK_Mode => Off
+is
 
    --  ---- Configuration (FUNC-WIDTH-006, NFR-WIDTH-003) ----
 
    subtype Width_Configuration is UXString_Width.Width_Configuration;
-   subtype Width_Context       is UXString_Width.Width_Context;
+   subtype Width_Context is UXString_Width.Width_Context;
 
    Narrow : constant Width_Context := UXString_Width.Narrow;
    Wide   : constant Width_Context := UXString_Width.Wide;
@@ -51,10 +53,7 @@ package String_Types.Width with SPARK_Mode => Off is
    type Grapheme_Cursor is private;
 
    type Grapheme_View is private
-     with Iterable => (First       => First,
-                       Next        => Next,
-                       Has_Element => Has_Element,
-                       Element     => Element);
+   with Iterable => (First => First, Next => Next, Has_Element => Has_Element, Element => Element);
 
    function First (V : Grapheme_View) return Grapheme_Cursor;
 
@@ -65,9 +64,7 @@ package String_Types.Width with SPARK_Mode => Off is
    function Element (V : Grapheme_View; C : Grapheme_Cursor) return Grapheme;
 
    --  @relation FUNC-WIDTH-005
-   function Graphemes
-     (S    : String_Type;
-      Conf : Width_Configuration := Default_Linux) return Grapheme_View;
+   function Graphemes (S : String_Type; Conf : Width_Configuration := Default_Linux) return Grapheme_View;
 
    --  ---- Width_Slice_Result (FUNC-WIDTH-014) ----
 
@@ -91,47 +88,33 @@ package String_Types.Width with SPARK_Mode => Off is
    --  ---- Scalar queries ----
 
    --  @relation FUNC-WIDTH-003
-   function Display_Width
-     (S    : String_Type;
-      Conf : Width_Configuration := Default_Linux) return Natural;
+   function Display_Width (S : String_Type; Conf : Width_Configuration := Default_Linux) return Natural;
 
    --  @relation FUNC-WIDTH-004
-   function Grapheme_Count
-     (S    : String_Type;
-      Conf : Width_Configuration := Default_Linux) return Natural;
+   function Grapheme_Count (S : String_Type; Conf : Width_Configuration := Default_Linux) return Natural;
 
    --  @relation FUNC-WIDTH-010
-   function Cluster_Length
-     (S    : String_Type;
-      Conf : Width_Configuration := Default_Linux) return Natural
-     renames Grapheme_Count;
+   function Cluster_Length (S : String_Type; Conf : Width_Configuration := Default_Linux) return Natural
+   renames Grapheme_Count;
 
    --  ---- Cluster-indexed operations ----
 
    --  @relation FUNC-WIDTH-011
    function Cluster_Element
-     (S     : String_Type;
-      Index : Positive;
-      Conf  : Width_Configuration := Default_Linux) return Grapheme;
+     (S : String_Type; Index : Positive; Conf : Width_Configuration := Default_Linux) return Grapheme;
 
    --  @relation FUNC-WIDTH-012
    function Cluster_Slice
-     (S            : String_Type;
-      From_Cluster : Positive;
-      To_Cluster   : Natural;
-      Conf         : Width_Configuration := Default_Linux) return String_Type;
+     (S : String_Type; From_Cluster : Positive; To_Cluster : Natural; Conf : Width_Configuration := Default_Linux)
+      return String_Type;
 
    --  @relation FUNC-WIDTH-013
    function Cluster_Head
-     (S     : String_Type;
-      Count : Natural;
-      Conf  : Width_Configuration := Default_Linux) return String_Type;
+     (S : String_Type; Count : Natural; Conf : Width_Configuration := Default_Linux) return String_Type;
 
    --  @relation FUNC-WIDTH-013
    function Cluster_Tail
-     (S     : String_Type;
-      Count : Natural;
-      Conf  : Width_Configuration := Default_Linux) return String_Type;
+     (S : String_Type; Count : Natural; Conf : Width_Configuration := Default_Linux) return String_Type;
 
    --  ---- Width-budget helpers ----
 
@@ -140,8 +123,7 @@ package String_Types.Width with SPARK_Mode => Off is
      (S                : String_Type;
       Max_Cells        : Natural;
       Allow_Split_Wide : Boolean := False;
-      Conf             : Width_Configuration := Default_Linux)
-      return Width_Slice_Result;
+      Conf             : Width_Configuration := Default_Linux) return Width_Slice_Result;
 
    --  @relation FUNC-WIDTH-015
    function Truncate_With_Ellipsis
@@ -154,8 +136,8 @@ package String_Types.Width with SPARK_Mode => Off is
    function Pad_To_Width
      (S            : String_Type;
       Target_Cells : Natural;
-      Pad          : Character_Type     := ' ';
-      Side         : Pad_Side           := Right;
+      Pad          : Character_Type := ' ';
+      Side         : Pad_Side := Right;
       Conf         : Width_Configuration := Default_Linux) return String_Type;
 
 private

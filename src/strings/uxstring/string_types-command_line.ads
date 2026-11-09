@@ -25,7 +25,9 @@
 
 with Ada.Command_Line;
 
-package String_Types.Command_Line with SPARK_Mode => Off is
+package String_Types.Command_Line
+  with SPARK_Mode => Off
+is
 
    function Argument_Count return Natural;
 

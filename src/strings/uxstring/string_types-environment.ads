@@ -21,13 +21,13 @@
 --
 --  @relation FUNC-FACADE-002, FUNC-FACADE-003, FUNC-FACADE-007, NFR-FACADE-002
 
-package String_Types.Environment with SPARK_Mode => Off is
+package String_Types.Environment
+  with SPARK_Mode => Off
+is
 
-   type Env_Processor is not null access procedure
-     (Name : String_Type; Value : String_Type);
+   type Env_Processor is not null access procedure (Name : String_Type; Value : String_Type);
 
-   type Env_Filter is not null access function
-     (Name : String_Type; Value : String_Type) return Boolean;
+   type Env_Filter is not null access function (Name : String_Type; Value : String_Type) return Boolean;
 
    function Get_Env (Name : String_Type) return String_Type;
 

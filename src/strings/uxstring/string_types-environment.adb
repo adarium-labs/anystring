@@ -8,7 +8,9 @@
 with UXString_Environment;
 with UXStrings;
 
-package body String_Types.Environment with SPARK_Mode => Off is
+package body String_Types.Environment
+  with SPARK_Mode => Off
+is
 
    function Get_Env (Name : String_Type) return String_Type
    is ((Value => UXString_Environment.Get_Env (Name.Value)));

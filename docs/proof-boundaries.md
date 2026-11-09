@@ -15,6 +15,8 @@ Both use `--no-subprojects`, so dependency crates are never analysed.
 | Declaration | Contract |
 |-------------|----------|
 | `Length (Source)` | `Global => null` |
+| `Null_String_Value` | `Global => null`; `Post => Length (Null_String_Value'Result) = 0` |
+| `Empty_String` | `Empty_String : constant String_Type := Null_String_Value;` on standard, wide_string, wide_wide_string, vss, so `Length (Empty_String) = 0` is provable. On uxstring `Empty_String` is a function with `Post => Length (Empty_String'Result) = 0` (same call syntax), see below |
 | `Is_Empty (Source)` | `Post => Is_Empty'Result = (Length (Source) = 0)` |
 | `"&"` String & String | `Pre => Length (Right) <= Natural'Last - Length (Left)`; `Post => Length ("&"'Result) = Length (Left) + Length (Right)` |
 | `"&"` String & Character, Character & String | `Pre => Length < Natural'Last`; `Post` adds 1 |
@@ -104,6 +106,7 @@ stop compiling and must go through `String_Types`:
 | a string literal `"abc"` as a `String_Type` | `To_String_Type ("abc")` |
 | `UTF_8_Decode_Result` / `WWS_Decode_Result` as plain records | private; use `Is_Ok`, `Get_Value`, `Get_Value_Or`, `Get_Error` |
 | `Env_Processor` / `Env_Filter` callbacks taking a `UXString` | same names, callbacks take `String_Types.String_Type` |
+| `Empty_String` constant | parameterless function `Empty_String` (a constant of a private type cannot be initialised in the visible part, and a deferred constant would hide its value from SPARK); source-compatible for reads, not for renamings |
 | `String_Types.Width.Grapheme.Slice`, `Width_Slice_Result.Result` of type `UXString` | same fields, now `String_Type` |
 
 `String_Types.Command_Line`, `.Directories`, `.Environment`, `.Text_IO` and
@@ -152,12 +155,5 @@ use VSS types with access-type globals. No client may rely on them in SPARK.
   slots on `wide_string`, Wide_Wide_Character slots on `wide_wide_string`,
   code points on `uxstring` and `vss`. The contracts make no character-count
   promise.
-- **`Length (Empty_String) = 0` is not provable by a SPARK client.** The
-  constant is initialised from a non-static aggregate. The GNAT runtime
-  declares `Ada.Strings.Unbounded.Length` with no postcondition, so
-  `Length (Null_Unbounded_String) = 0` is also unprovable (gnatprove:
-  `medium: assertion might fail`). The AUnit test checks it at run time only.
-  Making it provable needs `Empty_String` to become a function with a
-  postcondition, which changes the public surface.
 - **Generic `Anystrings`.** The generic signature (`src/anystrings.ads`) is
   unchanged. Its formals carry no contracts.

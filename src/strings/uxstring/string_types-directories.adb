@@ -5,7 +5,9 @@
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
-package body String_Types.Directories with SPARK_Mode => Off is
+package body String_Types.Directories
+  with SPARK_Mode => Off
+is
 
    function Exists (Path : String_Type) return Boolean
    is (UXString_Directories.Exists (Path.Value));

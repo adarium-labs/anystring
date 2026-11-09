@@ -13,7 +13,9 @@
 
 with UXStrings;
 
-package UXString_Environment with SPARK_Mode => Off is
+package UXString_Environment
+  with SPARK_Mode => Off
+is
 
    subtype String_Type is UXStrings.UXString;
 
@@ -26,8 +28,7 @@ package UXString_Environment with SPARK_Mode => Off is
    function Set_Env (Name : String_Type; Value : String_Type) return Boolean;
    function Clear_Env (Name : String_Type) return Boolean;
    function Clear_Env return Boolean;
-   function Iterate_Env
-     (Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean;
+   function Iterate_Env (Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean;
    function Iterate_Env
      (Include : not null access function (Name : String_Type; Value : String_Type) return Boolean;
       Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean;

@@ -13,7 +13,9 @@
 
 with UXStrings;
 
-package UXString_Directories with SPARK_Mode => Off is
+package UXString_Directories
+  with SPARK_Mode => Off
+is
 
    subtype String_Type is UXStrings.UXString;
 

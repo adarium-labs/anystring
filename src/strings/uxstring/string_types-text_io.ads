@@ -23,7 +23,9 @@
 
 with UXString_Text_IO;
 
-package String_Types.Text_IO with SPARK_Mode => Off is
+package String_Types.Text_IO
+  with SPARK_Mode => Off
+is
 
    subtype File_Type is UXString_Text_IO.File_Type;
    subtype File_Mode is UXString_Text_IO.File_Mode;
@@ -33,9 +35,8 @@ package String_Types.Text_IO with SPARK_Mode => Off is
    Append_File : constant File_Mode := UXString_Text_IO.Append_File;
 
    procedure Create (File : in out File_Type; Mode : File_Mode := Out_File; Name : String := "")
-     renames UXString_Text_IO.Create;
-   procedure Open (File : in out File_Type; Mode : File_Mode; Name : String)
-     renames UXString_Text_IO.Open;
+   renames UXString_Text_IO.Create;
+   procedure Open (File : in out File_Type; Mode : File_Mode; Name : String) renames UXString_Text_IO.Open;
    procedure Close (File : in out File_Type) renames UXString_Text_IO.Close;
    function Is_Open (File : File_Type) return Boolean renames UXString_Text_IO.Is_Open;
 

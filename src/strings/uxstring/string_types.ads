@@ -44,13 +44,20 @@ is
    type String_Type is private;
    subtype Character_Type is Wide_Wide_Character;
 
-   Empty_String : constant String_Type;
-
    function Length (Source : String_Type) return Natural
    with Global => null;
 
    function Is_Empty (Source : String_Type) return Boolean
    with Global => null, Post => Is_Empty'Result = (Length (Source) = 0);
+
+   function Null_String_Value return String_Type
+   with Global => null, Post => Length (Null_String_Value'Result) = 0;
+
+   --  A function, not a constant: a constant of a private type cannot be
+   --  initialised in the visible part, and a deferred constant would hide its
+   --  value from SPARK clients. Call syntax is identical (`Empty_String`).
+   function Empty_String return String_Type
+   with Global => null, Post => Length (Empty_String'Result) = 0;
 
    function Get_Length (Source : String_Type) return Natural;
 
@@ -114,7 +121,8 @@ is
      Pre    => Length (New_Item) <= Natural'Last - Length (Source),
      Post   => Length (Source) = Length (Source'Old) + Length (New_Item);
 
-   overriding function "=" (Left, Right : String_Type) return Boolean;
+   overriding
+   function "=" (Left, Right : String_Type) return Boolean;
 
    function "<" (Left, Right : String_Type) return Boolean;
 
@@ -343,8 +351,6 @@ private
    type String_Type is record
       Value : UXStrings.UXString;
    end record;
-
-   Empty_String : constant String_Type := (Value => UXStrings.Null_UXString);
 
    type UTF_8_Decode_Result is record
       Inner : UXString_UTF_8_Results.UTF_8_Decode_Result;

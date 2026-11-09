@@ -32,7 +32,9 @@
 with Ada.Command_Line;
 with UXStrings;
 
-package UXString_Command_Line with SPARK_Mode => Off is
+package UXString_Command_Line
+  with SPARK_Mode => Off
+is
 
    --  @relation FUNC-CMDLINE-001
    function Argument_Count return Natural;

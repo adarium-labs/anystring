@@ -8,7 +8,9 @@
 with Ada.Environment_Variables;
 with UXStrings; use UXStrings;
 
-package body UXString_Environment with SPARK_Mode => Off is
+package body UXString_Environment
+  with SPARK_Mode => Off
+is
 
    Null_String : constant String_Type := UXStrings.Null_UXString;
 
@@ -92,8 +94,8 @@ package body UXString_Environment with SPARK_Mode => Off is
          return False;
    end Clear_Env;
 
-   function Iterate_Env
-     (Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean is
+   function Iterate_Env (Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean
+   is
       Ok : Boolean := True;
 
       procedure Process_Item (Name, Value : String) is
@@ -101,7 +103,8 @@ package body UXString_Environment with SPARK_Mode => Off is
          begin
             Process.all (From_OS_String (Name), From_OS_String (Value));
          exception
-            when others => Ok := False;
+            when others =>
+               Ok := False;
          end;
       end Process_Item;
    begin
@@ -114,7 +117,8 @@ package body UXString_Environment with SPARK_Mode => Off is
 
    function Iterate_Env
      (Include : not null access function (Name : String_Type; Value : String_Type) return Boolean;
-      Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean is
+      Process : not null access procedure (Name : String_Type; Value : String_Type)) return Boolean
+   is
       Ok : Boolean := True;
 
       procedure Process_Item (Name, Value : String) is
@@ -127,7 +131,8 @@ package body UXString_Environment with SPARK_Mode => Off is
                Process.all (N, V);
             end if;
          exception
-            when others => Ok := False;
+            when others =>
+               Ok := False;
          end;
       end Process_Item;
    begin

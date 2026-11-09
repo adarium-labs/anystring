@@ -34,6 +34,12 @@ is
    function Is_Empty (Source : String_Type) return Boolean
    is (UXString_Operations.Is_Empty (Source.Value));
 
+   function Null_String_Value return String_Type
+   is ((Value => UXStrings.Null_UXString));
+
+   function Empty_String return String_Type
+   is ((Value => UXStrings.Null_UXString));
+
    function Get_Length (Source : String_Type) return Natural
    is (UXString_Strings.Get_Length (Source.Value));
 
@@ -84,7 +90,8 @@ is
       Source := Source & New_Item;
    end Append;
 
-   overriding function "=" (Left, Right : String_Type) return Boolean
+   overriding
+   function "=" (Left, Right : String_Type) return Boolean
    is (UXString_Strings.Equal (Left.Value, Right.Value));
 
    function "<" (Left, Right : String_Type) return Boolean

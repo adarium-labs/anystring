@@ -36,6 +36,4 @@ pragma SPARK_Mode (Off);
 with Anystrings_UTF_8_Results;
 with UXStrings; use UXStrings;
 
-package UXString_UTF_8_Results is new Anystrings_UTF_8_Results
-  (String_Type => UXString,
-   Null_String => Null_UXString);
+package UXString_UTF_8_Results is new Anystrings_UTF_8_Results (String_Type => UXString, Null_String => Null_UXString);

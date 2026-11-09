@@ -7,7 +7,9 @@
 
 with UXString_Command_Line;
 
-package body String_Types.Command_Line with SPARK_Mode => Off is
+package body String_Types.Command_Line
+  with SPARK_Mode => Off
+is
 
    function Argument_Count return Natural
    is (UXString_Command_Line.Argument_Count);

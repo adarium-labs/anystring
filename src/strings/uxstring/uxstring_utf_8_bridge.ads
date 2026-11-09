@@ -68,7 +68,6 @@ package UXString_UTF_8_Bridge is
    --  @return        UXString_UTF_8_Results.UTF_8_Decode_Result.
    --  @relation FUNC-UTF8-008, FUNC-UTF8-009, FUNC-UTF8-010, FUNC-UTF8-011,
    --            FUNC-UTF8-013, NFR-UTF8-004, NFR-UTF8-005
-   function From_UTF_8_UXString
-     (Source : String) return UXString_UTF_8_Results.UTF_8_Decode_Result;
+   function From_UTF_8_UXString (Source : String) return UXString_UTF_8_Results.UTF_8_Decode_Result;
 
 end UXString_UTF_8_Bridge;

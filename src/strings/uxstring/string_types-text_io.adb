@@ -5,7 +5,9 @@
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
-package body String_Types.Text_IO with SPARK_Mode => Off is
+package body String_Types.Text_IO
+  with SPARK_Mode => Off
+is
 
    procedure Put (Item : String_Type) is
    begin
