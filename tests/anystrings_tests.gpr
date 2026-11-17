@@ -46,9 +46,9 @@ project Anystrings_Tests is
 
    case With_Width is
       when "false" =>
-         for Main use ("anystrings_test_runner_no_width.adb");
+         for Main use ("anystrings_test_runner_no_width.adb", "ingress_probe.adb", "argv0_exec.adb");
       when "true" =>
-         for Main use ("anystrings_test_runner.adb");
+         for Main use ("anystrings_test_runner.adb", "ingress_probe.adb", "argv0_exec.adb");
    end case;
 
    package Compiler is
