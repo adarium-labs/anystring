@@ -155,12 +155,11 @@ package Wide_String_Operations is
    --  @summary Encode an Unbounded_Wide_String as a UTF-8 String.
    --
    --  @description
-   --  Total function; never raises (NFR-UTF8-005). Pre-scans Source
-   --  element-by-element: whenever Wide_Character'Pos (E) is in
-   --  16#D800#..16#DFFF# (surrogate range), substitutes U+FFFD
-   --  (Wide_Character'Val (16#FFFD#)) in a working buffer before encoding
-   --  (FUNC-UTF8-007). After surrogate substitution, encodes using
-   --  Ada.Strings.UTF_Encoding.Wide_Strings.Encode (UTF_8, no BOM).
+   --  Total function; never raises (NFR-UTF8-005). The code units are first
+   --  combined into code points (To_Wide_Wide_String): a valid surrogate pair
+   --  is one code point, and a lone surrogate becomes U+FFFD (FUNC-UTF8-007).
+   --  The code points are then encoded with
+   --  Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Encode (UTF_8, no BOM).
    --  ASCII-only input passes through byte-for-byte (FUNC-UTF8-005).
    --  The result is always well-formed UTF-8 (FUNC-UTF8-006).
    --

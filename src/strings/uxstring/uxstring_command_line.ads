@@ -10,14 +10,15 @@
 --  Hand-rolled package providing the command-line access API for the
 --  uxstring backend.  Calls Ada.Command_Line.Argument and
 --  Ada.Command_Line.Command_Name and decodes the returned Standard.String
---  as UTF-8 via UXStrings.From_UTF_8 — the explicit UTF-8 ingestion entry
---  point, not the Latin-1 To_String_Type path (per tech-spec §11.1).
+--  as UTF-8 with the shared replacement decoder (Anystrings_UTF_8_Replace) —
+--  the explicit UTF-8 ingestion entry point, not the Latin-1 To_String_Type
+--  path (per tech-spec §11.1). Ill-formed bytes become U+FFFD.
 --
 --  Purpose: Expose the command-line access surface for String_Types renames.
 --  Responsibilities:
 --    * Argument_Count: delegates to Ada.Command_Line.Argument_Count.
 --    * Argument:       delegates to Ada.Command_Line.Argument; decodes result
---                      as UTF-8 via UXStrings.From_UTF_8.
+--                      as UTF-8 with Anystrings_UTF_8_Replace.
 --    * Command_Name:   same.
 --    * Exit_Status:    subtype of Ada.Command_Line.Exit_Status (§11.4).
 --    * Set_Exit_Status: delegates to Ada.Command_Line.Set_Exit_Status.

@@ -18,11 +18,12 @@
 --  the actual for the From_UTF_8 formal subprogram. String_Types renames it.
 --
 --  Backend-specific note (uxstring / FUNC-UTF8-013):
---    UXStrings stores data as UTF-8 internally. Decoding is performed via
---    UXStrings.From_UTF_8, which raises Constraint_Error on ill-formed
---    input. This bridge catches any exception and returns Make_Error with
---    Malformed_Byte_Sequence, satisfying the non-raising contract
---    (NFR-UTF8-004, NFR-UTF8-005). No NFC or NFC normalisation is applied
+--    UXS5 stores code points, not UTF-8 bytes. The validator runs first; a
+--    valid input is decoded by the shared replacement decoder
+--    (Anystrings_UTF_8_Replace), so a leading U+FEFF is kept and no library
+--    decoder is called (UXStrings.From_UTF_8 strips a BOM and raises).
+--    An invalid input returns Make_Error with the validator's reason,
+--    satisfying the non-raising contract (NFR-UTF8-004, NFR-UTF8-005). No NFC or NFC normalisation is applied
 --    after a successful decode; the caller must normalise if canonical
 --    comparison is required (FUNC-UTF8-013).
 --    Empty input returns Is_Ok = True with an empty UXString (FUNC-UTF8-009).
@@ -54,10 +55,9 @@ package UXString_UTF_8_Bridge is
    --  @summary Decode a UTF-8 byte sequence into a UXString result.
    --
    --  @description
-   --  Total and non-raising (NFR-UTF8-004, NFR-UTF8-005). Calls
-   --  UXStrings.From_UTF_8 inside an exception handler. On success, wraps
-   --  the UXString in Make_Ok. On any exception (Constraint_Error from the
-   --  UXStrings runtime), returns Make_Error (Malformed_Byte_Sequence).
+   --  Total and non-raising (NFR-UTF8-004, NFR-UTF8-005). Runs the
+   --  validator, then the shared replacement decoder. On success, wraps
+   --  the UXString in Make_Ok. An invalid input returns Make_Error.
    --  Empty input returns Is_Ok = True with an empty UXString (FUNC-UTF8-009).
    --  No normalisation is performed (FUNC-UTF8-013).
    --

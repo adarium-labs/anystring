@@ -50,8 +50,8 @@ package Wide_Wide_UTF_8_Bridge is
    --  Total and non-raising (NFR-UTF8-004, NFR-UTF8-005). Runs the shared
    --  six-variant UTF-8 validator first. On failure, returns
    --  Wide_Wide_UTF_8_Results.Make_Error (Reason). On success, decodes via
-   --  Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Decode, then wraps the
-   --  result in Unbounded_Wide_Wide_String. No range-narrowing needed: the
+   --  Anystrings_UTF_8_Replace.Decode_Replacing, then wraps the result in
+   --  Unbounded_Wide_Wide_String (a leading U+FEFF is kept). No range-narrowing needed: the
    --  validator already excludes > U+10FFFF. Empty input returns Is_Ok = True
    --  with an empty string (FUNC-UTF8-009).
    --

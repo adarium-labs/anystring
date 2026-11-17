@@ -9,16 +9,16 @@
 --  @description
 --  Hand-rolled package providing the command-line access API for the vss
 --  backend.  Calls Ada.Command_Line.Argument and Ada.Command_Line.Command_Name
---  and decodes the returned Standard.String as UTF-8 via
---  VSS.Strings.Conversions.To_Virtual_String — the explicit UTF-8 ingestion
---  entry point in VSS (per tech-spec §11.1), not the Latin-1 widening used by
---  VSS_Operations.To_Virtual_String.
+--  and decodes the returned Standard.String as UTF-8 with the shared
+--  replacement decoder (Anystrings_UTF_8_Replace) — the explicit UTF-8
+--  ingestion entry point (per tech-spec §11.1), not the Latin-1 widening used
+--  by VSS_Operations.To_Virtual_String.
 --
 --  Purpose: Expose the command-line access surface for String_Types renames.
 --  Responsibilities:
 --    * Argument_Count: delegates to Ada.Command_Line.Argument_Count.
 --    * Argument:       delegates to Ada.Command_Line.Argument; decodes result
---                      via VSS.Strings.Conversions.To_Virtual_String (UTF-8).
+--                      with Anystrings_UTF_8_Replace.
 --    * Command_Name:   same.
 --    * Exit_Status:    subtype of Ada.Command_Line.Exit_Status (§11.4).
 --    * Set_Exit_Status: delegates to Ada.Command_Line.Set_Exit_Status.

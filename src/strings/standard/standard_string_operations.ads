@@ -227,7 +227,7 @@ package Standard_String_Operations is
    --
    --  @description
    --  Total; never raises. Same encoding logic as From_Wide_Wide_String
-   --  but replaces the backend default substitute ('?') with Substitute.
+   --  but replaces the backend default substitute (U+FFFD) with Substitute.
    --  Substitute is assumed to be a valid Unicode scalar; the wrapper in
    --  string_types.ads enforces this via precondition.
    function From_Wide_Wide_String_With_Substitute

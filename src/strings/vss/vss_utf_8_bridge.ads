@@ -19,11 +19,11 @@
 --
 --  Backend-specific note (vss / FUNC-UTF8-013):
 --    The bridge validates the input with Anystrings_UTF_8_Validate first to
---    classify malformed input precisely, then constructs the Virtual_String
---    via VSS.Strings.Conversions.To_Virtual_String. The latter would raise
---    Ada.Strings.UTF_Encoding.Encoding_Error on invalid input, but the
---    validator guarantees this never happens on the success path. Any
---    unexpected exception is mapped to Invalid_Lead_Byte defensively.
+--    classify malformed input precisely. A valid input is decoded by the
+--    shared replacement decoder (Anystrings_UTF_8_Replace) and stored through
+--    VSS_Operations.From_Wide_Wide_String, so a leading U+FEFF is kept and no
+--    library conversion is called (VSS.Strings.Conversions raises on ill-formed
+--    input).
 --    Empty input returns Is_Ok = True with an empty string (FUNC-UTF8-009).
 --    No NFC normalisation is performed (FUNC-UTF8-013).
 --

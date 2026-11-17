@@ -15,11 +15,11 @@
 --  when instantiating UXString_Strings, and re-exported via string_types.ads.
 --
 --  UXString backend note (FUNC-UTF8-013):
---    UXStrings stores strings internally as UTF-8. The To_UTF_8 encoder
---    calls UXStrings.To_UTF_8 directly, which is always well-formed by
---    construction — no surrogate substitution or pre-scan is required.
---    Conversely, From_UTF_8 calls UXStrings.From_UTF_8 and wraps any
---    encoding exception as Malformed_Byte_Sequence. No NFC/NFC normalisation
+--    UXS5 stores code points. The To_UTF_8 encoder replaces any stored
+--    surrogate or value above U+10FFFF by U+FFFD before it encodes, because
+--    UXStrings.To_UTF_8 raises on those. From_UTF_8 validates first, then
+--    decodes with the shared replacement decoder; an invalid input is
+--    reported as Malformed_Byte_Sequence. No NFC/NFC normalisation
 --    is performed either way; the caller is responsible for normalisation
 --    before comparison if canonical equivalence is required (FUNC-UTF8-013).
 --
