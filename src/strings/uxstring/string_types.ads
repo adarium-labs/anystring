@@ -130,9 +130,11 @@ is
 
    function ">=" (Left, Right : String_Type) return Boolean;
 
-   --  Valid UTF-8 is decoded to code points; any other input is read as Latin-1
-   --  (one code point per byte), so a Latin-1 byte above 0x7F is one code point
-   --  and never raises. The length equality therefore holds only for ASCII input.
+   --  uxstring reads the String as UTF-8 (human decision, docs/text-model.md):
+   --  ill-formed subparts become U+FFFD, a Latin-1 byte such as E9 becomes
+   --  U+FFFD, and the call never raises. Other back ends read Latin-1 (wide_*,
+   --  vss) or keep bytes (standard). The length equality therefore holds only
+   --  for ASCII input.
    function To_String_Type (Source : String) return String_Type
    with
      Global => null,

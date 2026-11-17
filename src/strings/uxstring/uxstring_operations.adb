@@ -11,7 +11,6 @@ with Ada.Strings.UTF_Encoding;
 with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 with Ada.Wide_Wide_Characters.Handling;
 with Anystrings_UTF_8_Replace;
-with Anystrings_UTF_8_Validate;
 
 package body UXString_Operations is
 
@@ -25,12 +24,13 @@ package body UXString_Operations is
       return P <= 16#10_FFFF# and then P not in 16#D800# .. 16#DFFF#;
    end Is_Unicode_Scalar;
 
+   --  Human decision (2026-11-17): uxstring reads the API-edge String as UTF-8,
+   --  with ill-formed subparts replaced by U+FFFD (algorithm R). No Latin-1
+   --  fallback, so no input raises. This differs from the Latin-1 convention
+   --  that wide_* follow; see docs/text-model.md (cross-backend To_String_Type).
    function To_UXString (Source : String) return UXString is
    begin
-      if Anystrings_UTF_8_Validate.Validate (Source).Is_Ok then
-         return From_Wide_Wide_String (Anystrings_UTF_8_Replace.Decode_Replacing (Source));
-      end if;
-      return UXStrings.From_Latin_1 (Source);
+      return From_Wide_Wide_String (Anystrings_UTF_8_Replace.Decode_Replacing (Source));
    end To_UXString;
 
    function To_String (Source : UXString) return String is

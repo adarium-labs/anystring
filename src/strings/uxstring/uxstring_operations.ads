@@ -69,8 +69,9 @@ package UXString_Operations is
    ---------------------------------------------------------------------------
 
    --  Convert from String to UXString (assumes UTF-8 encoding)
-   --  Valid UTF-8 is decoded with the shared replacement decoder; any other input
-   --  is read as Latin-1 (one code point per byte), the API-edge convention.
+   --  UTF-8 decoded with the shared replacement decoder (ill-formed subparts
+   --  become U+FFFD). Total: never raises. Differs from the Latin-1 convention
+   --  of the other back ends (decision recorded in docs/text-model.md).
    function To_UXString (Source : String) return UXString;
 
    --  Convert from UXString to String (UTF-8 encoding)
