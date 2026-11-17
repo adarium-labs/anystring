@@ -22,7 +22,7 @@ package body Anystrings_UTF_8_Validate is
    function Validate (Source : String) return Validate_Result is
 
       --  Byte value as Natural for arithmetic comparisons.
-      function B (I : Positive) return Natural
+      function B (I : Integer) return Natural
       is (Character'Pos (Source (I)));
 
       --  Extract low N bits of a Natural by taking mod 2**N.
@@ -36,7 +36,7 @@ package body Anystrings_UTF_8_Validate is
       function Low_6 (X : Natural) return Natural
       is (X mod 64);
 
-      I          : Positive;
+      I          : Integer;   --  index in Source'Range; never formed past Source'Last
       Seq_Length : Natural;  --  Expected total bytes in current sequence
       Code_Point : Natural;  --  Accumulated code point value
 
@@ -87,8 +87,16 @@ package body Anystrings_UTF_8_Validate is
 
             --  For multi-byte sequences, check continuation bytes.
             for J in 2 .. Seq_Length loop
+               --  Byte J of this sequence is at I + J - 1. It is inside Source
+               --  exactly when J - 1 <= Source'Last - I, which is tested before
+               --  the index is formed (no overflow near Positive'Last).
+               if J - 1 > Source'Last - I then
+                  return Fail (Truncated_Sequence);
+               end if;
                declare
-                  Pos : constant Positive := I + J - 1;
+                  --  Written I + (J - 1), not I + J - 1: the partial sum I + J
+                  --  can exceed Integer'Last even when I + J - 1 does not.
+                  Pos : constant Integer := I + (J - 1);
                begin
                   --  Check that the continuation byte is within the input.
                   if Pos > Source'Last then
@@ -129,10 +137,11 @@ package body Anystrings_UTF_8_Validate is
                return Fail (Code_Point_Out_Of_Range);
             end if;
 
+            --  The sequence that ends Source ends the loop; otherwise I moves on
+            --  to a position still inside Source (no overflow).
+            exit when Seq_Length > Source'Last - I;
             I := I + Seq_Length;
          end;
-
-         exit when I > Source'Last;
       end loop;
 
       return Ok;

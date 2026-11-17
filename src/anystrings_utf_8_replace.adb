@@ -5,6 +5,14 @@
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
+--  SPARK_Mode is Off: gnatprove does not analyse this body. Every index I
+--  satisfies I in Source'Range, and every remaining length is computed as
+--  Source'Last - I (a non-negative difference that fits Natural), never as
+--  I + Length. The loops test "Step > Source'Last - I" and only then form
+--  I + Step, so no index is formed past Source'Last. The boundary tests of
+--  Ingress_Boundary_Test (strings whose bounds are near Positive'Last) and
+--  the property gate of Ingress_Replace_Test exercise this body.
+
 package body Anystrings_UTF_8_Replace
   with SPARK_Mode => Off
 is
@@ -22,12 +30,15 @@ is
 
    procedure Next
      (Source      : String;
-      Index       : Positive;
+      Index       : Integer;
       Scalar      : out Natural;
       Step        : out Positive;
       Well_Formed : out Boolean)
    is
       Lead     : constant Natural := Character'Pos (Source (Index));
+      --  Bytes after Index. Index <= Source'Last, so this is never negative,
+      --  and every position Index + K with K <= Room is inside Source.
+      Room     : constant Natural := Source'Last - Index;
       Need     : Natural := 0;   --  continuation bytes required
       First_Lo : Natural := 16#80#;
       First_Hi : Natural := 16#BF#;
@@ -81,10 +92,14 @@ is
       end if;
 
       --  Consume the continuation bytes allowed by the table for this lead.
+      --  The byte at Index + Accepted + 1 exists exactly when
+      --  Accepted + 1 <= Room; the test is made before the position is formed.
       while Accepted < Need loop
-         exit when Index + Accepted + 1 > Source'Last;
+         exit when Accepted + 1 > Room;
          declare
-            B  : constant Natural := Character'Pos (Source (Index + Accepted + 1));
+            --  Index + (Accepted + 1), not Index + Accepted + 1: the same
+            --  evaluation-order rule as Anystrings_UTF_8_Validate.
+            B  : constant Natural := Character'Pos (Source (Index + (Accepted + 1)));
             Lo : constant Natural := (if Accepted = 0 then First_Lo else 16#80#);
             Hi : constant Natural := (if Accepted = 0 then First_Hi else 16#BF#);
          begin
@@ -107,70 +122,93 @@ is
       end if;
    end Next;
 
+   --  Scan driver shared by the three passes. Each caller handles the empty
+   --  string first. The loop never forms an index past Source'Last: it stops
+   --  when the step consumed the rest of Source, and otherwise I + Step is at
+   --  most Source'Last.
+
    function Code_Point_Count (Source : String) return Natural is
-      I       : Natural := Source'First;
-      Scalar  : Natural;
-      Step    : Positive;
-      Ok      : Boolean;
-      Count   : Natural := 0;
+      Count  : Natural := 0;
+      I      : Integer;
+      Scalar : Natural;
+      Step   : Positive;
+      Ok     : Boolean;
    begin
-      while I <= Source'Last loop
+      if Source'Length = 0 then
+         return 0;
+      end if;
+      I := Source'First;
+      loop
          Next (Source, I, Scalar, Step, Ok);
          Count := Count + 1;
-         I     := I + Step;
+         exit when Step > Source'Last - I;
+         I := I + Step;
       end loop;
       return Count;
    end Code_Point_Count;
 
    function Decode_Replacing (Source : String) return Wide_Wide_String is
       Result : Wide_Wide_String (1 .. Code_Point_Count (Source));
-      I      : Natural := Source'First;
       J      : Natural := 0;
+      I      : Integer;
       Scalar : Natural;
       Step   : Positive;
       Ok     : Boolean;
    begin
-      while I <= Source'Last loop
+      if Source'Length = 0 then
+         return Result;
+      end if;
+      I := Source'First;
+      loop
          Next (Source, I, Scalar, Step, Ok);
-         J            := J + 1;
-         Result (J)   := Wide_Wide_Character'Val (Scalar);
-         I            := I + Step;
+         J          := J + 1;
+         Result (J) := Wide_Wide_Character'Val (Scalar);
+         exit when Step > Source'Last - I;
+         I := I + Step;
       end loop;
       return Result;
    end Decode_Replacing;
 
    function Replace_Ill_Formed (Source : String) return String is
       Total  : Natural := 0;
-      I      : Natural := Source'First;
+      I      : Integer;
       Scalar : Natural;
       Step   : Positive;
       Ok     : Boolean;
    begin
+      if Source'Length = 0 then
+         return "";
+      end if;
+
       --  First pass: exact length of the result.
-      while I <= Source'Last loop
+      I := Source'First;
+      loop
          Next (Source, I, Scalar, Step, Ok);
          Total := Total + (if Ok then Step else 3);
-         I     := I + Step;
+         exit when Step > Source'Last - I;
+         I := I + Step;
       end loop;
 
       declare
          Result : String (1 .. Total);
          Out_At : Natural := 0;
       begin
+         --  Second pass: copy the well-formed subparts, write U+FFFD for the rest.
          I := Source'First;
-         while I <= Source'Last loop
+         loop
             Next (Source, I, Scalar, Step, Ok);
             if Ok then
                for K in 0 .. Step - 1 loop
-                  Out_At           := Out_At + 1;
-                  Result (Out_At)  := Source (I + K);
+                  Out_At          := Out_At + 1;
+                  Result (Out_At) := Source (I + K);
                end loop;
             else
                Result (Out_At + 1) := Character'Val (16#EF#);
                Result (Out_At + 2) := Character'Val (16#BF#);
                Result (Out_At + 3) := Character'Val (16#BD#);
-               Out_At := Out_At + 3;
+               Out_At              := Out_At + 3;
             end if;
+            exit when Step > Source'Last - I;
             I := I + Step;
          end loop;
          return Result;
