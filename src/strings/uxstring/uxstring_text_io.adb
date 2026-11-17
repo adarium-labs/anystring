@@ -19,9 +19,9 @@ is
    function To_UTF_8 (Item : String_Type) return String
    is (String (UXStrings.To_UTF_8 (Item)));
 
-   --  Code points of a UTF-8 line; an invalid line is taken as Latin-1.
-   --  UXStrings decodes lazily (a bad sequence only raises Data_Error on a
-   --  later access), so the line is validated up front.
+   --  Code points of a UTF-8 line. A valid line is decoded with R (a leading
+   --  U+FEFF is kept). An invalid line is taken as Latin-1: a deliberate
+   --  exception to R for files (docs/text-model.md, section 9.4).
    function From_UTF_8 (Line : String) return String_Type
    is (if Anystrings_UTF_8_Validate.Validate (Line).Is_Ok
        then UXString_Operations.From_Wide_Wide_String

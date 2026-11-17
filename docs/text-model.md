@@ -217,3 +217,44 @@ end;
 | Per-backend UTF-8 bridge          | `src/strings/<backend>/<prefix>_utf_8_bridge.{ads,adb}`                    |
 | Facade-isolation witness program  | `examples/src/anystrings_facade_isolation.adb`                             |
 | Roadmap entry                     | `UTF8-BOUNDARY-DOCS` (`.opencode/roadmap.json`)                            |
+
+## 9. The API edge: `To_String_Type`, argv, environment, Text_IO
+
+This section records what each back end does with the `String` that crosses
+the API edge. The rules below are the decisions of 2026-11-17.
+
+### 9.1 Ingress through the shared replacement decoder (all five back ends)
+
+Command-line arguments, `Command_Name`, environment names and values, the
+checked `From_UTF_8` and the valid lines of Text_IO are decoded with algorithm
+R (`Anystrings_UTF_8_Replace`): one U+FFFD per maximal ill-formed subpart. A
+leading U+FEFF is kept. No ingress path raises.
+
+### 9.2 `To_String_Type (String)` per back end
+
+| Back end           | Reads the `String` as                       | Ill-formed input                           |
+|--------------------|---------------------------------------------|--------------------------------------------|
+| `standard`         | bytes, stored as given                      | kept as bytes (`To_Wide_Wide_String` gives U+FFFD per subpart) |
+| `wide_string`      | Latin-1 (one code point per byte)           | a byte above 7F is one code point          |
+| `wide_wide_string` | Latin-1 (one code point per byte)           | a byte above 7F is one code point          |
+| `uxstring`         | UTF-8, decoded with R (human decision)      | ill-formed subparts become U+FFFD; never raises |
+| `vss`              | Latin-1 (`Latin_1_To_WWS`)                  | a byte above 7F is one code point          |
+
+### 9.3 Cross-backend `To_String_Type` inconsistency (follow-up issue, not fixed here)
+
+The same `String` value gives different code points on different back ends.
+For example `"C3 A9"` is one code point, U+00E9, on `standard` (read as bytes
+and decoded by `To_Wide_Wide_String`) and on `uxstring`, and two code points,
+U+00C3 and U+00A9, on `wide_string`, `wide_wide_string` and `vss`. The API-edge
+convention in `AGENTS.md` (Latin-1) is followed by the wide and vss back ends,
+not by `uxstring`. Aligning the back ends is a follow-up issue; the decision
+for `uxstring` is recorded here and in `AGENTS.md`.
+
+### 9.4 Text_IO: Latin-1 fallback for invalid lines (deliberate exception)
+
+A valid UTF-8 line read by `Get_Line` is decoded with R, so a leading U+FEFF is
+kept. A line that is not valid UTF-8 is read as Latin-1 on the back ends that
+decode Text_IO lines (`uxstring`, `wide_string`, `wide_wide_string`, `vss`);
+`standard` keeps the bytes. This is a deliberate exception to R, for files: a
+file may hold legacy Latin-1 text, and reading it as Latin-1 loses nothing.
+Argv and environment do not have this exception.

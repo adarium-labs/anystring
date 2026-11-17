@@ -56,14 +56,16 @@ Design decisions captured during Phase 1 review:
    a converted `String_Type` value or one of a finite set of named error
    codes.  This keeps the API SPARK-friendly and removes the need for a
    separate `Try_From_UTF_8` variant.
-2. **Surrogate handling in `To_UTF_8`**: any code point in the surrogate
-   range U+D800-U+DFFF that a backend can legally hold SHALL be encoded
-   as U+FFFD (REPLACEMENT CHARACTER) by `To_UTF_8`.  `To_UTF_8` is total
-   and never raises.
+2. **Surrogate handling in `To_UTF_8`**: a valid UTF-16 surrogate PAIR
+   (high surrogate followed by low surrogate) SHALL be encoded as the
+   UTF-8 encoding of its supplementary code point. An unpaired surrogate
+   code unit, and on code-point storage any surrogate code point, SHALL be
+   encoded as U+FFFD (REPLACEMENT CHARACTER). `To_UTF_8` is total and never
+   raises.
 3. **Round-trip identity**: `From_UTF_8 (To_UTF_8 (S))` SHALL yield a
    success Result whose value equals `S` for every `String_Type` value
-   `S` representable by the backend AND containing no surrogate code
-   units.  Strings containing surrogates lose them on round-trip
+   `S` representable by the backend AND containing no unpaired surrogate
+   code unit. Values with an unpaired surrogate lose it on round-trip
    (substituted by U+FFFD); this case is documented but does not violate
    the invariant for the supported domain.
 4. **Inverse round-trip**: `To_UTF_8 (value-of (From_UTF_8 (B)))` is NOT
@@ -277,24 +279,36 @@ STATUS: Approved
 PRIORITY: Must
 TITLE: To_UTF_8 substitutes surrogate code points with U+FFFD
 STATEMENT: >>>
-For backends whose internal character type can hold values in the
-surrogate range U+D800-U+DFFF (notably the `wide` and `wide_wide`
-backends), `To_UTF_8` SHALL encode each such code unit as the UTF-8
-encoding of U+FFFD (REPLACEMENT CHARACTER, the three bytes
-16#EF# 16#BF# 16#BD#).
+For backends whose internal storage can hold surrogate code units (the
+`wide_string` backend, whose storage is UTF-16, and the `wide_wide_string`
+backend, whose storage is code points), `To_UTF_8` SHALL encode the stored
+values as follows:
+
+- A valid UTF-16 surrogate PAIR (a high surrogate U+D800-U+DBFF immediately
+  followed by a low surrogate U+DC00-U+DFFF) SHALL be encoded as the UTF-8
+  encoding of its supplementary code point (U+10000-U+10FFFF, four bytes).
+- An unpaired surrogate code unit (a lone high or a lone low surrogate)
+  SHALL be encoded as the UTF-8 encoding of U+FFFD (REPLACEMENT CHARACTER,
+  the three bytes 16#EF# 16#BF# 16#BD#).
+- On code-point storage (`wide_wide_string`), every surrogate code point
+  SHALL be encoded as U+FFFD, because no pairing exists in that storage.
+- A stored value above U+10FFFF (possible on `uxstring`) SHALL be encoded as
+  U+FFFD.
 
 `To_UTF_8` SHALL NOT raise for any reason, including the presence of
-surrogate code units in the input.
+surrogate code units or out-of-range values in the stored value.
 <<<
 COMMENT: >>>
 This makes `To_UTF_8` total under the project's "no exceptions in the
-contract surface" rule.  Substitution with U+FFFD is the standard
+contract surface" rule. The pair rule keeps `To_UTF_8` consistent with
+`To_Wide_Wide_String` on the same storage: a valid pair is one character in
+both. Substitution with U+FFFD for unpaired surrogates is the standard
 recovery strategy described by the Unicode Standard (Sec 3.9 "Unicode
 Encoding Forms").
 
-Backends whose internal character type cannot represent surrogates
-(e.g. `standard` with `Character` 0..255, `uxstring` which already
-guarantees scalar values) MAY satisfy this requirement vacuously.
+Backends whose storage cannot hold surrogates or out-of-range values
+(e.g. `standard` with `Character` 0..255, `vss`) MAY satisfy this
+requirement vacuously.
 <<<
 
 [/SECTION]
@@ -396,11 +410,11 @@ TITLE: Round-Trip Invariant
 UID: FUNC-UTF8-011
 STATUS: Approved
 PRIORITY: Must
-TITLE: From_UTF_8 of To_UTF_8 round-trip identity for surrogate-free values
+TITLE: From_UTF_8 of To_UTF_8 round-trip identity without unpaired surrogates
 STATEMENT: >>>
 For every `String_Type` value `S` representable by the backend AND
-containing no code units in the surrogate range U+D800-U+DFFF, the
-following SHALL hold:
+containing no unpaired surrogate code unit (a valid UTF-16 pair is a
+supplementary code point and is allowed), the following SHALL hold:
 
     let R := From_UTF_8 (To_UTF_8 (S))
     Is_Ok (R) = True
@@ -411,9 +425,10 @@ back SHALL reproduce the original value without loss, substitution, or
 modification.
 <<<
 COMMENT: >>>
-The round-trip invariant is restricted to surrogate-free inputs because
-FUNC-UTF8-007 mandates surrogate substitution by U+FFFD in `To_UTF_8`,
-which is intentionally lossy for surrogate code units.
+The round-trip invariant is restricted to inputs without unpaired surrogates
+because FUNC-UTF8-007 substitutes U+FFFD for an unpaired surrogate in
+`To_UTF_8`, which is intentionally lossy for those code units. A valid pair
+round-trips, since it is encoded as one supplementary code point.
 
 The inverse round-trip - `To_UTF_8 (Get_Value (From_UTF_8 (B)))` - is
 defined only for valid UTF-8 byte strings `B` and is NOT required to

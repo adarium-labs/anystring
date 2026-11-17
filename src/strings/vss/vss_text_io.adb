@@ -60,7 +60,8 @@ is
    function From_UTF_8 (Line : String) return String_Type is
    begin
       --  A valid line takes the shared decode path (U+FEFF kept, no library
-      --  conversion); an invalid line falls through to the Latin-1 reading below.
+      --  conversion). An invalid line falls through to the Latin-1 reading
+      --  below: a deliberate exception to R for files (docs/text-model.md, 9.4).
       if Anystrings_UTF_8_Validate.Validate (Line).Is_Ok then
          return VSS_Operations.From_Wide_Wide_String
            (Anystrings_UTF_8_Replace.Decode_Replacing (Line));

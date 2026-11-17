@@ -48,6 +48,7 @@ The library’s entry point for consumers is **`String_Types`**, not `Anystrings
 - Doc comments use the `--  @summary` / `--  @description` leading style (see `package Documentation` in the GPR).
 - Binder uses `-Es` for symbolic tracebacks.
 - Latin-1 is the canonical interchange encoding at the API edge: every backend implements `To_String_Type (String) -> String_Type` and `To_Latin_1 (String_Type) -> String`. UTF-8 / Unicode-code-point semantics are **backend-specific** (UXString = code points, Standard = bytes).
+- **Deviation (human decision, 2026-11-17):** on `uxstring`, `To_String_Type` reads the API-edge `String` as UTF-8, with ill-formed subparts replaced by U+FFFD (algorithm R), and never raises. The wide and vss back ends read Latin-1, and standard keeps the bytes. This cross-backend inconsistency is a follow-up issue; see `docs/text-model.md` section 9. Text_IO keeps its Latin-1 fallback for invalid lines on every back end, as a deliberate exception for files.
 - `String_Types` always exposes `"&"`, `"="`, `"<"`, `Length`, `Code_Point_Length`, `Element`, `Index`, `Slice`, `Trim`, `To_Lower/Upper`, `Starts_With`, `Ends_With`, `Hash`, `Contains`, `Is_Equals_Sign`, `Is_Dash`. Every new backend must rename-export this exact surface. `Code_Point_Length (S)` equals `To_Wide_Wide_String (S)'Length` for any stored value (linear, allocation-free).
 
 
