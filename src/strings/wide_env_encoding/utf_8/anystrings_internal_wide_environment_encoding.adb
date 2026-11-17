@@ -8,6 +8,7 @@
 with Ada.Strings.UTF_Encoding;
 with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
+with Anystrings_UTF_8_Replace;
 
 package body Anystrings_Internal_Wide_Environment_Encoding is
 
@@ -28,11 +29,12 @@ package body Anystrings_Internal_Wide_Environment_Encoding is
           (Item => To_Wide_String (Source), Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8, Output_BOM => False);
    end Encode;
 
+   --  Ingress: ill-formed UTF-8 becomes U+FFFD (algorithm R), a leading BOM is kept.
    function Decode_Wide (Source : String) return Ada.Strings.Wide_Unbounded.Unbounded_Wide_String is
    begin
       return
         Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String
-          (Ada.Strings.UTF_Encoding.Wide_Strings.Decode (Ada.Strings.UTF_Encoding.UTF_8_String (Source)));
+          (Anystrings_UTF_8_Replace.To_UTF_16 (Anystrings_UTF_8_Replace.Decode_Replacing (Source)));
    end Decode_Wide;
 
    function Can_Encode (Source : Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String) return Boolean is
@@ -49,11 +51,12 @@ package body Anystrings_Internal_Wide_Environment_Encoding is
           (Item => To_Wide_Wide_String (Source), Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8, Output_BOM => False);
    end Encode;
 
+   --  Ingress: ill-formed UTF-8 becomes U+FFFD (algorithm R), a leading BOM is kept.
    function Decode_Wide_Wide (Source : String) return Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String is
    begin
       return
         Ada.Strings.Wide_Wide_Unbounded.To_Unbounded_Wide_Wide_String
-          (Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Decode (Ada.Strings.UTF_Encoding.UTF_8_String (Source)));
+          (Anystrings_UTF_8_Replace.Decode_Replacing (Source));
    end Decode_Wide_Wide;
 
 end Anystrings_Internal_Wide_Environment_Encoding;

@@ -6,7 +6,9 @@
 -------------------------------------------------------------------------------
 
 with Ada.Environment_Variables;
+with Anystrings_UTF_8_Replace;
 with UXStrings; use UXStrings;
+with UXString_Operations;
 
 package body UXString_Environment
   with SPARK_Mode => Off
@@ -27,10 +29,10 @@ is
    --  Ingress: OS bytes are interpreted as UTF-8.
    function From_OS_String (Source : String) return String_Type is
    begin
-      return UXStrings.From_UTF_8 (Source);
-   exception
-      when others =>
-         return Null_String;
+      --  Ingress: ill-formed UTF-8 becomes U+FFFD (algorithm R). Total, so the
+      --  variable is always present with its value, never emptied.
+      return UXString_Operations.From_Wide_Wide_String
+        (Anystrings_UTF_8_Replace.Decode_Replacing (Source));
    end From_OS_String;
 
    function Get_Env (Name : String_Type) return String_Type is

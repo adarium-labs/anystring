@@ -111,6 +111,9 @@ is
    function To_Wide_Wide_String (Source : String_Type) return Wide_Wide_String
    is (UXString_Operations.To_Wide_Wide_String (Conv.To_UXString (Source)));
 
+   function Code_Point_Length (Source : String_Type) return Natural
+   is (UXString_Operations.Code_Point_Length (Conv.To_UXString (Source)));
+
    function From_Wide_Wide_String (Source : Wide_Wide_String) return String_Type
    is (Conv.From_UXString (UXString_Operations.From_Wide_Wide_String (Source)));
 

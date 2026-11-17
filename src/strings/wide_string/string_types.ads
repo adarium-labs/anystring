@@ -170,6 +170,11 @@ is
    function To_Wide_Wide_String (Source : String_Type) return Wide_Wide_String
    renames Wide_String_Operations.To_Wide_Wide_String;
 
+   --  @summary Number of code points To_Wide_Wide_String (Source) yields.
+   --  Equal to To_Wide_Wide_String (Source)'Length. Linear, allocation-free.
+   function Code_Point_Length (Source : String_Type) return Natural
+   renames Wide_String_Operations.Code_Point_Length;
+
    --  @summary Build a String_Type from a Wide_Wide_String. Total; never
    --  raises. Supplementary code-points become UTF-16 surrogate pairs;
    --  surrogate code-points and values greater than U+10FFFF are

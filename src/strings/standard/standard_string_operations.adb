@@ -7,7 +7,15 @@
 
 with Ada.Strings;
 with Ada.Strings.Fixed;
-with Ada.Strings.Wide_Wide_Unbounded;
+--  Ada.Strings.Unbounded.Aux exposes the buffer of an Unbounded_String without
+--  a copy, which Code_Point_Length needs to stay allocation-free. It is a GNAT
+--  internal unit; the warning it raises is accepted here and nowhere else.
+pragma Warnings (Off, "internal GNAT unit");
+pragma Warnings (Off, "non-portable");
+with Ada.Strings.Unbounded.Aux;
+pragma Warnings (On, "non-portable");
+pragma Warnings (On, "internal GNAT unit");
+with Anystrings_UTF_8_Replace;
 
 package body Standard_String_Operations is
 
@@ -34,7 +42,9 @@ package body Standard_String_Operations is
 
       Lead : constant Natural := Character'Pos (Buf (Start));
    begin
-      --  Default for malformed input: U+FFFD, single-byte resync.
+      --  Default for malformed input: U+FFFD, single-byte resync. This helper
+      --  serves the Latin-1 egress only; To_Wide_Wide_String and the ingress
+      --  paths use Anystrings_UTF_8_Replace (one U+FFFD per maximal subpart).
       Code_Point := 16#FFFD#;
       Step := 1;
 
@@ -251,106 +261,28 @@ package body Standard_String_Operations is
    end To_Latin_1_If_Possible;
 
    function To_Wide_Wide_String (Source : Unbounded_String) return Wide_Wide_String is
-      Buf         : constant String := To_String (Source);
-      Out_Buf     : Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String :=
-        Ada.Strings.Wide_Wide_Unbounded.Null_Unbounded_Wide_Wide_String;
-      --  Backend-chosen substitute for malformed UTF-8 sequences; matches
-      --  the choice made by From_Wide_Wide_String for invalid input.
-      Replacement : constant Wide_Wide_Character :=
-        Wide_Wide_Character'Val (Character'Pos ('?'));
-
-      function Is_Cont (C : Character) return Boolean
-      is (Character'Pos (C) in 16#80# .. 16#BF#);
-
-      I : Natural := Buf'First;
    begin
-      while I <= Buf'Last loop
-         declare
-            Lead : constant Natural := Character'Pos (Buf (I));
-         begin
-            if Lead <= 16#7F# then
-               --  1-byte ASCII.
-               Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Wide_Wide_Character'Val (Lead));
-               I := I + 1;
-
-            elsif Lead in 16#C2# .. 16#DF#
-              and then I + 1 <= Buf'Last
-              and then Is_Cont (Buf (I + 1))
-            then
-               --  2-byte sequence; encodes U+0080..U+07FF (overlong check
-               --  is unnecessary because C2 is the lowest valid lead).
-               Ada.Strings.Wide_Wide_Unbounded.Append
-                 (Out_Buf,
-                  Wide_Wide_Character'Val
-                    ((Lead mod 32) * 64
-                     + (Character'Pos (Buf (I + 1)) mod 64)));
-               I := I + 2;
-
-            elsif Lead in 16#E0# .. 16#EF#
-              and then I + 2 <= Buf'Last
-              and then Is_Cont (Buf (I + 1))
-              and then Is_Cont (Buf (I + 2))
-            then
-               --  3-byte sequence.
-               declare
-                  CP : constant Natural :=
-                    (Lead mod 16) * 4_096
-                    + (Character'Pos (Buf (I + 1)) mod 64) * 64
-                    + (Character'Pos (Buf (I + 2)) mod 64);
-               begin
-                  if CP < 16#0800# or else CP in 16#D800# .. 16#DFFF# then
-                     --  Overlong or surrogate code-point.
-                     Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Replacement);
-                  else
-                     Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Wide_Wide_Character'Val (CP));
-                  end if;
-               end;
-               I := I + 3;
-
-            elsif Lead in 16#F0# .. 16#F4#
-              and then I + 3 <= Buf'Last
-              and then Is_Cont (Buf (I + 1))
-              and then Is_Cont (Buf (I + 2))
-              and then Is_Cont (Buf (I + 3))
-            then
-               --  4-byte sequence.
-               declare
-                  CP : constant Natural :=
-                    (Lead mod 8) * 262_144
-                    + (Character'Pos (Buf (I + 1)) mod 64) * 4_096
-                    + (Character'Pos (Buf (I + 2)) mod 64) * 64
-                    + (Character'Pos (Buf (I + 3)) mod 64);
-               begin
-                  if CP < 16#10000# or else CP > 16#10_FFFF# then
-                     --  Overlong or out-of-range.
-                     Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Replacement);
-                  else
-                     Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Wide_Wide_Character'Val (CP));
-                  end if;
-               end;
-               I := I + 4;
-
-            else
-               --  Invalid lead byte, truncated multi-byte sequence, bare
-               --  continuation byte (0x80..0xBF), overlong starter
-               --  (0xC0/0xC1), or out-of-range lead (0xF5..0xFF). Emit one
-               --  U+FFFD and resync by a single byte.
-               Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Replacement);
-               I := I + 1;
-            end if;
-         end;
-      end loop;
-      return Ada.Strings.Wide_Wide_Unbounded.To_Wide_Wide_String (Out_Buf);
+      return Anystrings_UTF_8_Replace.Decode_Replacing (To_String (Source));
    end To_Wide_Wide_String;
+
+   function Code_Point_Length (Source : Unbounded_String) return Natural is
+      Buf : Ada.Strings.Unbounded.Aux.Big_String_Access;
+      Len : Natural;
+   begin
+      Ada.Strings.Unbounded.Aux.Get_String (Source, Buf, Len);
+      if Len = 0 then
+         return 0;
+      end if;
+      return Anystrings_UTF_8_Replace.Code_Point_Count (Buf (1 .. Len));
+   end Code_Point_Length;
 
    function From_Wide_Wide_String (Source : Wide_Wide_String) return Unbounded_String is
       Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
 
-      --  Backend-chosen substitute for surrogate / out-of-range code-points.
-      --  The standard backend stores UTF-8 bytes; using ASCII '?' matches the
-      --  existing To_Latin_1 lossy-transliteration substitute (FUNC-CONV-006)
-      --  and preserves length-invariants (1 code-point in, 1 byte out).
-      Default_Substitute : constant Natural := Character'Pos ('?');
+      --  Substitute for surrogate / out-of-range code-points (policy P): the
+      --  same U+FFFD as every other backend. It is stored as its UTF-8 encoding,
+      --  EF BF BD (three bytes), so one code point in gives three bytes out.
+      Default_Substitute : constant Natural := 16#FFFD#;
 
       procedure Encode_Code_Point (CP : Natural) is
       begin

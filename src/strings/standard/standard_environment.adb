@@ -7,6 +7,7 @@
 
 with Ada.Environment_Variables;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+with Anystrings_UTF_8_Replace;
 
 package body Standard_Environment with SPARK_Mode => Off is
 
@@ -14,7 +15,7 @@ package body Standard_Environment with SPARK_Mode => Off is
    begin
       if Ada.Environment_Variables.Exists (To_String (Name)) then
          return To_Unbounded_String
-                  (Ada.Environment_Variables.Value (To_String (Name)));
+                  (Anystrings_UTF_8_Replace.Replace_Ill_Formed (Ada.Environment_Variables.Value (To_String (Name))));
       else
          return Null_Unbounded_String;
       end if;
@@ -27,7 +28,7 @@ package body Standard_Environment with SPARK_Mode => Off is
    begin
       if Ada.Environment_Variables.Exists (To_String (Name)) then
          return To_Unbounded_String
-                  (Ada.Environment_Variables.Value (To_String (Name)));
+                  (Anystrings_UTF_8_Replace.Replace_Ill_Formed (Ada.Environment_Variables.Value (To_String (Name))));
       else
          return Default;
       end if;
@@ -73,7 +74,9 @@ package body Standard_Environment with SPARK_Mode => Off is
       procedure Process_Item (Name, Value : String) is
       begin
          begin
-            Process.all (To_Unbounded_String (Name), To_Unbounded_String (Value));
+            Process.all
+              (To_Unbounded_String (Anystrings_UTF_8_Replace.Replace_Ill_Formed (Name)),
+               To_Unbounded_String (Anystrings_UTF_8_Replace.Replace_Ill_Formed (Value)));
          exception
             when others => Ok := False;
          end;
@@ -90,8 +93,8 @@ package body Standard_Environment with SPARK_Mode => Off is
       procedure Process_Item (Name, Value : String) is
       begin
          declare
-            N : constant String_Type := To_Unbounded_String (Name);
-            V : constant String_Type := To_Unbounded_String (Value);
+            N : constant String_Type := To_Unbounded_String (Anystrings_UTF_8_Replace.Replace_Ill_Formed (Name));
+            V : constant String_Type := To_Unbounded_String (Anystrings_UTF_8_Replace.Replace_Ill_Formed (Value));
          begin
             if Include.all (N, V) then
                Process.all (N, V);

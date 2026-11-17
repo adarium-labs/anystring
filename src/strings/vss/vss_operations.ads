@@ -179,6 +179,10 @@ package VSS_Operations is
    --  Unicode scalar values.
    function To_Wide_Wide_String (Source : Virtual_String) return Wide_Wide_String;
 
+   --  @summary Number of code points To_Wide_Wide_String (Source) yields.
+   --  Virtual_String stores code points, so this is its character length.
+   function Code_Point_Length (Source : Virtual_String) return Natural renames Length;
+
    --  @summary Build a Virtual_String from a Wide_Wide_String.
    --
    --  @description

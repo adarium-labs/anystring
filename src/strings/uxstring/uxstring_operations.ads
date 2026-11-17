@@ -144,6 +144,10 @@ package UXString_Operations is
    --  no substitution is needed.
    function To_Wide_Wide_String (Source : UXString) return Wide_Wide_String;
 
+   --  @summary Number of code points To_Wide_Wide_String (Source) yields.
+   --  UXString stores code points, so this is its length (O(1) under UXS5).
+   function Code_Point_Length (Source : UXString) return Natural renames UXStrings.Length;
+
    --  @summary Build a UXString from a Wide_Wide_String.
    --
    --  @description

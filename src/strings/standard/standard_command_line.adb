@@ -12,19 +12,24 @@
 --  Ada.Command_Line is not SPARK-provable; this body is SPARK_Mode Off while
 --  the spec retains SPARK_Mode On (per tech-spec §7).
 
+with Anystrings_UTF_8_Replace;
+
 package body Standard_Command_Line with SPARK_Mode => Off is
 
    --  @relation FUNC-CMDLINE-001
    function Argument_Count return Natural is
      (Ada.Command_Line.Argument_Count);
 
+   --  Ill-formed UTF-8 is replaced by U+FFFD (algorithm R); a leading BOM is kept.
    --  @relation FUNC-CMDLINE-002, FUNC-CMDLINE-003, FUNC-CMDLINE-008
    function Argument (Number : Positive) return Ada.Strings.Unbounded.Unbounded_String is
-     (Ada.Strings.Unbounded.To_Unbounded_String (Ada.Command_Line.Argument (Number)));
+     (Ada.Strings.Unbounded.To_Unbounded_String
+        (Anystrings_UTF_8_Replace.Replace_Ill_Formed (Ada.Command_Line.Argument (Number))));
 
    --  @relation FUNC-CMDLINE-004, FUNC-CMDLINE-008
    function Command_Name return Ada.Strings.Unbounded.Unbounded_String is
-     (Ada.Strings.Unbounded.To_Unbounded_String (Ada.Command_Line.Command_Name));
+     (Ada.Strings.Unbounded.To_Unbounded_String
+        (Anystrings_UTF_8_Replace.Replace_Ill_Formed (Ada.Command_Line.Command_Name)));
 
    --  @relation FUNC-CMDLINE-006
    procedure Set_Exit_Status (Code : Exit_Status) is

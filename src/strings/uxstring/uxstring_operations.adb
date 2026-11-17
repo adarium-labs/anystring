@@ -178,8 +178,9 @@ package body UXString_Operations is
          return B in 16#80# .. 16#BF#;
       end Is_Cont;
 
-      --  The internal byte representation from UXStrings (UXS1 stores raw
-      --  bytes as given to From_UTF_8; UXS5 stores validated UTF-8).
+      --  UXStrings.To_UTF_8 encodes the stored code points (UXS5 stores an
+      --  array of code points, not UTF-8 bytes); the walk below re-checks the
+      --  encoding byte by byte and is the identity on well-formed UTF-8.
       Raw    : constant String := String (UXStrings.To_UTF_8 (Source));
       Result : Unbounded_String;
       I      : Positive;
@@ -266,74 +267,54 @@ package body UXString_Operations is
       return To_String (Result);
    end To_UTF_8;
 
+   --  Code points in one step: UXS5 stores the array of code points, so this
+   --  is a single copy (linear), not one Element call per index.
    function To_Wide_Wide_String (Source : UXString) return Wide_Wide_String is
-      Len    : constant Natural := Length (Source);
-      Result : Wide_Wide_String (1 .. Len);
    begin
-      for I in 1 .. Len loop
-         Result (I) := Wide_Wide_Character'Val
-           (Wide_Wide_Character'Pos (Element (Source, I)));
-      end loop;
-      return Result;
+      return UXStrings.To_Unicode (Source);
    end To_Wide_Wide_String;
 
-   function From_Wide_Wide_String (Source : Wide_Wide_String) return UXString is
-      Result      : UXString := Null_UXString;
-      Replacement : constant Unicode_Character := Unicode_Character'Val (16#FFFD#);
+   --  Build a UXString in one pass: each invalid code point (surrogate or above
+   --  U+10FFFF) becomes Substitute, or is dropped when Drop is set. The result is
+   --  built with a single UXStrings.From_Unicode, so no code point is stripped
+   --  (a leading U+FEFF is kept).
+   function Build_Policy
+     (Source : Wide_Wide_String; Substitute : Natural; Drop : Boolean) return UXString
+   is
+      Clean : Wide_Wide_String (1 .. Source'Length);
+      Count : Natural := 0;
    begin
-      for I in Source'Range loop
-         declare
-            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
-         begin
-            if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
-               Result := UXStrings."&" (Result, Replacement);
-            else
-               Result := UXStrings."&" (Result, Unicode_Character'Val (CP));
-            end if;
-         end;
+      for C of Source loop
+         if Is_Unicode_Scalar (C) then
+            Count := Count + 1;
+            Clean (Count) := C;
+         elsif not Drop then
+            Count := Count + 1;
+            Clean (Count) := Wide_Wide_Character'Val (Substitute);
+         end if;
       end loop;
-      return Result;
+      return UXStrings.From_Unicode (Clean (1 .. Count));
+   end Build_Policy;
+
+   function From_Wide_Wide_String (Source : Wide_Wide_String) return UXString is
+   begin
+      return Build_Policy (Source, 16#FFFD#, Drop => False);
    end From_Wide_Wide_String;
 
    function From_Wide_Wide_String_With_Substitute
      (Source     : Wide_Wide_String;
       Substitute : Wide_Wide_Character) return UXString
    is
-      Result : UXString := Null_UXString;
-      Sub    : constant Unicode_Character :=
-        Unicode_Character'Val (Wide_Wide_Character'Pos (Substitute));
    begin
-      for I in Source'Range loop
-         declare
-            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
-         begin
-            if CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF# then
-               Result := UXStrings."&" (Result, Sub);
-            else
-               Result := UXStrings."&" (Result, Unicode_Character'Val (CP));
-            end if;
-         end;
-      end loop;
-      return Result;
+      return Build_Policy (Source, Wide_Wide_Character'Pos (Substitute), Drop => False);
    end From_Wide_Wide_String_With_Substitute;
 
    function From_Wide_Wide_String_Skip_Invalid
      (Source : Wide_Wide_String) return UXString
    is
-      Result : UXString := Null_UXString;
    begin
-      for I in Source'Range loop
-         declare
-            CP : constant Natural := Wide_Wide_Character'Pos (Source (I));
-         begin
-            if not (CP in 16#D800# .. 16#DFFF# or else CP > 16#10_FFFF#) then
-               Result := UXStrings."&" (Result, Unicode_Character'Val (CP));
-            end if;
-         end;
-      end loop;
-      return Result;
+      return Build_Policy (Source, 16#FFFD#, Drop => True);
    end From_Wide_Wide_String_Skip_Invalid;
-
 
 
    ---------------------------------------------------------------------------

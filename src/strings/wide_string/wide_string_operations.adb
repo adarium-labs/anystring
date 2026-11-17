@@ -267,6 +267,31 @@ package body Wide_String_Operations is
       return Ada.Strings.Wide_Wide_Unbounded.To_Wide_Wide_String (Out_Buf);
    end To_Wide_Wide_String;
 
+   function Code_Point_Length (Source : Unbounded_Wide_String) return Natural is
+      Units : constant Natural := Ada.Strings.Wide_Unbounded.Length (Source);
+      I     : Natural := 1;
+      Count : Natural := 0;
+   begin
+      --  Same greedy pairing as To_Wide_Wide_String: a high surrogate followed
+      --  by a low surrogate is one code point; any other unit is one.
+      while I <= Units loop
+         declare
+            C : constant Natural := Wide_Character'Pos (Ada.Strings.Wide_Unbounded.Element (Source, I));
+         begin
+            if C in 16#D800# .. 16#DBFF# and then I < Units
+              and then Wide_Character'Pos (Ada.Strings.Wide_Unbounded.Element (Source, I + 1))
+                       in 16#DC00# .. 16#DFFF#
+            then
+               I := I + 2;
+            else
+               I := I + 1;
+            end if;
+         end;
+         Count := Count + 1;
+      end loop;
+      return Count;
+   end Code_Point_Length;
+
    function From_Wide_Wide_String
      (Source : Wide_Wide_String) return Unbounded_Wide_String
    is

@@ -6,6 +6,9 @@
 -------------------------------------------------------------------------------
 
 with Anystrings_Byte_Output;
+with Anystrings_UTF_8_Replace;
+with Anystrings_UTF_8_Validate;
+with Wide_Wide_String_Operations;
 with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 with Ada.Strings.Wide_Wide_Unbounded; use Ada.Strings.Wide_Wide_Unbounded;
 
@@ -41,9 +44,12 @@ is
    --  Code points of a UTF-8 line; an invalid line is taken as Latin-1.
    function From_UTF_8 (Line : String) return String_Type is
    begin
-      return To_Unbounded_Wide_Wide_String (WWS.Decode (Line));
-   exception
-      when UTF.Encoding_Error =>
+      --  A valid line takes the shared decode path (U+FEFF kept, no library
+      --  decoder); an invalid line falls through to the Latin-1 reading below.
+      if Anystrings_UTF_8_Validate.Validate (Line).Is_Ok then
+         return Wide_Wide_String_Operations.From_Wide_Wide_String
+                  (Anystrings_UTF_8_Replace.Decode_Replacing (Line));
+      end if;
          declare
             Result : Wide_Wide_String (Line'Range);
          begin

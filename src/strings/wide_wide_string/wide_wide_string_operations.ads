@@ -173,6 +173,11 @@ package Wide_Wide_String_Operations is
    function To_Wide_Wide_String
      (Source : Unbounded_Wide_Wide_String) return Wide_Wide_String;
 
+   --  @summary Number of code points To_Wide_Wide_String (Source) yields.
+   --  Storage is code-point-indexed here, so this is the storage length.
+   function Code_Point_Length (Source : Unbounded_Wide_Wide_String) return Natural
+   is (Ada.Strings.Wide_Wide_Unbounded.Length (Source));
+
    --  @summary Build storage from a Wide_Wide_String.
    --
    --  @description

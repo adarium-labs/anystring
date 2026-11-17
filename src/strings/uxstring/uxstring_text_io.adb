@@ -6,7 +6,9 @@
 -------------------------------------------------------------------------------
 
 with Anystrings_Byte_Output;
+with Anystrings_UTF_8_Replace;
 with Anystrings_UTF_8_Validate;
+with UXString_Operations;
 
 package body UXString_Text_IO
   with SPARK_Mode => Off
@@ -22,7 +24,8 @@ is
    --  later access), so the line is validated up front.
    function From_UTF_8 (Line : String) return String_Type
    is (if Anystrings_UTF_8_Validate.Validate (Line).Is_Ok
-       then UXStrings.From_UTF_8 (Line)
+       then UXString_Operations.From_Wide_Wide_String
+              (Anystrings_UTF_8_Replace.Decode_Replacing (Line))
        else UXStrings.From_Latin_1 (Line));
 
    procedure Create (File : in out File_Type; Mode : File_Mode := Out_File; Name : String := "") is

@@ -8,6 +8,8 @@
 with Ada.Environment_Variables;
 with VSS.Strings;
 with VSS.Strings.Conversions;
+with Anystrings_UTF_8_Replace;
+with VSS_Operations;
 
 package body VSS_Environment with SPARK_Mode => Off is
 
@@ -20,10 +22,10 @@ package body VSS_Environment with SPARK_Mode => Off is
 
    function From_UTF_8_String (Source : String) return String_Type is
    begin
-      return VSS.Strings.Conversions.To_Virtual_String (Source);
-   exception
-      when others =>
-         return Null_String;
+      --  Ingress: ill-formed UTF-8 becomes U+FFFD (algorithm R). Total, so the
+      --  variable is always present with its value, never emptied.
+      return VSS_Operations.From_Wide_Wide_String
+        (Anystrings_UTF_8_Replace.Decode_Replacing (Source));
    end From_UTF_8_String;
 
    function Get_Env (Name : String_Type) return String_Type is

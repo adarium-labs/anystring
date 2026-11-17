@@ -157,6 +157,11 @@ is
    function To_Wide_Wide_String (Source : String_Type) return Wide_Wide_String
    renames VSS_Operations.To_Wide_Wide_String;
 
+   --  @summary Number of code points To_Wide_Wide_String (Source) yields.
+   --  Equal to To_Wide_Wide_String (Source)'Length. Linear, allocation-free.
+   function Code_Point_Length (Source : String_Type) return Natural
+   renames VSS_Operations.Code_Point_Length;
+
    --  @summary Build a String_Type from a Wide_Wide_String. Total; never
    --  raises. Surrogate code-points and values greater than U+10FFFF are
    --  substituted with `Invalid_Substitute_Codepoint` before being

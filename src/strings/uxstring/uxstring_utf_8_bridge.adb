@@ -8,6 +8,8 @@
 with Ada.Strings.Unbounded;
 with Anystrings_UTF_8_Validate;
 with Anystrings_UTF_8;
+with Anystrings_UTF_8_Replace;
+with UXString_Operations;
 with UXStrings;
 
 package body UXString_UTF_8_Bridge is
@@ -15,24 +17,16 @@ package body UXString_UTF_8_Bridge is
    use UXString_UTF_8_Results;
    use Anystrings_UTF_8;
 
-   --  Build a UXString from validated UTF-8 bytes.
-   --
-   --  Source has already been validated as well-formed UTF-8 by the caller, so
-   --  we pass the bytes verbatim to UXStrings.From_UTF_8. This guarantees the
-   --  internal storage is valid UTF-8, which is required by UXStrings.Length
-   --  (and other accessors that walk the internal byte sequence via
-   --  Strings_Edit.Utf8) — a previous "compress U+0080..U+00FF to a single
-   --  Latin-1 byte" convention produced invalid UTF-8 storage and crashed
-   --  Length on any non-ASCII Latin-1-supplement code point.
+   --  Build a UXString from a Source already validated as UTF-8, through the
+   --  shared decoder: a leading U+FEFF is kept and no library decoder runs
+   --  (UXStrings.From_UTF_8 would strip a BOM). UXS5 stores code points, so no
+   --  UTF-8 storage invariant applies to the result.
    function Build_UXString_From_Valid_UTF_8
      (Source : String) return UXStrings.UXString
    is
    begin
-      if Source'Length = 0 then
-         return UXStrings.Null_UXString;
-      end if;
-      return UXStrings.From_UTF_8
-        (UXStrings.UTF_8_Character_Array (Source));
+      return UXString_Operations.From_Wide_Wide_String
+        (Anystrings_UTF_8_Replace.Decode_Replacing (Source));
    end Build_UXString_From_Valid_UTF_8;
 
    --  @relation FUNC-UTF8-008, FUNC-UTF8-009, FUNC-UTF8-010, FUNC-UTF8-011,

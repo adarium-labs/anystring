@@ -10,7 +10,8 @@
 --
 --  @description
 --  Delegates to Ada.Command_Line and ingests the returned Standard.String as
---  UTF-8 via UXStrings.From_UTF_8.  On Linux/macOS the Ada runtime passes
+--  UTF-8 with the shared replacement decoder (Anystrings_UTF_8_Replace), which
+--  never strips a BOM or raises.  On Linux/macOS the Ada runtime passes
 --  argv bytes through unchanged, so the string is already UTF-8 from the
 --  shell.  Ada.Wide_Wide_Command_Line (Ada RM A.15.1) would be more general
 --  but is not provided by GNAT 15.x; this UTF-8-decode path is the
@@ -22,6 +23,8 @@
 --            FUNC-CMDLINE-007, FUNC-CMDLINE-008, FUNC-CMDLINE-009
 
 with Ada.Command_Line;
+with Anystrings_UTF_8_Replace;
+with UXString_Operations;
 
 package body UXString_Command_Line with SPARK_Mode => Off is
 
@@ -31,13 +34,13 @@ package body UXString_Command_Line with SPARK_Mode => Off is
    function Argument (Number : Positive) return UXStrings.UXString is
       Raw : constant String := Ada.Command_Line.Argument (Number);
    begin
-      return UXStrings.From_UTF_8 (UXStrings.UTF_8_Character_Array (Raw));
+      return UXString_Operations.From_Wide_Wide_String (Anystrings_UTF_8_Replace.Decode_Replacing (Raw));
    end Argument;
 
    function Command_Name return UXStrings.UXString is
       Raw : constant String := Ada.Command_Line.Command_Name;
    begin
-      return UXStrings.From_UTF_8 (UXStrings.UTF_8_Character_Array (Raw));
+      return UXString_Operations.From_Wide_Wide_String (Anystrings_UTF_8_Replace.Decode_Replacing (Raw));
    end Command_Name;
 
    procedure Set_Exit_Status (Code : Exit_Status) is

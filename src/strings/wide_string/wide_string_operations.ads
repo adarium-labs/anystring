@@ -181,6 +181,14 @@ package Wide_String_Operations is
    function To_Wide_Wide_String
      (Source : Unbounded_Wide_String) return Wide_Wide_String;
 
+   --  @summary Number of code points To_Wide_Wide_String (Source) yields.
+   --
+   --  @description
+   --  Equal to To_Wide_Wide_String (Source)'Length: a valid surrogate pair
+   --  counts as one code point, every other code unit as one (a lone surrogate
+   --  is one U+FFFD). Linear, allocation-free.
+   function Code_Point_Length (Source : Unbounded_Wide_String) return Natural;
+
    --  @summary Encode a Wide_Wide_String as the UTF-16 storage.
    --
    --  @description

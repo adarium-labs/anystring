@@ -183,6 +183,11 @@ is
    function To_Wide_Wide_String (Source : String_Type) return Wide_Wide_String
    renames Standard_String_Operations.To_Wide_Wide_String;
 
+   --  @summary Number of code points To_Wide_Wide_String (Source) yields.
+   --  Equal to To_Wide_Wide_String (Source)'Length. Linear, allocation-free.
+   function Code_Point_Length (Source : String_Type) return Natural
+   renames Standard_String_Operations.Code_Point_Length;
+
    --  @summary Build a String_Type from a Wide_Wide_String. Total; never
    --  raises. Surrogate code-points and values greater than U+10FFFF are
    --  substituted with `Invalid_Substitute_Codepoint` before being embedded
@@ -191,13 +196,13 @@ is
    renames Standard_String_Operations.From_Wide_Wide_String;
 
    --  @summary The Unicode code-point this backend emits when
-   --  `From_Wide_Wide_String` (or any UTF-8 decode) encounters an invalid
-   --  code-point (surrogate, > U+10FFFF, or malformed UTF-8 sequence).
+   --  `From_Wide_Wide_String` encounters an invalid code-point (surrogate or
+   --  > U+10FFFF). The same U+FFFD as every other backend.
    --  @description
-   --  The standard backend stores UTF-8 bytes and uses ASCII '?'
-   --  (U+003F) — consistent with `To_Latin_1` lossy transliteration, and
-   --  length-preserving under both Latin-1 and UTF-8 encodings.
-   Invalid_Substitute_Codepoint : constant Wide_Wide_Character := Wide_Wide_Character'Val (Character'Pos ('?'));
+   --  The standard backend stores UTF-8 bytes, so U+FFFD is stored as its
+   --  three-byte encoding EF BF BD. One code point in gives three bytes out:
+   --  the substitute is not length-preserving in bytes.
+   Invalid_Substitute_Codepoint : constant Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#);
 
    --  ----- Wide_Wide_String boundary - per-call invalid-code-point policy -----
    --  (Fix 2 Tier 2)

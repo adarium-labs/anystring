@@ -9,12 +9,12 @@
 --
 --  @description
 --  Calls Ada.Command_Line and decodes the returned Standard.String as UTF-8
---  via Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Decode (Ada 2012, ARM A.4.11).
+--  with the shared replacement decoder (Anystrings_UTF_8_Replace).
 --  Ada.Wide_Wide_Command_Line (Ada RM A.15.1) is Ada 2022 and unavailable under
 --  -gnat2012; this is the encoding-equivalent Ada 2012 alternative.
 --  Ada.Command_Line is not SPARK-provable; this body is SPARK_Mode Off.
 
-with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
+with Anystrings_UTF_8_Replace;
 
 package body Wide_Wide_Command_Line with SPARK_Mode => Off is
 
@@ -28,7 +28,7 @@ package body Wide_Wide_Command_Line with SPARK_Mode => Off is
       return Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String
    is
      (Ada.Strings.Wide_Wide_Unbounded.To_Unbounded_Wide_Wide_String
-        (Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Decode
+        (Anystrings_UTF_8_Replace.Decode_Replacing
            (Ada.Command_Line.Argument (Number))));
 
    --  @relation FUNC-CMDLINE-004, FUNC-CMDLINE-008
@@ -36,7 +36,7 @@ package body Wide_Wide_Command_Line with SPARK_Mode => Off is
      return Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String
    is
      (Ada.Strings.Wide_Wide_Unbounded.To_Unbounded_Wide_Wide_String
-        (Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Decode
+        (Anystrings_UTF_8_Replace.Decode_Replacing
            (Ada.Command_Line.Command_Name)));
 
    --  @relation FUNC-CMDLINE-006

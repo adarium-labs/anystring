@@ -6,6 +6,9 @@
 -------------------------------------------------------------------------------
 
 with Anystrings_Byte_Output;
+with Anystrings_UTF_8_Replace;
+with Anystrings_UTF_8_Validate;
+with VSS_Operations;
 with VSS.Strings.Conversions;
 
 package body VSS_Text_IO
@@ -56,17 +59,20 @@ is
    --  Constraint_Error "Ill-formed UTF-8 data") is taken as Latin-1.
    function From_UTF_8 (Line : String) return String_Type is
    begin
-      return VSS.Strings.Conversions.To_Virtual_String (Line);
-   exception
-      when Constraint_Error =>
-         declare
-            Result : Wide_Wide_String (Line'Range);
-         begin
-            for I in Line'Range loop
-               Result (I) := Wide_Wide_Character'Val (Character'Pos (Line (I)));
-            end loop;
-            return VSS.Strings.To_Virtual_String (Result);
-         end;
+      --  A valid line takes the shared decode path (U+FEFF kept, no library
+      --  conversion); an invalid line falls through to the Latin-1 reading below.
+      if Anystrings_UTF_8_Validate.Validate (Line).Is_Ok then
+         return VSS_Operations.From_Wide_Wide_String
+           (Anystrings_UTF_8_Replace.Decode_Replacing (Line));
+      end if;
+      declare
+         Result : Wide_Wide_String (Line'Range);
+      begin
+         for I in Line'Range loop
+            Result (I) := Wide_Wide_Character'Val (Character'Pos (Line (I)));
+         end loop;
+         return VSS.Strings.To_Virtual_String (Result);
+      end;
    end From_UTF_8;
 
    function Get_Line return String_Type is

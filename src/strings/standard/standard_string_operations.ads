@@ -199,13 +199,17 @@ package Standard_String_Operations is
    --  @summary Decode the UTF-8 storage as a Wide_Wide_String of code-points.
    --
    --  @description
-   --  Total; never raises. Walks the stored UTF-8 bytes per RFC 3629 and
-   --  emits one Wide_Wide_Character per decoded scalar value. Malformed
-   --  sequences (invalid lead byte, truncated sequence, invalid
-   --  continuation, overlong encoding, surrogate code-point, value
-   --  greater than U+10FFFF) yield a single U+FFFD REPLACEMENT CHARACTER
-   --  and the decoder resynchronises on the next byte.
+   --  Total; never raises. Decodes the stored UTF-8 bytes with the shared
+   --  replacement algorithm (Anystrings_UTF_8_Replace.Decode_Replacing):
+   --  one U+FFFD per maximal ill-formed subpart (Unicode section 3.9).
    function To_Wide_Wide_String (Source : Unbounded_String) return Wide_Wide_String;
+
+   --  @summary Number of code points To_Wide_Wide_String (Source) yields.
+   --
+   --  @description
+   --  Equal to To_Wide_Wide_String (Source)'Length for any stored bytes.
+   --  Linear, allocation-free.
+   function Code_Point_Length (Source : Unbounded_String) return Natural;
 
    --  @summary Encode a Wide_Wide_String as UTF-8 storage.
    --
