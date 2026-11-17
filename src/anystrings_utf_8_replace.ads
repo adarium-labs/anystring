@@ -82,6 +82,23 @@ is
      Pre  => Source'Length <= Natural'Last / 3,
      Post => Replace_Ill_Formed'Result'Length <= 3 * Source'Length;
 
+   --  @summary Number of code points From_UTF_16 (Source) produces.
+   --  @description A high surrogate followed by a low surrogate is one code
+   --  point; every other unit (a lone surrogate included) is one. Linear and
+   --  allocation-free. Source may end at Positive'Last.
+   function UTF_16_Scalar_Count (Source : Wide_String) return Natural
+   with
+     Post => UTF_16_Scalar_Count'Result <= Source'Length;
+
+   --  @summary Code points of a UTF-16 string. A valid surrogate pair is one
+   --  code point; a lone surrogate is U+FFFD; every other unit is itself.
+   --  @description From_UTF_16 (Source)'Length = UTF_16_Scalar_Count (Source).
+   --  Total (it never raises for any Wide_String); Source may end at
+   --  Positive'Last. Allocates the result (Storage_Error if that fails).
+   function From_UTF_16 (Source : Wide_String) return Wide_Wide_String
+   with
+     Post => From_UTF_16'Result'Length <= Source'Length;
+
    --  @summary UTF-16 code units of Source. A surrogate or a value above
    --  U+10FFFF is replaced by U+FFFD first (policy P); a leading U+FEFF is kept.
    --  @description Pre keeps 2 * Source'Length within Natural, so the Post is

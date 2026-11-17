@@ -33,16 +33,21 @@ is
             subtype Low is Wide_Character range Wide_Character'Val (16#DC00#) .. Wide_Character'Val (16#DFFF#);
             Clean : Wide_String := Value;
             I     : Natural := Clean'First;
+            Step  : Positive;
          begin
+            --  The step that consumes the rest of Clean ends the loop, so I + Step
+            --  is never formed past Clean'Last (which can be Positive'Last).
             while I <= Clean'Last loop
                if Clean (I) in High and then I < Clean'Last and then Clean (I + 1) in Low then
-                  I := I + 2;
+                  Step := 2;
                else
                   if Clean (I) in High | Low then
                      Clean (I) := REPLACEMENT;
                   end if;
-                  I := I + 1;
+                  Step := 1;
                end if;
+               exit when Step > Clean'Last - I;
+               I := I + Step;
             end loop;
             return WS.Encode (Clean);
          end;

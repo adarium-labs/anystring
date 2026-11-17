@@ -212,36 +212,43 @@ package body UXString_Operations is
       Raw    : constant String := Sanitised_UTF_8 (Source);
       Result : Unbounded_String;
       I      : Positive;
+      Step   : Positive;   --  bytes consumed at I
       Lead   : Natural;
       CP     : Natural;
+      --  Bytes after I. I <= Raw'Last, so this is never negative, and every
+      --  position I + K with K <= Room is inside Raw. The tests below read
+      --  "Room >= K", never "I + K <= Raw'Last", which overflows when Raw'Last
+      --  is Positive'Last.
+      Room   : Natural;
    begin
       if Raw'Length = 0 then
          return "";
       end if;
 
       I := Raw'First;
-      while I <= Raw'Last loop
+      loop
          Lead := Character'Pos (Raw (I));
+         Room := Raw'Last - I;
 
          if Lead <= 16#7F# then
             --  ASCII single byte — always valid UTF-8, pass through.
             Append (Result, Raw (I));
-            I := I + 1;
+            Step := 1;
 
          elsif Lead in 16#C2# .. 16#DF# then
             --  2-byte sequence: valid if followed by one continuation byte.
-            if I + 1 <= Raw'Last and then Is_Cont (Raw (I + 1)) then
+            if Room >= 1 and then Is_Cont (Raw (I + 1)) then
                Append (Result, Raw (I .. I + 1));
-               I := I + 2;
+               Step := 2;
             else
                --  Truncated or invalid: treat lead as Latin-1 code point.
                Append (Result, Encode_Latin_1 (Lead));
-               I := I + 1;
+               Step := 1;
             end if;
 
          elsif Lead in 16#E0# .. 16#EF# then
             --  3-byte sequence: valid if followed by two continuation bytes.
-            if I + 2 <= Raw'Last and then Is_Cont (Raw (I + 1)) and then Is_Cont (Raw (I + 2)) then
+            if Room >= 2 and then Is_Cont (Raw (I + 1)) and then Is_Cont (Raw (I + 2)) then
                CP :=
                  (Lead mod 16)
                  * 4_096
@@ -253,16 +260,16 @@ package body UXString_Operations is
                else
                   Append (Result, Raw (I .. I + 2));
                end if;
-               I := I + 3;
+               Step := 3;
             else
                --  Truncated: treat lead as Latin-1 code point.
                Append (Result, Encode_Latin_1 (Lead));
-               I := I + 1;
+               Step := 1;
             end if;
 
          elsif Lead in 16#F0# .. 16#F4# then
             --  4-byte sequence: valid if followed by three continuation bytes.
-            if I + 3 <= Raw'Last
+            if Room >= 3
               and then Is_Cont (Raw (I + 1))
               and then Is_Cont (Raw (I + 2))
               and then Is_Cont (Raw (I + 3))
@@ -278,18 +285,23 @@ package body UXString_Operations is
                else
                   Append (Result, Raw (I .. I + 3));
                end if;
-               I := I + 4;
+               Step := 4;
             else
                Append (Result, Encode_Latin_1 (Lead));
-               I := I + 1;
+               Step := 1;
             end if;
 
          else
             --  0x80..0xBF (bare continuation), 0xC0..0xC1 (always overlong),
             --  0xF5..0xFF (out-of-range lead): treat as Latin-1 code point.
             Append (Result, Encode_Latin_1 (Lead));
-            I := I + 1;
+            Step := 1;
          end if;
+
+         --  The step that consumed the rest of Raw ends the loop; otherwise
+         --  I + Step is at most Raw'Last.
+         exit when Step > Room;
+         I := I + Step;
       end loop;
 
       return To_String (Result);

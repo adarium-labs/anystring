@@ -42,6 +42,8 @@ package body Standard_String_Operations is
 
       Lead : constant Natural := Character'Pos (Buf (Start));
    begin
+      --  Every test of the form "Buf'Last - Start >= K" below keeps Start + K from
+      --  being formed past Buf'Last (it overflows when Buf'Last is Positive'Last).
       --  Default for malformed input: U+FFFD, single-byte resync. This helper
       --  serves the Latin-1 egress only; To_Wide_Wide_String and the ingress
       --  paths use Anystrings_UTF_8_Replace (one U+FFFD per maximal subpart).
@@ -53,13 +55,13 @@ package body Standard_String_Operations is
          Code_Point := Lead;
          Step := 1;
 
-      elsif Lead in 16#C2# .. 16#DF# and then Start + 1 <= Buf'Last and then Is_Cont (Buf (Start + 1)) then
+      elsif Lead in 16#C2# .. 16#DF# and then Buf'Last - Start >= 1 and then Is_Cont (Buf (Start + 1)) then
          --  2-byte sequence: 110xxxxx 10xxxxxx — encodes U+0080..U+07FF.
          Code_Point := (Lead mod 32) * 64 + (Character'Pos (Buf (Start + 1)) mod 64);
          Step := 2;
 
       elsif Lead in 16#E0# .. 16#EF#
-        and then Start + 2 <= Buf'Last
+        and then Buf'Last - Start >= 2
         and then Is_Cont (Buf (Start + 1))
         and then Is_Cont (Buf (Start + 2))
       then
@@ -77,7 +79,7 @@ package body Standard_String_Operations is
          end if;
 
       elsif Lead in 16#F0# .. 16#F4#
-        and then Start + 3 <= Buf'Last
+        and then Buf'Last - Start >= 3
         and then Is_Cont (Buf (Start + 1))
         and then Is_Cont (Buf (Start + 2))
         and then Is_Cont (Buf (Start + 3))
@@ -226,6 +228,7 @@ package body Standard_String_Operations is
             else
                Ada.Strings.Unbounded.Append (Out_Buf, '?');
             end if;
+            exit when Step > Buf'Last - I;
             I := I + Step;
          end;
       end loop;
@@ -251,6 +254,7 @@ package body Standard_String_Operations is
                Ada.Strings.Unbounded.Append (Out_Buf, '?');
                Repls := Repls + 1;
             end if;
+            exit when Step > Buf'Last - I;
             I := I + Step;
          end;
       end loop;

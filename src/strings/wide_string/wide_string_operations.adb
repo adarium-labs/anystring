@@ -9,11 +9,10 @@ with Ada.Strings.Wide_Fixed;
 with Ada.Strings;
 with Ada.Strings.Unbounded;
 with Ada.Strings.UTF_Encoding;
-with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
-with Ada.Strings.Wide_Wide_Unbounded;
 with Ada.Wide_Characters.Handling;
 with Anystrings_Conv;
+with Anystrings_UTF_8_Replace;
 
 package body Wide_String_Operations is
 
@@ -192,11 +191,13 @@ package body Wide_String_Operations is
       return Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String ([1 => C]);
    end From_Character;
 
+   --  Code points first: a valid surrogate pair is one code point (encoded as
+   --  four bytes), a lone surrogate is one U+FFFD. Encoding the raw code units
+   --  would turn every surrogate, pairs included, into U+FFFD. The pairing is
+   --  Anystrings_UTF_8_Replace.From_UTF_16, which never forms an index past the
+   --  last unit.
    --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007, NFR-UTF8-007
    function To_UTF_8 (Source : Unbounded_Wide_String) return String is
-      --  Code points first: a valid surrogate pair is one code point (encoded
-      --  as four bytes), a lone surrogate is one U+FFFD. Encoding the raw
-      --  code units would turn every surrogate, pairs included, into U+FFFD.
       Scalars : constant Wide_Wide_String := To_Wide_Wide_String (Source);
    begin
       return
@@ -205,75 +206,35 @@ package body Wide_String_Operations is
    end To_UTF_8;
 
    function To_Wide_Wide_String
-     (Source : Unbounded_Wide_String) return Wide_Wide_String
-   is
-      WS : constant Wide_String :=
-        Ada.Strings.Wide_Unbounded.To_Wide_String (Source);
-      Out_Buf : Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String :=
-        Ada.Strings.Wide_Wide_Unbounded.Null_Unbounded_Wide_Wide_String;
-      Replacement : constant Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#);
-      I : Natural := WS'First;
+     (Source : Unbounded_Wide_String) return Wide_Wide_String is
    begin
-      while I <= WS'Last loop
-         declare
-            CP : constant Natural := Wide_Character'Pos (WS (I));
-         begin
-            if CP in 16#D800# .. 16#DBFF# then
-               --  High surrogate; expect a low surrogate to follow.
-               if I + 1 <= WS'Last
-                 and then Wide_Character'Pos (WS (I + 1)) in 16#DC00# .. 16#DFFF#
-               then
-                  declare
-                     Low_CP : constant Natural :=
-                       Wide_Character'Pos (WS (I + 1));
-                     Scalar : constant Natural :=
-                       16#10000# + (CP - 16#D800#) * 16#400# + (Low_CP - 16#DC00#);
-                  begin
-                     Ada.Strings.Wide_Wide_Unbounded.Append
-                       (Out_Buf, Wide_Wide_Character'Val (Scalar));
-                  end;
-                  I := I + 2;
-               else
-                  --  Lone or mismatched high surrogate.
-                  Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Replacement);
-                  I := I + 1;
-               end if;
-            elsif CP in 16#DC00# .. 16#DFFF# then
-               --  Lone low surrogate.
-               Ada.Strings.Wide_Wide_Unbounded.Append (Out_Buf, Replacement);
-               I := I + 1;
-            else
-               --  Regular BMP code unit.
-               Ada.Strings.Wide_Wide_Unbounded.Append
-                 (Out_Buf, Wide_Wide_Character'Val (CP));
-               I := I + 1;
-            end if;
-         end;
-      end loop;
-      return Ada.Strings.Wide_Wide_Unbounded.To_Wide_Wide_String (Out_Buf);
+      return Anystrings_UTF_8_Replace.From_UTF_16 (Ada.Strings.Wide_Unbounded.To_Wide_String (Source));
    end To_Wide_Wide_String;
 
+   --  Same pairing rule as Anystrings_UTF_8_Replace.UTF_16_Scalar_Count, read
+   --  through Element so that no copy of the storage is made (the allocation-free
+   --  contract of Code_Point_Length).
    function Code_Point_Length (Source : Unbounded_Wide_String) return Natural is
       Units : constant Natural := Ada.Strings.Wide_Unbounded.Length (Source);
-      I     : Natural := 1;
+      I     : Positive;
       Count : Natural := 0;
+      Step  : Positive;
    begin
-      --  Same greedy pairing as To_Wide_Wide_String: a high surrogate followed
-      --  by a low surrogate is one code point; any other unit is one.
-      while I <= Units loop
-         declare
-            C : constant Natural := Wide_Character'Pos (Ada.Strings.Wide_Unbounded.Element (Source, I));
-         begin
-            if C in 16#D800# .. 16#DBFF# and then I < Units
+      if Units = 0 then
+         return 0;
+      end if;
+      I := 1;
+      loop
+         Step :=
+           (if Wide_Character'Pos (Ada.Strings.Wide_Unbounded.Element (Source, I)) in 16#D800# .. 16#DBFF#
+              and then I < Units
               and then Wide_Character'Pos (Ada.Strings.Wide_Unbounded.Element (Source, I + 1))
                        in 16#DC00# .. 16#DFFF#
-            then
-               I := I + 2;
-            else
-               I := I + 1;
-            end if;
-         end;
+            then 2
+            else 1);
          Count := Count + 1;
+         exit when Step > Units - I;
+         I := I + Step;
       end loop;
       return Count;
    end Code_Point_Length;

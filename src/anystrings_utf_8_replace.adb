@@ -215,6 +215,72 @@ is
       end;
    end Replace_Ill_Formed;
 
+   --  Width in code units of the code point that starts at Source (I): 2 for a
+   --  high surrogate followed by a low surrogate, 1 for every other unit. The
+   --  test I < Source'Last comes before I + 1 is formed, so no index is built
+   --  past Source'Last (which can be Positive'Last).
+   function UTF_16_Width (Source : Wide_String; I : Integer) return Positive is
+   begin
+      if Wide_Character'Pos (Source (I)) in 16#D800# .. 16#DBFF#
+        and then I < Source'Last
+        and then Wide_Character'Pos (Source (I + 1)) in 16#DC00# .. 16#DFFF#
+      then
+         return 2;
+      end if;
+      return 1;
+   end UTF_16_Width;
+
+   function UTF_16_Scalar_Count (Source : Wide_String) return Natural is
+      Count : Natural := 0;
+      I     : Integer;
+      Step  : Positive;
+   begin
+      if Source'Length = 0 then
+         return 0;
+      end if;
+      I := Source'First;
+      loop
+         Step  := UTF_16_Width (Source, I);
+         Count := Count + 1;
+         exit when Step > Source'Last - I;
+         I := I + Step;
+      end loop;
+      return Count;
+   end UTF_16_Scalar_Count;
+
+   function From_UTF_16 (Source : Wide_String) return Wide_Wide_String is
+      Result : Wide_Wide_String (1 .. UTF_16_Scalar_Count (Source));
+      J      : Natural := 0;
+      I      : Integer;
+      Step   : Positive;
+   begin
+      if Source'Length = 0 then
+         return Result;
+      end if;
+      I := Source'First;
+      loop
+         Step := UTF_16_Width (Source, I);
+         J    := J + 1;
+         declare
+            CP : constant Natural := Wide_Character'Pos (Source (I));
+         begin
+            if Step = 2 then
+               Result (J) :=
+                 Wide_Wide_Character'Val
+                   (16#10000# + (CP - 16#D800#) * 16#400#
+                    + (Wide_Character'Pos (Source (I + 1)) - 16#DC00#));
+            elsif CP in 16#D800# .. 16#DFFF# then
+               Result (J) := Wide_Wide_Character'Val (16#FFFD#);   --  lone surrogate
+            else
+               Result (J) := Wide_Wide_Character'Val (CP);
+            end if;
+         end;
+         exit when Step > Source'Last - I;
+         I := I + Step;
+      end loop;
+      return Result;
+   end From_UTF_16;
+
    function To_UTF_16 (Source : Wide_Wide_String) return Wide_String is
       Units : Natural := 0;
    begin
