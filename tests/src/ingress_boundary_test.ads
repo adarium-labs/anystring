@@ -46,6 +46,14 @@ private
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 
    --  @relation FUNC-UTF8-007
+   procedure Test_UTF_16_At_Top_Of_Index_Range
+     (T : in out AUnit.Test_Cases.Test_Case'Class);
+
+   --  @relation FUNC-UTF8-007
+   procedure Test_Code_Point_Length_And_To_UTF_8_At_The_End
+     (T : in out AUnit.Test_Cases.Test_Case'Class);
+
+   --  @relation FUNC-UTF8-007
    procedure Test_To_String_Type_Replaces_Latin_1_Bytes
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 
