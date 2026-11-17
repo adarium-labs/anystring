@@ -47,6 +47,8 @@ with Empty_String_Default_Test;
 with Length_Contracts_Test;
 with Ingress_Replace_Test;
 with Ingress_Argv_Test;
+with Ingress_Boundary_Test;
+with Ingress_Env_Test;
 with Width_Core_Test;
 with Width_Clusters_Test;
 with Width_Helpers_Test;
@@ -75,6 +77,8 @@ procedure Anystrings_Test_Runner is
       S.Add_Test (new Length_Contracts_Test.Test_Case);
       S.Add_Test (new Ingress_Replace_Test.Test_Case);
       S.Add_Test (new Ingress_Argv_Test.Test_Case);
+      S.Add_Test (new Ingress_Boundary_Test.Test_Case);
+      S.Add_Test (new Ingress_Env_Test.Test_Case);
       S.Add_Test (new Empty_String_Default_Test.Test_Case);
       S.Add_Test (new Cmdline_Test.Test_Case);
       S.Add_Test (new Filesystem_Test.Test_Case);

@@ -5,6 +5,9 @@
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
+with Ada.Characters.Latin_1;
+with Ada.Text_IO;
+with GNAT.Strings;
 with String_Types;
 
 package body Ingress_Vectors is
@@ -126,6 +129,45 @@ package body Ingress_Vectors is
          when others => return Len_Other;
       end case;
    end Expected_Length;
+
+   procedure Run_Capture
+     (Program     : String;
+      Args        : GNAT.OS_Lib.Argument_List;
+      Output      : out Ada.Strings.Unbounded.Unbounded_String;
+      Return_Code : out Integer;
+      Success     : out Boolean)
+   is
+      use GNAT.OS_Lib;
+      FD   : File_Descriptor;
+      Name : GNAT.Strings.String_Access;
+      File : Ada.Text_IO.File_Type;
+      Done : Boolean;
+   begin
+      Create_Temp_File (FD, Name);
+      if FD = Invalid_FD then
+         raise Program_Error with "Run_Capture: cannot create a temporary output file";
+      end if;
+      Close (FD);
+
+      Spawn
+        (Program_Name => Program,
+         Args         => Args,
+         Output_File  => Name.all,
+         Success      => Success,
+         Return_Code  => Return_Code,
+         Err_To_Out   => True);
+
+      Output := Ada.Strings.Unbounded.Null_Unbounded_String;
+      Ada.Text_IO.Open (File, Ada.Text_IO.In_File, Name.all);
+      while not Ada.Text_IO.End_Of_File (File) loop
+         Ada.Strings.Unbounded.Append (Output, Ada.Text_IO.Get_Line (File));
+         Ada.Strings.Unbounded.Append (Output, Ada.Characters.Latin_1.LF);
+      end loop;
+      Ada.Text_IO.Close (File);
+
+      Delete_File (Name.all, Done);
+      GNAT.Strings.Free (Name);
+   end Run_Capture;
 
    --  KI-046 Table I, transcribed from the study (section 7.6). Length columns:
    --  standard / wide_string / the other three back ends.

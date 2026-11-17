@@ -16,6 +16,9 @@
 --  classes for Length: 1 = standard (bytes), 2 = wide_string (UTF-16 units),
 --  3 = wide_wide_string, uxstring and vss (code points).
 
+with Ada.Strings.Unbounded;
+with GNAT.OS_Lib;
+
 package Ingress_Vectors is
 
    --  Visits one Table I row. Valid is True when the row is well-formed UTF-8
@@ -49,5 +52,17 @@ package Ingress_Vectors is
 
    --  The expected Length of a value on the running backend.
    function Expected_Length (Len_Std, Len_Wide, Len_Other : Natural) return Natural;
+
+   --  Runs Program with Args as a child process and returns its standard
+   --  output and error (LF-terminated lines) and its exit code. The output
+   --  goes to a temporary file with a name unique to this call (created with
+   --  GNAT.OS_Lib.Create_Temp_File in the current directory), and the file is
+   --  deleted before return. Concurrent runs cannot collide on the name.
+   procedure Run_Capture
+     (Program     : String;
+      Args        : GNAT.OS_Lib.Argument_List;
+      Output      : out Ada.Strings.Unbounded.Unbounded_String;
+      Return_Code : out Integer;
+      Success     : out Boolean);
 
 end Ingress_Vectors;

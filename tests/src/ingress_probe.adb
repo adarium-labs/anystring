@@ -11,10 +11,12 @@
 --  "ARG <code points> <Code_Point_Length> <Length>". Code points are uppercase
 --  hexadecimal, "-" when empty (see Ingress_Vectors.Hex_Image).
 
+with Ada.Command_Line;
 with Ada.Strings.Fixed;
 with Ada.Text_IO;
 with String_Types;
 with String_Types.Command_Line;
+with Ingress_Env_Probe;
 with Ingress_Vectors;
 
 procedure Ingress_Probe is
@@ -34,6 +36,11 @@ procedure Ingress_Probe is
    end Report;
 
 begin
-   Report ("CMD", String_Types.Command_Line.Command_Name);
-   Report ("ARG", String_Types.Command_Line.Argument (1));
+   if Ada.Command_Line.Argument_Count = 0 then
+      --  Environment mode (no arguments): see Ingress_Env_Probe.
+      Ingress_Env_Probe.Run;
+   else
+      Report ("CMD", String_Types.Command_Line.Command_Name);
+      Report ("ARG", String_Types.Command_Line.Argument (1));
+   end if;
 end Ingress_Probe;
