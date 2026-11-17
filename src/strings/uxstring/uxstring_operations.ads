@@ -69,7 +69,9 @@ package UXString_Operations is
    ---------------------------------------------------------------------------
 
    --  Convert from String to UXString (assumes UTF-8 encoding)
-   function To_UXString (Source : String) return UXString renames UXStrings.From_UTF_8;
+   --  Valid UTF-8 is decoded with the shared replacement decoder; any other input
+   --  is read as Latin-1 (one code point per byte), the API-edge convention.
+   function To_UXString (Source : String) return UXString;
 
    --  Convert from UXString to String (UTF-8 encoding)
    function To_String (Source : UXString) return String;

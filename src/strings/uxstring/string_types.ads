@@ -130,8 +130,9 @@ is
 
    function ">=" (Left, Right : String_Type) return Boolean;
 
-   --  UXStrings.From_UTF_8 decodes UTF-8, so a Latin-1 byte above 0x7F is not
-   --  one code point. The length equality therefore holds only for ASCII input.
+   --  Valid UTF-8 is decoded to code points; any other input is read as Latin-1
+   --  (one code point per byte), so a Latin-1 byte above 0x7F is one code point
+   --  and never raises. The length equality therefore holds only for ASCII input.
    function To_String_Type (Source : String) return String_Type
    with
      Global => null,

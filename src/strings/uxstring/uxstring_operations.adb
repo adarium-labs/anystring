@@ -7,7 +7,11 @@
 
 with Ada.Strings;
 with Ada.Strings.Unbounded;
+with Ada.Strings.UTF_Encoding;
+with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 with Ada.Wide_Wide_Characters.Handling;
+with Anystrings_UTF_8_Replace;
+with Anystrings_UTF_8_Validate;
 
 package body UXString_Operations is
 
@@ -20,6 +24,14 @@ package body UXString_Operations is
    begin
       return P <= 16#10_FFFF# and then P not in 16#D800# .. 16#DFFF#;
    end Is_Unicode_Scalar;
+
+   function To_UXString (Source : String) return UXString is
+   begin
+      if Anystrings_UTF_8_Validate.Validate (Source).Is_Ok then
+         return From_Wide_Wide_String (Anystrings_UTF_8_Replace.Decode_Replacing (Source));
+      end if;
+      return UXStrings.From_Latin_1 (Source);
+   end To_UXString;
 
    function To_String (Source : UXString) return String is
    begin
@@ -152,6 +164,22 @@ package body UXString_Operations is
       return UXStrings.From_Unicode (C);
    end From_Character;
 
+   --  UTF-8 of the stored code points. UXS5 stores whatever it is given, so a
+   --  surrogate or a value above U+10FFFF can be stored; each one becomes
+   --  U+FFFD here (policy P) before the encoder, which would otherwise raise.
+   function Sanitised_UTF_8 (Source : UXString) return String is
+      Cps : Wide_Wide_String := UXStrings.To_Unicode (Source);
+   begin
+      for C of Cps loop
+         if not Is_Unicode_Scalar (C) then
+            C := Wide_Wide_Character'Val (16#FFFD#);
+         end if;
+      end loop;
+      return
+        Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Encode
+          (Item => Cps, Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8, Output_BOM => False);
+   end Sanitised_UTF_8;
+
    --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, NFR-UTF8-007
    function To_UTF_8 (Source : UXString) return String is
       use Ada.Strings.Unbounded;
@@ -181,7 +209,7 @@ package body UXString_Operations is
       --  UXStrings.To_UTF_8 encodes the stored code points (UXS5 stores an
       --  array of code points, not UTF-8 bytes); the walk below re-checks the
       --  encoding byte by byte and is the identity on well-formed UTF-8.
-      Raw    : constant String := String (UXStrings.To_UTF_8 (Source));
+      Raw    : constant String := Sanitised_UTF_8 (Source);
       Result : Unbounded_String;
       I      : Positive;
       Lead   : Natural;
