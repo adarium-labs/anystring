@@ -76,6 +76,11 @@ private
    procedure Test_Cluster_Tail_Zero_Returns_Empty
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 
+   --  @relation FUNC-WIDTH-003, FUNC-WIDTH-004, FUNC-WIDTH-005, FUNC-WIDTH-011, FUNC-WIDTH-012,
+   --            FUNC-WIDTH-013, FUNC-WIDTH-014
+   procedure Test_Walks_End_At_The_Last_Cluster
+     (T : in out AUnit.Test_Cases.Test_Case'Class);
+
    --  @relation FUNC-WIDTH-013
    procedure Test_Cluster_Head_Tail_CJK_Prefix_Suffix
      (T : in out AUnit.Test_Cases.Test_Case'Class);

@@ -70,6 +70,9 @@ package body Width_Clusters_Test is
       Add_Routine (T,
          (Routine      => Test_Cluster_Head_Tail_CJK_Prefix_Suffix'Access,
           Routine_Name => AUnit.Format ("Cluster_Head/Tail: prefix and suffix on CJK")));
+      Add_Routine (T,
+         (Routine      => Test_Walks_End_At_The_Last_Cluster'Access,
+          Routine_Name => AUnit.Format ("Cluster walks end at the last cluster (multi-byte final cluster)")));
    end Register_Tests;
 
    --  ---- Grapheme iterator (FUNC-WIDTH-005) ----
@@ -249,5 +252,45 @@ package body Width_Clusters_Test is
       Assert (Cluster_Element (Tail, 2).Width = 2,
               "Second cluster of Tail must have width 2 (CJK)");
    end Test_Cluster_Head_Tail_CJK_Prefix_Suffix;
+
+   --  Every cluster walk stops when a cluster ends the byte string, without
+   --  forming an index past it (Last_Byte + 1 overflows at Positive'Last; the
+   --  width APIs take bounded string types, so the bound itself cannot be
+   --  placed there, but the final multi-byte cluster exercises the exit).
+   procedure Test_Walks_End_At_The_Last_Cluster
+     (T : in out AUnit.Test_Cases.Test_Case'Class)
+   is
+      pragma Unreferenced (T);
+      Emoji : constant String :=
+        Character'Val (16#F0#) & Character'Val (16#9F#) & Character'Val (16#98#) & Character'Val (16#80#);
+      --  a, three CJK ideographs, one emoji: 5 clusters, 1 + 2 + 2 + 2 + 2 = 9 cells.
+      S      : constant String_Type := Mk ("a" & Nihongo_Bytes & Emoji);
+      Prefix : constant String_Type := Mk ("a" & Nihongo_Bytes);
+      Seen   : Natural := 0;
+   begin
+      Assert (Grapheme_Count (S) = 5, "Grapheme_Count of a string ending in an emoji");
+      Assert (Display_Width (S) = 9, "Display_Width of a string ending in an emoji");
+      for G of Graphemes (S) loop
+         Seen := Seen + G.Code_Points / G.Code_Points;
+      end loop;
+      Assert (Seen = 5, "Graphemes visits the last cluster once and stops");
+
+      Assert (Cluster_Element (S, 5).Slice = Mk (Emoji), "Cluster_Element of the last cluster");
+      Assert (Cluster_Element (S, 5).Width = 2, "width of the last cluster");
+      Assert (Cluster_Slice (S, 4, 5) = Mk (Nihongo_Bytes (Nihongo_Bytes'Last - 2 .. Nihongo_Bytes'Last) & Emoji),
+              "Cluster_Slice up to the last cluster");
+      Assert (Cluster_Head (S, 4) = Prefix, "Cluster_Head before the last cluster");
+      Assert (Cluster_Tail (S, 1) = Mk (Emoji), "Cluster_Tail of one cluster");
+
+      declare
+         Fits : constant Width_Slice_Result := Head_By_Width (S, 9);
+         Cut  : constant Width_Slice_Result := Head_By_Width (S, 8);
+      begin
+         Assert (Fits.Result = S and then Fits.Width = 9 and then not Fits.Truncated,
+                 "Head_By_Width with the exact budget keeps every cluster");
+         Assert (Cut.Result = Prefix and then Cut.Width = 7 and then Cut.Truncated,
+                 "Head_By_Width one cell short drops only the last cluster");
+      end;
+   end Test_Walks_End_At_The_Last_Cluster;
 
 end Width_Clusters_Test;
