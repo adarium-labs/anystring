@@ -22,7 +22,7 @@ umwi = "~0.2"
 ANYSTRING_WITH_WIDTH = {type = "Boolean", default = false}
 
 [environment]
-UXS_VARIANT.set = "UXS1"
+UXS_VARIANT.set = "UXS5"
 
 [[pins]]
 umwi = { path='../umwi' }
