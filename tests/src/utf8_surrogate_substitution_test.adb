@@ -77,8 +77,8 @@ package body UTF8_Surrogate_Substitution_Test is
         (T, (Routine      => Test_Low_Surrogate_Becomes_Replacement_Char'Access,
              Routine_Name => AUnit.Format ("To_UTF_8: low surrogate U+DFFF becomes U+FFFD encoding")));
       Add_Routine
-        (T, (Routine      => Test_Surrogate_Pair_Becomes_Two_Replacement_Chars'Access,
-             Routine_Name => AUnit.Format ("To_UTF_8: surrogate pair becomes two U+FFFD encodings")));
+        (T, (Routine      => Test_Surrogate_Pair_Encodes_Supplementary'Access,
+             Routine_Name => AUnit.Format ("To_UTF_8: surrogate pair (one code point U+10000 on UTF-16 storage)")));
       Add_Routine
         (T, (Routine      => Test_To_UTF8_Does_Not_Raise_On_Surrogate_Input'Access,
              Routine_Name => AUnit.Format ("To_UTF_8 does not raise when input contains surrogate code units")));
@@ -138,7 +138,7 @@ package body UTF8_Surrogate_Substitution_Test is
 
    --------------------------------------------------------------------------
    --  @relation FUNC-UTF8-007
-   procedure Test_Surrogate_Pair_Becomes_Two_Replacement_Chars
+   procedure Test_Surrogate_Pair_Encodes_Supplementary
      (T : in out AUnit.Test_Cases.Test_Case'Class)
    is
       pragma Unreferenced (T);
@@ -156,14 +156,23 @@ package body UTF8_Surrogate_Substitution_Test is
            Concat (From_Character (High_Sur), From_Character (Low_Sur));
          --  Act
          Result     : constant String         := To_UTF_8 (Source);
-         --  Expected: two consecutive U+FFFD encodings
-         Expected   : constant String         := Replacement_UTF8 & Replacement_UTF8;
+         --  Expected: on UTF-16 storage (wide_string) the two units D800 DC00
+         --  are one supplementary code point, U+10000 (F0 90 80 80), consistent
+         --  with To_Wide_Wide_String. Elsewhere the storage holds two surrogate
+         --  code points, each replaced by U+FFFD.
+         Pair_Is_One_Point : constant Boolean :=
+           String_Types.Code_Point_Length (Source) = 1;
+         Expected   : constant String         :=
+           (if Pair_Is_One_Point
+            then Character'Val (16#F0#) & Character'Val (16#90#)
+                 & Character'Val (16#80#) & Character'Val (16#80#)
+            else Replacement_UTF8 & Replacement_UTF8);
       begin
          Assert (Result = Expected,
-                 "To_UTF_8 of surrogate pair shall yield two U+FFFD encodings "
-                 & "(6 bytes total)");
+                 "To_UTF_8 of a surrogate pair: one code point (U+10000) on "
+                 & "UTF-16 storage, two U+FFFD elsewhere");
       end;
-   end Test_Surrogate_Pair_Becomes_Two_Replacement_Chars;
+   end Test_Surrogate_Pair_Encodes_Supplementary;
 
    --------------------------------------------------------------------------
    --  @relation FUNC-UTF8-007

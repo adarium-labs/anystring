@@ -152,11 +152,20 @@ package body Ingress_Replace_Test is
    is
       pragma Unreferenced (T);
    begin
-      Check_Invariant (String_Types.To_String_Type (Ingress_Vectors.Bytes ("E9")), "S1-bytes");
-      Check_Invariant (String_Types.To_String_Type (Ingress_Vectors.Bytes ("E2 82 61")), "S2-bytes");
-      Check_Invariant (String_Types.To_String_Type (Ingress_Vectors.Bytes ("ED A0 80")), "CESU");
+      --  Well-formed storage inputs: accepted by To_String_Type on every back end.
+      Check_Invariant (String_Types.To_String_Type (Ingress_Vectors.Bytes ("C3 A9")), "valid-2-byte");
+      Check_Invariant (String_Types.To_String_Type (Ingress_Vectors.Bytes ("F0 9F 98 80")), "valid-4-byte");
       Check_Invariant (String_Types.To_String_Type (Ingress_Vectors.Bytes ("EF BB BF 61")), "BOM");
       Check_Invariant (String_Types.To_String_Type ("abc"), "ASCII");
+
+      --  Ill-formed storage inputs: only standard stores raw bytes. On the other
+      --  back ends To_String_Type rejects or reads them differently (uxstring
+      --  raises in UXStrings.From_UTF_8), so they are not part of this gate.
+      if Ingress_Vectors.Backend_Class = 1 then
+         Check_Invariant (String_Types.To_String_Type (Ingress_Vectors.Bytes ("E9")), "S1-bytes");
+         Check_Invariant (String_Types.To_String_Type (Ingress_Vectors.Bytes ("E2 82 61")), "S2-bytes");
+         Check_Invariant (String_Types.To_String_Type (Ingress_Vectors.Bytes ("ED A0 80")), "CESU");
+      end if;
 
       --  Table IV on the standard back end: a lone Latin-1 byte and a broken
       --  sequence are replaced by R (one U+FFFD per maximal subpart).

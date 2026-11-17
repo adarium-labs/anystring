@@ -52,7 +52,7 @@ private
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 
    --  @relation FUNC-UTF8-007
-   procedure Test_Surrogate_Pair_Becomes_Two_Replacement_Chars
+   procedure Test_Surrogate_Pair_Encodes_Supplementary
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 
    --  @relation FUNC-UTF8-007
