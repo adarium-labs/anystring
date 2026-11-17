@@ -63,14 +63,16 @@ package body Wide_Width with SPARK_Mode => Off is
    end Has_Element;
 
    function Next (V : Grapheme_View; C : Grapheme_Cursor) return Grapheme_Cursor is
-      UTF8     : constant String   := Wide_String_Operations.To_UTF_8 (V.Source);
-      Next_Pos : constant Positive := C.Last_Byte + 1;
+      UTF8 : constant String := Wide_String_Operations.To_UTF_8 (V.Source);
    begin
-      if Next_Pos > UTF8'Last then
+      --  Last_Byte >= UTF8'Last is tested before Last_Byte + 1 is formed: the sum
+      --  overflows when the cluster ends at Positive'Last.
+      if C.Last_Byte >= UTF8'Last then
          return (Is_Done => True, First_Byte => 1, Last_Byte => 1, Num_Points => 1, Disp_Width => 0);
       end if;
       declare
-         NC : constant Umwi.UTF8_Grapheme_Cluster :=
+         Next_Pos : constant Positive := C.Last_Byte + 1;
+         NC       : constant Umwi.UTF8_Grapheme_Cluster :=
            Umwi.Next_Cluster (Umwi.UTF8_String (UTF8), Next_Pos, V.Conf);
       begin
          return
@@ -141,16 +143,16 @@ package body Wide_Width with SPARK_Mode => Off is
       Conf  : Width_Configuration := Default_Linux) return Grapheme
    is
       UTF8 : constant Umwi.UTF8_String := To_UTF8 (S);
-      I    : Positive := 1;
+      I    : Natural := 0;   --  clusters seen so far, never more than the cluster count
    begin
       for C of Umwi.Clusters (UTF8, Conf) loop
+         I := I + 1;
          if I = Index then
             return
               (Width       => C.Width,
                Code_Points => C.Points,
                Slice       => From_UTF8_Bytes (UTF8, C.First_Byte, C.Last_Byte));
          end if;
-         I := I + 1;
       end loop;
       raise Constraint_Error with "Cluster_Element: index exceeds cluster count";
    end Cluster_Element;
@@ -232,7 +234,8 @@ package body Wide_Width with SPARK_Mode => Off is
       Has_More : Boolean           := False;
    begin
       for C of Umwi.Clusters (UTF8, Conf) loop
-         if Acc_W + C.Width <= Max_Cells then
+         --  Acc_W <= Max_Cells always, so the difference is a Natural.
+         if C.Width <= Max_Cells - Acc_W then
             Result := Concat_Strings (Result, From_UTF8_Bytes (UTF8, C.First_Byte, C.Last_Byte));
             Acc_W  := Acc_W + C.Width;
          else

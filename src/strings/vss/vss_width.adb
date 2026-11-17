@@ -54,14 +54,16 @@ is
    end Has_Element;
 
    function Next (V : Grapheme_View; C : Grapheme_Cursor) return Grapheme_Cursor is
-      Bytes    : constant Umwi.UTF8_String := To_UTF8_Bytes (V.Source);
-      Next_Pos : constant Natural := C.Last_Byte + 1;
+      Bytes : constant Umwi.UTF8_String := To_UTF8_Bytes (V.Source);
    begin
-      if Next_Pos > Bytes'Last then
+      --  Last_Byte >= Bytes'Last is tested before Last_Byte + 1 is formed: the sum
+      --  overflows when the cluster ends at Positive'Last.
+      if C.Last_Byte >= Bytes'Last then
          return (Is_Done => True, others => <>);
       end if;
       declare
-         Cl : constant Umwi.UTF8_Grapheme_Cluster := Umwi.Next_Cluster (Bytes, Next_Pos, V.Conf);
+         Next_Pos : constant Positive := C.Last_Byte + 1;
+         Cl       : constant Umwi.UTF8_Grapheme_Cluster := Umwi.Next_Cluster (Bytes, Next_Pos, V.Conf);
       begin
          return
            (Is_Done    => False,
@@ -105,6 +107,9 @@ is
             Cl : constant Umwi.UTF8_Grapheme_Cluster := Umwi.Next_Cluster (Bytes, Cursor, Conf);
          begin
             Total := Total + Cl.Width;
+            --  The cluster that ends at Bytes'Last ends the walk: Last_Byte + 1 is
+            --  never formed past Positive'Last (the sum overflows there).
+            exit when Cl.Last_Byte >= Bytes'Last;
             Cursor := Cl.Last_Byte + 1;
          end;
       end loop;
@@ -126,6 +131,7 @@ is
             Cl : constant Umwi.UTF8_Grapheme_Cluster := Umwi.Next_Cluster (Bytes, Cursor, Conf);
          begin
             Count := Count + 1;
+            exit when Cl.Last_Byte >= Bytes'Last;
             Cursor := Cl.Last_Byte + 1;
          end;
       end loop;
@@ -153,6 +159,7 @@ is
                   Code_Points => Cl.Points,
                   Slice       => From_UTF8_Bytes (String (Bytes (Cl.First_Byte .. Cl.Last_Byte))));
             end if;
+            exit when Cl.Last_Byte >= Bytes'Last;
             Cursor := Cl.Last_Byte + 1;
          end;
       end loop;
@@ -190,6 +197,7 @@ is
                if I = To_Cluster then
                   return From_UTF8_Bytes (String (Bytes (First_Byte .. Cl.Last_Byte)));
                end if;
+               exit when Cl.Last_Byte >= Bytes'Last;
                Cursor := Cl.Last_Byte + 1;
             end;
          end loop;
@@ -251,7 +259,8 @@ is
          declare
             Cl : constant Umwi.UTF8_Grapheme_Cluster := Umwi.Next_Cluster (Bytes, Cursor, Conf);
          begin
-            if Acc_Width + Cl.Width > Max_Cells then
+            --  Acc_Width <= Max_Cells always, so the difference is a Natural.
+            if Cl.Width > Max_Cells - Acc_Width then
                return
                  (Result    => From_UTF8_Bytes (String (Bytes (Bytes'First .. Last_Good))),
                   Width     => Acc_Width,
@@ -259,6 +268,7 @@ is
             end if;
             Acc_Width := Acc_Width + Cl.Width;
             Last_Good := Cl.Last_Byte;
+            exit when Cl.Last_Byte >= Bytes'Last;
             Cursor := Cl.Last_Byte + 1;
          end;
       end loop;

@@ -40,6 +40,9 @@ is
             Cl : constant Umwi.UTF8_Grapheme_Cluster := Umwi.Next_Cluster (UTF8, From, Conf);
          begin
             V.Append (Cl);
+            --  The cluster that ends at UTF8'Last ends the walk: Last_Byte + 1 is
+            --  never formed past Positive'Last (the sum overflows there).
+            exit when Cl.Last_Byte >= UTF8'Last;
             From := Cl.Last_Byte + 1;
          end;
       end loop;
@@ -235,7 +238,8 @@ is
          return (Result => Empty_String, Width => 0, Truncated => True);
       end if;
       for Cl of Umwi.Clusters (UTF8, Conf) loop
-         if Acc_Width + Cl.Width > Max_Cells then
+         --  Acc_Width <= Max_Cells always, so the difference is a Natural.
+         if Cl.Width > Max_Cells - Acc_Width then
             Truncated := True;
             exit;
          end if;

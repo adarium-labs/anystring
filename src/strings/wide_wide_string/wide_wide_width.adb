@@ -110,6 +110,9 @@ package body Wide_Wide_Width with SPARK_Mode => Off is
             Cl : constant Umwi.UTF8_Grapheme_Cluster := Umwi.Next_Cluster (Bytes, From, Conf);
          begin
             Total := Total + Cl.Width;
+            --  The cluster that ends at Bytes'Last ends the walk: Last_Byte + 1 is
+            --  never formed past Positive'Last (the sum overflows there).
+            exit when Cl.Last_Byte >= Bytes'Last;
             From  := Cl.Last_Byte + 1;
          end;
       end loop;
@@ -130,6 +133,7 @@ package body Wide_Wide_Width with SPARK_Mode => Off is
             Cl : constant Umwi.UTF8_Grapheme_Cluster := Umwi.Next_Cluster (Bytes, From, Conf);
          begin
             Count := Count + 1;
+            exit when Cl.Last_Byte >= Bytes'Last;
             From  := Cl.Last_Byte + 1;
          end;
       end loop;
@@ -159,6 +163,7 @@ package body Wide_Wide_Width with SPARK_Mode => Off is
                          Code_Points => Cl.Points,
                          Slice       => From_UTF8_Bytes (Bytes, Cl.First_Byte, Cl.Last_Byte));
             end if;
+            exit when Cl.Last_Byte >= Bytes'Last;
             From := Cl.Last_Byte + 1;
          end;
       end loop;
@@ -196,6 +201,7 @@ package body Wide_Wide_Width with SPARK_Mode => Off is
                if I >= From_Cluster then
                   Last_Byte := Cl.Last_Byte;
                end if;
+               exit when Cl.Last_Byte >= Bytes'Last;
                From := Cl.Last_Byte + 1;
             end;
          end loop;
@@ -229,6 +235,7 @@ package body Wide_Wide_Width with SPARK_Mode => Off is
             begin
                I         := I + 1;
                Last_Byte := Cl.Last_Byte;
+               exit when Cl.Last_Byte >= Bytes'Last;
                From      := Cl.Last_Byte + 1;
             end;
          end loop;
@@ -275,6 +282,7 @@ package body Wide_Wide_Width with SPARK_Mode => Off is
                   if I = Skip + 1 then
                      From_Byte := Cl.First_Byte;
                   end if;
+                  exit when Cl.Last_Byte >= Bytes'Last;
                   From := Cl.Last_Byte + 1;
                end;
             end loop;
@@ -307,12 +315,14 @@ package body Wide_Wide_Width with SPARK_Mode => Off is
          declare
             Cl : constant Umwi.UTF8_Grapheme_Cluster := Umwi.Next_Cluster (Bytes, From, Conf);
          begin
-            if Accum + Cl.Width > Max_Cells then
+            --  Accum <= Max_Cells always, so the difference is a Natural.
+            if Cl.Width > Max_Cells - Accum then
                Truncated := True;
                exit;
             end if;
             Accum     := Accum + Cl.Width;
             Last_Byte := Cl.Last_Byte;
+            exit when Cl.Last_Byte >= Bytes'Last;
             From      := Cl.Last_Byte + 1;
          end;
       end loop;
