@@ -258,3 +258,61 @@ decode Text_IO lines (`uxstring`, `wide_string`, `wide_wide_string`, `vss`);
 `standard` keeps the bytes. This is a deliberate exception to R, for files: a
 file may hold legacy Latin-1 text, and reading it as Latin-1 loses nothing.
 Argv and environment do not have this exception.
+
+## 10. Known issues
+
+### 10.1 `Display_Width` sums cluster widths in `Natural`, unguarded (outside KI-046)
+
+**Symptom.** `Display_Width` accumulates the per-cluster widths in a `Natural`
+with no overflow guard. A string whose total display width exceeds
+`Natural'Last` (2 147 483 647 cells) raises `Constraint_Error` instead of
+returning a width. At 2 cells per wide cluster that takes more than about 1 G
+clusters, so the string alone is several GB; it is a limit case, not a case
+seen in practice.
+
+**Affected units** (the accumulation line; same shape in each):
+
+| Back end | Unit | Line |
+|---|---|---|
+| standard | `standard_width.adb` | `Total := Total + C.Width;` |
+| wide_string | `wide_width.adb` | `Total := Total + C.Width;` |
+| wide_wide_string | `wide_wide_width.adb` | `Total := Total + Cl.Width;` |
+| uxstring | `uxstring_width.adb` | `Total := Total + Cl.Width;` |
+| vss | `vss_width.adb` | `Total := Total + Cl.Width;` |
+
+`Head_By_Width` is not affected: its accumulator never exceeds `Max_Cells`, and
+its test reads `Cl.Width > Max_Cells - Acc` (changed with the KI-046 width
+pass). The other width operations accumulate cluster counts or indexes, which
+are bounded by the string length.
+
+**Options.**
+
+1. A `Pre` on `Display_Width` bounding the input length (for example
+   `Length (S) <= Natural'Last / Max_Cluster_Width`), so the sum cannot
+   overflow. Cheapest; moves the limit into the contract.
+2. A wider result type (`Long_Long_Natural`, or a dedicated subtype). Changes
+   the signature on all five `string_types-width.ads` files and every caller,
+   so it must be done in one change.
+3. Documented saturation at `Natural'Last`. No signature change, but callers
+   can no longer tell "exactly `Natural'Last`" from "more".
+
+**Before choosing.** Audit the per-cluster width bounds that `umwi` returns
+(`Cl.Width`, today assumed to be 0, 1 or 2 in the `Grapheme` record comment in
+`standard_width.ads`). The bound that option 1 relies on comes from `umwi`, so
+it has to be confirmed there first (`umwi` is an external crate and is not
+changed from this repository).
+
+**Scope.** This is outside KI-046 and was not changed by it. KI-046 only made
+the cluster-walk indexes and the `Head_By_Width` budget test overflow-free.
+
+### 10.2 The width boundary fix is covered functionally, not at `Positive'Last`
+
+The KI-046 width pass makes every cluster walk exit before it forms
+`Last_Byte + 1`, which would overflow when the last cluster ends at
+`Positive'Last`. The width operations take `Unbounded_*`, `UXString` and
+`Virtual_String` values, whose bytes are always indexed `1 .. Length`, so no
+test can put the bytes at `Positive'Last` (the decoder and UTF-16 scans take
+plain `String` / `Wide_String` and do have such tests, in
+`Ingress_Boundary_Test`). `Width_Clusters_Test.Test_Walks_End_At_The_Last_Cluster`
+checks the exit on a string whose last cluster is multi-byte; it is functional
+coverage of the exit, and does not reproduce the overflow.
