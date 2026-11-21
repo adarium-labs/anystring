@@ -19,6 +19,7 @@
 
 with Ada.Command_Line;
 with Ada.Containers.Vectors;
+with Ada.Directories;
 with Ada.Strings;
 with Ada.Strings.Fixed;
 with Ada.Text_IO;
@@ -49,6 +50,11 @@ procedure Ucd_Generator is
    package Special_Vectors is new Ada.Containers.Vectors (Positive, Special);
    package Span_Vectors    is new Ada.Containers.Vectors (Positive, Span);
 
+   function "<" (L, R : Special) return Boolean is (L.Source < R.Source);
+
+   --  SpecialCasing.txt is grouped by script, not sorted by code point.
+   package Special_Sorting is new Special_Vectors.Generic_Sorting ("<");
+
    Simple_Lower_List  : Pair_Vectors.Vector;
    Simple_Upper_List  : Pair_Vectors.Vector;
    Special_Lower_List : Special_Vectors.Vector;
@@ -70,7 +76,8 @@ procedure Ucd_Generator is
       then Ada.Command_Line.Argument (2)
       else "src");
 
-   Ucd_Version : constant String := "15.1.0";
+   --  The version is the name of the data directory (data/<version>).
+   Ucd_Version : constant String := Ada.Directories.Simple_Name (Data_Dir);
 
    Digits_Set : constant String := "0123456789ABCDEF";
 
@@ -243,6 +250,17 @@ procedure Ucd_Generator is
       if Final_Found /= 1 then
          raise Program_Error with "expected exactly one Final_Sigma entry";
       end if;
+
+      Special_Sorting.Sort (Special_Lower_List);
+      Special_Sorting.Sort (Special_Upper_List);
+      for I in 2 .. Natural (Special_Lower_List.Length) loop
+         Check_Ascending
+           (Special_Lower_List (I - 1).Source, Special_Lower_List (I).Source, "special lower");
+      end loop;
+      for I in 2 .. Natural (Special_Upper_List.Length) loop
+         Check_Ascending
+           (Special_Upper_List (I - 1).Source, Special_Upper_List (I).Source, "special upper");
+      end loop;
    end Read_Special_Casing;
 
    procedure Read_Derived_Core_Properties is
@@ -481,7 +499,7 @@ procedure Ucd_Generator is
       Body_Line
         ("   with Global => null,");
       Body_Line
-        ("        Pre  => T'First = 1,");
+        ("        Pre  => T'First = 1 and then T'Length >= 1 and then T'Last < Natural'Last,");
       Body_Line
         ("        Post => Find_Pair'Result = 0");
       Body_Line
@@ -530,7 +548,7 @@ procedure Ucd_Generator is
       Body_Line
         ("   with Global => null,");
       Body_Line
-        ("        Pre  => T'First = 1,");
+        ("        Pre  => T'First = 1 and then T'Length >= 1 and then T'Last < Natural'Last,");
       Body_Line
         ("        Post => Find_Special'Result = 0");
       Body_Line
@@ -581,7 +599,7 @@ procedure Ucd_Generator is
       Body_Line
         ("   with Global => null,");
       Body_Line
-        ("        Pre => T'First = 1");
+        ("        Pre => T'First = 1 and then T'Length >= 1 and then T'Last < Natural'Last");
       Body_Line
         ("   is");
       Body_Line
