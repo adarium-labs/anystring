@@ -46,8 +46,12 @@ alr with anystrings
 The default build uses `STRING_TYPE=standard` and pulls only what
 `Ada.Strings.Unbounded` needs. Its case mapping uses tables generated from the
 Unicode Character Database 15.1.0 (`tools/ucd`), so no crate is needed for it.
-`uxstring` and `vss` builds also pull `uxstrings ~0.9` and `vss_text ~26`
-respectively; `vss` is the only backend whose library closure contains VSS.
+The Alire manifest (`alire.toml`) is not per backend. It declares `uxstrings ~0.9`,
+`vss_text ~26` and `umwi ~0.2` unconditionally, and pins `vss_text` by path, so
+Alire resolves all three whatever the backend. The library closure is what
+differs. VSS is absent from the `standard`, `wide_string` and `wide_wide_string`
+library closure. The `uxstring` closure contains `uxstrings` and not VSS. Only the
+`vss` closure contains VSS. `umwi` is in none of the five default library closures.
 
 ## Quick start
 

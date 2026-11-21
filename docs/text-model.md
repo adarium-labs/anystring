@@ -259,6 +259,31 @@ decode Text_IO lines (`uxstring`, `wide_string`, `wide_wide_string`, `vss`);
 file may hold legacy Latin-1 text, and reading it as Latin-1 loses nothing.
 Argv and environment do not have this exception.
 
+### 9.5 Egress to Latin-1 on standard: malformed and overlong sequences
+
+`To_Latin_1` and `To_Latin_1_If_Possible` decode the stored UTF-8 with the same
+decoder as the case mappings. Since `bd68be7` an overlong 3- or 4-byte sequence
+is ill-formed, like any other malformed sequence: it is one U+FFFD, and decoding
+resynchronises at the lead byte. A code point above U+00FF is written as `?`.
+Well-formed input is unchanged.
+
+Example, the overlong encoding of © (U+00A9) as `E0 80 A9`:
+
+| Bytes | Decoded as | Written by `To_Latin_1` |
+|---|---|---|
+| `E0` | one U+FFFD (lead of an overlong form, no valid second byte) | `?` |
+| `80` | one U+FFFD (stray continuation byte) | `?` |
+| `A9` | one U+FFFD (stray continuation byte) | `?` |
+
+So `To_Latin_1` gives `???`, not the byte `A9`. `To_Latin_1_If_Possible` gives
+the same string with status `Lossy` and three replacements. `F0 80 80 AF`
+(overlong `/`) gives `????` in the same way.
+
+This follows the maximal-subpart rule of algorithm R, which `To_Wide_Wide_String`
+uses. One exception: an encoded surrogate (`ED A0 80`) is one U+FFFD for its
+three bytes in this decoder, where algorithm R gives one U+FFFD per byte. So
+`To_Latin_1` writes one `?` for it, where algorithm R would give three.
+
 ## 10. Known issues
 
 ### 10.1 `Display_Width` sums cluster widths in `Natural`, unguarded (outside KI-046)
