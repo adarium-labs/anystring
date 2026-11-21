@@ -188,6 +188,12 @@ is
    function Tail (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type
    is (Conv.From_UXString (UXString_Strings.Tail (Conv.To_UXString (Source), Count, Pad)));
 
+   function Full_Lower_Length (Source : String_Type) return Long_Long_Integer
+   is (UXString_Operations.Full_Lower_Length (Conv.To_UXString (Source)));
+
+   function Full_Upper_Length (Source : String_Type) return Long_Long_Integer
+   is (UXString_Operations.Full_Upper_Length (Conv.To_UXString (Source)));
+
    function To_Lower (Source : String_Type) return String_Type
    is (Conv.From_UXString (UXString_Operations.To_Lower (Conv.To_UXString (Source))));
 

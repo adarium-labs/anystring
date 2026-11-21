@@ -153,7 +153,8 @@ package Standard_String_Operations is
    --  Anystrings_Simple_Case.Full_Map, with Final_Sigma decided inside the run.
    --  Ill-formed bytes are copied unchanged and end the run. The byte length of
    --  the result may differ from the input (e.g. U+0130 lower-cases to U+0069
-   --  U+0307), so these functions carry no Length postcondition.
+   --  U+0307). Its length is Full_Lower_Length (Source) / Full_Upper_Length
+   --  (the facade states it as the postcondition of To_Lower / To_Upper).
    function To_Lower (Source : Unbounded_String) return Unbounded_String;
 
    --  @summary Simple lower-case mapping, one code point in, one code point out.
@@ -165,6 +166,12 @@ package Standard_String_Operations is
    --  Length (bytes) as Source. Bytes that are not part of a well-formed
    --  sequence are copied unchanged.
    function Simple_To_Lower (Source : Unbounded_String) return Unbounded_String;
+
+   --  @summary Length, in bytes, of To_Lower (Source) / To_Upper (Source), computed
+   --  without building the result (pass 1 of the two-pass mapping).
+   function Full_Lower_Length (Source : Unbounded_String) return Long_Long_Integer;
+
+   function Full_Upper_Length (Source : Unbounded_String) return Long_Long_Integer;
 
    function To_Upper (Source : Unbounded_String) return Unbounded_String;
 

@@ -130,6 +130,12 @@ package VSS_Operations is
      (Source  : Virtual_String;
       Pattern : Virtual_String) return Natural;
 
+   --  @summary Length, in code points, of To_Lower (Source) / To_Upper (Source),
+   --  computed without building the result.
+   function Full_Lower_Length (Source : Virtual_String) return Long_Long_Integer;
+
+   function Full_Upper_Length (Source : Virtual_String) return Long_Long_Integer;
+
    function To_Lower (Source : Virtual_String) return Virtual_String;
 
    --  @summary Simple lower-case mapping, one code point in, one code point out.

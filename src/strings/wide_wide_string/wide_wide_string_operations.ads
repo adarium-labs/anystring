@@ -112,6 +112,12 @@ package Wide_Wide_String_Operations is
      (Source  : Unbounded_Wide_Wide_String;
       Pattern : Unbounded_Wide_Wide_String) return Natural;
 
+   --  @summary Length, in code points, of To_Lower (Source) / To_Upper (Source),
+   --  computed without building the result.
+   function Full_Lower_Length (Source : Unbounded_Wide_Wide_String) return Long_Long_Integer;
+
+   function Full_Upper_Length (Source : Unbounded_Wide_Wide_String) return Long_Long_Integer;
+
    function To_Lower
      (Source : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String;
 

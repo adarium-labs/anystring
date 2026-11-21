@@ -294,7 +294,33 @@ is
 
    function Tail (Source : String_Type; Count : Natural; Pad : Character_Type) return String_Type;
 
-   function To_Lower (Source : String_Type) return String_Type;
+   --  @summary Length, in the backend's Length unit, of To_Lower (Source) and
+   --  To_Upper (Source), computed without building the result (pass 1 of the
+   --  two-pass mapping). The unit is UTF-8 bytes on standard, UTF-16 units on
+   --  wide_string, and code points on wide_wide_string, uxstring and vss.
+   function Full_Lower_Length (Source : String_Type) return Long_Long_Integer
+   with Global => null;
+
+   function Full_Upper_Length (Source : String_Type) return Long_Long_Integer
+   with Global => null;
+
+   --  @summary Full Unicode case mapping: UnicodeData simple mappings, the
+   --  unconditional SpecialCasing entries and the Final_Sigma rule (Unicode 3.13),
+   --  from the generated UCD 15.1.0 tables. The same code points on every backend.
+   --  @description The result has exactly Full_Lower_Length (Source) (resp.
+   --  Full_Upper_Length (Source)) units of Length. The precondition keeps that
+   --  length within Natural'Last; it is not clamped.
+   function To_Lower (Source : String_Type) return String_Type
+   with
+     Global => null,
+     Pre  => Full_Lower_Length (Source) <= Long_Long_Integer (Natural'Last),
+     Post => Length (To_Lower'Result) = Natural (Full_Lower_Length (Source));
+
+   function To_Upper (Source : String_Type) return String_Type
+   with
+     Global => null,
+     Pre  => Full_Upper_Length (Source) <= Long_Long_Integer (Natural'Last),
+     Post => Length (To_Upper'Result) = Natural (Full_Upper_Length (Source));
 
    --  @summary Simple lower-case mapping: one code point in, one code point
    --  out (Unicode simple mapping, not the full mapping of To_Lower).
@@ -302,7 +328,6 @@ is
    function Simple_To_Lower (Source : String_Type) return String_Type
    with Global => null, Post => Length (Simple_To_Lower'Result) = Length (Source);
 
-   function To_Upper (Source : String_Type) return String_Type;
 
    function Starts_With (Source : String_Type; Prefix : String_Type) return Boolean;
 

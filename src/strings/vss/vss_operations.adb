@@ -269,9 +269,19 @@ package body VSS_Operations is
       end;
    end Index_Reverse;
 
-   --  Full case mapping from the generated UCD tables (Anystrings_Simple_Case),
-   --  the same code as the other backends, so the result is identical on all
-   --  of them. VSS.Transformers.Casing is no longer used here.
+
+   --  Full case mapping (Anystrings_Simple_Case.Full_Map) on the code points, rebuilt
+   --  with exactly the number of code points the mapping gives.
+   function Full_Lower_Length (Source : Virtual_String) return Long_Long_Integer is
+   begin
+      return Anystrings_Simple_Case.Mapped_Code_Points (To_Wide_Wide_String (Source), Upper => False);
+   end Full_Lower_Length;
+
+   function Full_Upper_Length (Source : Virtual_String) return Long_Long_Integer is
+   begin
+      return Anystrings_Simple_Case.Mapped_Code_Points (To_Wide_Wide_String (Source), Upper => True);
+   end Full_Upper_Length;
+
    function To_Lower (Source : Virtual_String) return Virtual_String is
    begin
       return From_Wide_Wide_String (Anystrings_Simple_Case.Full_Map (To_Wide_Wide_String (Source), Upper => False));

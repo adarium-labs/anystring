@@ -349,9 +349,12 @@ coverage of the exit, and does not reproduce the overflow.
 (UnicodeData simple mappings, unconditional SpecialCasing entries, and the
 Final_Sigma rule of Unicode §3.13) on every backend. The result is the same code
 points on `standard`, `wide_string`, `wide_wide_string`, `uxstring` and `vss`,
-from the generated UCD 15.1.0 tables. The length may change (U+00DF upper-cases
-to `SS`; U+0130 lower-cases to U+0069 U+0307), so there is no `Length` contract
-for them.
+from the generated UCD 15.1.0 tables. The length may change (U+00DF upper-cases to `SS`; U+0130 lower-cases to U+0069 U+0307),
+so the length is part of the contract: `Full_Lower_Length (S)` and `Full_Upper_Length (S)`
+give the length of the result in the backend's `Length` unit (UTF-8 bytes on standard,
+UTF-16 units on wide_string, code points elsewhere), and the postcondition of
+`To_Lower` / `To_Upper` is `Length (To_Lower (S)) = Full_Lower_Length (S)`. The
+precondition is `Full_Lower_Length (S) <= Natural'Last`; nothing is clamped.
 
 How the code points are read depends on the storage:
 

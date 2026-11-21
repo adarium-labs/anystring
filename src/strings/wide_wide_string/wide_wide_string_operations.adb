@@ -133,6 +133,16 @@ package body Wide_Wide_String_Operations is
 
    --  Full case mapping (Anystrings_Simple_Case.Full_Map), one code point per
    --  Wide_Wide_Character. A value that is not a scalar value is copied unchanged.
+   function Full_Lower_Length (Source : Unbounded_Wide_Wide_String) return Long_Long_Integer is
+   begin
+      return Anystrings_Simple_Case.Mapped_Code_Points (To_Wide_Wide_String (Source), Upper => False);
+   end Full_Lower_Length;
+
+   function Full_Upper_Length (Source : Unbounded_Wide_Wide_String) return Long_Long_Integer is
+   begin
+      return Anystrings_Simple_Case.Mapped_Code_Points (To_Wide_Wide_String (Source), Upper => True);
+   end Full_Upper_Length;
+
    function To_Lower (Source : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String is
       use Ada.Strings.Wide_Wide_Unbounded;
    begin

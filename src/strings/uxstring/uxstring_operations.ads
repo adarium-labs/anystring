@@ -97,6 +97,12 @@ package UXString_Operations is
    function Index_Reverse (Source : UXString; Pattern : UXString) return Natural;
 
    --  Case conversion
+   --  @summary Length, in code points, of To_Lower (Source) / To_Upper (Source),
+   --  computed without building the result.
+   function Full_Lower_Length (Source : UXString) return Long_Long_Integer;
+
+   function Full_Upper_Length (Source : UXString) return Long_Long_Integer;
+
    function To_Lower (Source : UXString) return UXString;
 
    --  @summary Simple lower-case mapping, one code point in, one code point out.

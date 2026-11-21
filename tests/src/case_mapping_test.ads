@@ -42,6 +42,8 @@ private
      (T : in out AUnit.Test_Cases.Test_Case'Class);
    procedure Test_Standard_Overlong_And_Out_Of_Range_Kept
      (T : in out AUnit.Test_Cases.Test_Case'Class);
+   procedure Test_Length_Contract
+     (T : in out AUnit.Test_Cases.Test_Case'Class);
    procedure Test_Standard_Char_Mapping_ASCII_Only
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 end Case_Mapping_Test;

@@ -59,6 +59,17 @@ package body Case_Mapping_Test is
       Assert (To_Wide_Wide_String (Result) = Expected, Label & ": unexpected code points");
    end Expect_Map;
 
+   --  Full_Lower_Length (or Full_Upper_Length) of Input equals the Length of the
+   --  mapping result, on every backend.
+   procedure Expect_Length (Input : Wide_Wide_String; Upper : Boolean; Label : String) is
+      Source    : constant String_Type := From_Wide_Wide_String (Input);
+      Result    : constant String_Type := (if Upper then To_Upper (Source) else To_Lower (Source));
+      Predicted : constant Long_Long_Integer :=
+        (if Upper then Full_Upper_Length (Source) else Full_Lower_Length (Source));
+   begin
+      Assert (Predicted = Long_Long_Integer (Length (Result)), Label & ": Full_*_Length /= Length of the result");
+   end Expect_Length;
+
    overriding function Name (T : Test_Case) return AUnit.Message_String is
       pragma Unreferenced (T);
    begin
@@ -93,6 +104,10 @@ package body Case_Mapping_Test is
         (T,
          (Routine      => Test_Standard_Overlong_And_Out_Of_Range_Kept'Access,
           Routine_Name => AUnit.Format ("standard: overlong, surrogate and out-of-range sequences kept")));
+      Add_Routine
+        (T,
+         (Routine      => Test_Length_Contract'Access,
+          Routine_Name => AUnit.Format ("Full_Lower_Length / Full_Upper_Length agree with the result")));
       Add_Routine
         (T,
          (Routine      => Test_Standard_Char_Mapping_ASCII_Only'Access,
@@ -344,6 +359,61 @@ package body Case_Mapping_Test is
 
    --  standard: a Character is one byte of UTF-8. Char_To_Lower / Char_To_Upper
    --  map A-Z and a-z only; a byte >= 16#80# is returned unchanged.
+   procedure Test_Length_Contract (T : in out AUnit.Test_Cases.Test_Case'Class) is
+      pragma Unreferenced (T);
+      Ascii    : constant Wide_Wide_String := "Hello, World 123!";
+      Dotted_I : constant Wide_Wide_String := Text ((1 => 16#390#));
+      Big_A    : constant Wide_Wide_String := (1 .. 100_000 => 'A');
+      Big_Sharp : constant Wide_Wide_String := (1 .. 100_000 => Cp (16#DF#));
+   begin
+      --  ASCII: the mapping keeps the length (bytes, units and code points agree).
+      Expect_Length (Ascii, Upper => False, Label => "ASCII lower");
+      Expect_Length (Ascii, Upper => True, Label => "ASCII upper");
+      Assert
+        (Full_Lower_Length (From_Wide_Wide_String (Ascii)) = Long_Long_Integer (Ascii'Length),
+         "ASCII: Full_Lower_Length /= input length");
+
+      --  U+0390 (ΐ) upper-cases to three code points: U+0399 U+0308 U+0301. Six
+      --  bytes on standard (two each), three units or code points elsewhere.
+      declare
+         Source : constant String_Type := From_Wide_Wide_String (Dotted_I);
+         Result : constant String_Type := To_Upper (Source);
+      begin
+         Assert
+           (To_Wide_Wide_String (Result) = Text ((16#399#, 16#308#, 16#301#)),
+            "U+0390 upper: unexpected code points");
+         Assert
+           (Full_Upper_Length (Source) = (if Byte_Counting then 6 else 3),
+            "U+0390 upper: Full_Upper_Length is not 3 code points (6 bytes on standard)");
+      end;
+      Expect_Length (Dotted_I, Upper => True, Label => "U+0390 upper");
+      Expect_Length (Dotted_I, Upper => False, Label => "U+0390 lower");
+
+      --  ß -> SS: two code points, two bytes on standard, so the length is two.
+      Expect_Length (Text ((1 => 16#DF#)), Upper => True, Label => "sharp s upper");
+      Assert
+        (Full_Upper_Length (From_Wide_Wide_String (Text ((1 => 16#DF#)))) = 2,
+         "sharp s upper: Full_Upper_Length /= 2");
+
+      --  ÉCOLE -> école: both forms are six bytes on standard, five code points.
+      Expect_Length (Text ((16#C9#, 16#43#, 16#4F#, 16#4C#, 16#45#)), Upper => False, Label => "ECOLE lower");
+
+      --  Empty input.
+      Expect_Length ("", Upper => False, Label => "empty lower");
+      Expect_Length ("", Upper => True, Label => "empty upper");
+      Assert (Full_Upper_Length (From_Wide_Wide_String ("")) = 0, "empty: Full_Upper_Length /= 0");
+
+      --  Large inputs: the sizing path must not depend on the size of the input.
+      Expect_Length (Big_A, Upper => False, Label => "100000 A lower");
+      Assert
+        (Full_Lower_Length (From_Wide_Wide_String (Big_A)) = 100_000,
+         "100000 A: Full_Lower_Length /= 100000");
+      Expect_Length (Big_Sharp, Upper => True, Label => "100000 sharp s upper");
+      Assert
+        (Full_Upper_Length (From_Wide_Wide_String (Big_Sharp)) = 200_000,
+         "100000 sharp s: Full_Upper_Length /= 200000");
+   end Test_Length_Contract;
+
    procedure Test_Standard_Char_Mapping_ASCII_Only (T : in out AUnit.Test_Cases.Test_Case'Class) is
       pragma Unreferenced (T);
    begin

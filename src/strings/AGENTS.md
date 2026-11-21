@@ -93,6 +93,18 @@ Only the way each backend reads the code points differs:
 | `uxstring` | code points (`To_Wide_Wide_String`), mapped and rebuilt; no new dependency | none (UXString stores scalar values only) |
 | `vss` | code points (`To_Wide_Wide_String`), mapped and rebuilt; `VSS.Transformers.Casing` is no longer used | none (VSS stores scalar values only) |
 
+Length of the mapping (contract). `Full_Lower_Length (S)` and `Full_Upper_Length (S)` give the length of `To_Lower (S)` and `To_Upper (S)` in the backend's `Length` unit, without building the result. They are computed in two passes (count, then fill an exactly sized buffer), in `Long_Long_Integer`, so no size is over-allocated and no sum can overflow. The facade states the contract:
+
+- `To_Lower` / `To_Upper`: `Pre => Full_Lower_Length (Source) <= Long_Long_Integer (Natural'Last)` (resp. Upper), and `Post => Length (To_Lower'Result) = Natural (Full_Lower_Length (Source))`.
+- The precondition is not clamped and there is no exception path: a string whose mapping would be longer than `Natural'Last` is outside the contract.
+- The bodies are SPARK Off, so the contract is trusted there (as `Simple_To_Lower`); `pragma Assume` is not used.
+
+| Backend | Length unit of `Full_*_Length` and `Length` |
+|---|---|
+| `standard` | UTF-8 bytes |
+| `wide_string` | UTF-16 code units |
+| `wide_wide_string`, `uxstring`, `vss` | code points |
+
 Character level (case predicates and mapping). On `standard` a `Character` is one byte of UTF-8, so `Char_Is_Lower`, `Char_Is_Upper`, `Char_To_Lower` and `Char_To_Upper` are ASCII only: a byte ≥ 16#80# is neither lower nor upper case and is returned unchanged by the mapping, so the lead byte of U+00C9 (C3) is never altered or taken for a letter case.
 
 | Backend | `Is_Lower` / `Is_Upper` | `Char_To_Lower` / `Char_To_Upper` |

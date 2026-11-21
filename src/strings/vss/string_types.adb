@@ -21,6 +21,18 @@ is
    function Is_Empty (Source : String_Type) return Boolean
    is (VSS_Operations.Is_Empty (Source));
 
+   function Full_Lower_Length (Source : String_Type) return Long_Long_Integer
+   is (VSS_Operations.Full_Lower_Length (Source));
+
+   function Full_Upper_Length (Source : String_Type) return Long_Long_Integer
+   is (VSS_Operations.Full_Upper_Length (Source));
+
+   function To_Lower (Source : String_Type) return String_Type
+   is (VSS_Operations.To_Lower (Source));
+
+   function To_Upper (Source : String_Type) return String_Type
+   is (VSS_Operations.To_Upper (Source));
+
    function Simple_To_Lower (Source : String_Type) return String_Type
    is (VSS_Operations.Simple_To_Lower (Source));
 

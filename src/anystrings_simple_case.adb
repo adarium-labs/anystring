@@ -72,37 +72,114 @@ package body Anystrings_Simple_Case is
       return True;
    end Final_Sigma;
 
-   function Full_Map (Run : Wide_Wide_String; Upper : Boolean) return Wide_Wide_String is
-      --  Each code point maps to at most three code points.
-      Buf : Wide_Wide_String (1 .. 3 * Run'Length);
-      N   : Natural := 0;
+   procedure Map_At
+     (Run   : Wide_Wide_String;
+      I     : Positive;
+      Upper : Boolean;
+      Chars : out Mapped_Chars;
+      Count : out Map_Count)
+   is
+      CP    : constant Natural := Code (Run (I));
+      Text  : Anystrings_UCD_Case.Mapped_Text;
+      Text_Count : Anystrings_UCD_Case.Mapping_Length;
+   begin
+      Chars := (others => Wide_Wide_Character'First);
+      if not Is_Scalar (CP) then
+         Chars (1) := Run (I);
+         Count := 1;
+      elsif Upper then
+         Anystrings_UCD_Case.Full_Upper (CP, Text, Text_Count);
+      elsif CP = Anystrings_UCD_Case.Final_Sigma_Source and then Final_Sigma (Run, I) then
+         Text := (1 => Anystrings_UCD_Case.Final_Sigma_Target, others => 0);
+         Text_Count := 1;
+      else
+         Anystrings_UCD_Case.Full_Lower (CP, Text, Text_Count);
+      end if;
+
+      if Is_Scalar (CP) then
+         for K in 1 .. Text_Count loop
+            Chars (K) := To_Wide_Wide (Text (K));
+         end loop;
+         Count := Text_Count;
+      end if;
+   end Map_At;
+
+   function UTF_16_Size (C : Wide_Wide_Character) return Long_Long_Integer is
+   begin
+      return (if Code (C) <= 16#FFFF# then 1 else 2);
+   end UTF_16_Size;
+
+   function UTF_8_Size (C : Wide_Wide_Character) return Long_Long_Integer is
+      CP : constant Natural := Code (C);
+   begin
+      if CP <= 16#7F# then
+         return 1;
+      elsif CP <= 16#7FF# then
+         return 2;
+      elsif CP <= 16#FFFF# then
+         return 3;
+      else
+         return 4;
+      end if;
+   end UTF_8_Size;
+
+   function Mapped_Code_Points (Run : Wide_Wide_String; Upper : Boolean) return Long_Long_Integer is
+      Chars : Mapped_Chars;
+      Count : Map_Count;
+      Total : Long_Long_Integer := 0;
    begin
       for I in Run'Range loop
-         declare
-            CP    : constant Natural := Code (Run (I));
-            Text  : Anystrings_UCD_Case.Mapped_Text;
-            Count : Anystrings_UCD_Case.Mapping_Length;
-         begin
-            if not Is_Scalar (CP) then
-               N := N + 1;
-               Buf (N) := Run (I);
-            else
-               if Upper then
-                  Anystrings_UCD_Case.Full_Upper (CP, Text, Count);
-               elsif CP = Anystrings_UCD_Case.Final_Sigma_Source and then Final_Sigma (Run, I) then
-                  Text := (1 => Anystrings_UCD_Case.Final_Sigma_Target, others => 0);
-                  Count := 1;
-               else
-                  Anystrings_UCD_Case.Full_Lower (CP, Text, Count);
-               end if;
-               for K in 1 .. Count loop
-                  N := N + 1;
-                  Buf (N) := To_Wide_Wide (Text (K));
-               end loop;
-            end if;
-         end;
+         Map_At (Run, I, Upper, Chars, Count);
+         Total := Total + Long_Long_Integer (Count);
       end loop;
-      return Buf (1 .. N);
+      return Total;
+   end Mapped_Code_Points;
+
+   function Mapped_UTF_16_Units (Run : Wide_Wide_String; Upper : Boolean) return Long_Long_Integer is
+      Chars : Mapped_Chars;
+      Count : Map_Count;
+      Total : Long_Long_Integer := 0;
+   begin
+      for I in Run'Range loop
+         Map_At (Run, I, Upper, Chars, Count);
+         for K in 1 .. Count loop
+            Total := Total + UTF_16_Size (Chars (K));
+         end loop;
+      end loop;
+      return Total;
+   end Mapped_UTF_16_Units;
+
+   function Mapped_UTF_8_Bytes (Run : Wide_Wide_String; Upper : Boolean) return Long_Long_Integer is
+      Chars : Mapped_Chars;
+      Count : Map_Count;
+      Total : Long_Long_Integer := 0;
+   begin
+      for I in Run'Range loop
+         Map_At (Run, I, Upper, Chars, Count);
+         for K in 1 .. Count loop
+            Total := Total + UTF_8_Size (Chars (K));
+         end loop;
+      end loop;
+      return Total;
+   end Mapped_UTF_8_Bytes;
+
+   function Full_Map (Run : Wide_Wide_String; Upper : Boolean) return Wide_Wide_String is
+      --  Pass 1 (the precondition bounds the size by Natural'Last); pass 2 fills
+      --  exactly that many code points, so Pos never exceeds Size.
+      Size  : constant Natural := Natural (Mapped_Code_Points (Run, Upper));
+      Buf   : Wide_Wide_String (1 .. Size);
+      Pos   : Natural := 0;
+      Chars : Mapped_Chars;
+      Count : Map_Count;
+   begin
+      for I in Run'Range loop
+         Map_At (Run, I, Upper, Chars, Count);
+         for K in 1 .. Count loop
+            Pos := Pos + 1;
+            Buf (Pos) := Chars (K);
+         end loop;
+      end loop;
+      return Buf;
    end Full_Map;
 
 end Anystrings_Simple_Case;

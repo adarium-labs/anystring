@@ -214,51 +214,115 @@ package body Standard_String_Operations is
       return Out_Buf;
    end Simple_To_Lower;
 
-   --  Full case mapping of one well-formed UTF-8 run (Anystrings_Simple_Case.
-   --  Full_Map: the same full mapping as the vss backend, Final_Sigma within the
-   --  run). Run decodes to exactly its own code points, so no U+FFFD is made.
-   function Map_Run (Run : String; Upper : Boolean) return String is
-   begin
-      return
-        Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Encode
-          (Item          => Anystrings_Simple_Case.Full_Map (Anystrings_UTF_8_Replace.Decode_Replacing (Run), Upper),
-           Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8,
-           Output_BOM    => False);
-   end Map_Run;
-
-   --  Case mapping of UTF-8 storage, code point by code point. Each maximal run of
-   --  well-formed sequences is mapped by Map_Run. Every ill-formed sequence (as
-   --  decoded by Decode_One_UTF_8_Code_Point, re-encoded and compared with the
-   --  stored bytes) is copied unchanged and ends the run. Byte length may change.
-   function Case_Map (Source : Unbounded_String; Upper : Boolean) return Unbounded_String is
-      S          : constant String := To_String (Source);
-      Out_Buf    : Unbounded_String;
-      I          : Positive;
-      Run_Start  : Positive;
+   --  Case mapping of the UTF-8 storage S, in two passes (see Full_Map in
+   --  Anystrings_Simple_Case). The storage is walked code point by code point:
+   --  every ill-formed sequence (as decoded by Decode_One_UTF_8_Code_Point and
+   --  not re-encoded to the same bytes) is copied unchanged and ends the current
+   --  run; every maximal run of canonical sequences is decoded, mapped with the
+   --  full mapping (Final_Sigma context inside the run) and encoded.
+   --
+   --  Fill = False: Total is the number of bytes the mapping produces (pass 1).
+   --  Fill = True: the same bytes are written to Buf (Buf'First ..), which must
+   --  hold exactly Total bytes of pass 1 (pass 2). Buf is not read when Fill is
+   --  False.
+   --
+   --  Arithmetic: Total is Long_Long_Integer and counts at most 4 bytes per
+   --  code point of S, far from overflow. In pass 2, Total < Buf'Length <=
+   --  Natural'Last before each write, so Buf'First + Natural (Total) and the
+   --  write range stay within Buf.
+   procedure Case_Walk
+     (S     : String;
+      Upper : Boolean;
+      Fill  : Boolean;
+      Buf   : in out String;
+      Total : in out Long_Long_Integer)
+   is
+      Run_Start : Positive;
+      I         : Positive;
       Code_Point : Natural;
-      Step       : Natural;
+      Step      : Natural;
+
+      procedure Put (X : String) is
+         First : Natural;
+      begin
+         if Fill then
+            First := Buf'First + Natural (Total);
+            Buf (First .. First + X'Length - 1) := X;
+         end if;
+         Total := Total + Long_Long_Integer (X'Length);
+      end Put;
+
+      procedure Emit_Run (Run : String) is
+         CPs   : constant Wide_Wide_String := Anystrings_UTF_8_Replace.Decode_Replacing (Run);
+         Chars : Anystrings_Simple_Case.Mapped_Chars;
+         Count : Anystrings_Simple_Case.Map_Count;
+      begin
+         for K in CPs'Range loop
+            Anystrings_Simple_Case.Map_At (CPs, K, Upper, Chars, Count);
+            for J in 1 .. Count loop
+               Put (Encode_Scalar (Wide_Wide_Character'Pos (Chars (J))));
+            end loop;
+         end loop;
+      end Emit_Run;
    begin
       if S'Length = 0 then
-         return Out_Buf;
+         return;
       end if;
-      I := S'First;
+      I         := S'First;
       Run_Start := S'First;
       loop
          Decode_One_UTF_8_Code_Point (S, I, Code_Point, Step);
          if Encode_Scalar (Code_Point) /= S (I .. I + Step - 1) then
             if Run_Start < I then
-               Ada.Strings.Unbounded.Append (Out_Buf, Map_Run (S (Run_Start .. I - 1), Upper));
+               Emit_Run (S (Run_Start .. I - 1));
             end if;
-            Ada.Strings.Unbounded.Append (Out_Buf, S (I .. I + Step - 1));
+            Put (S (I .. I + Step - 1));
             Run_Start := I + Step;
          end if;
          exit when Step > S'Last - I;
          I := I + Step;
       end loop;
       if Run_Start <= S'Last then
-         Ada.Strings.Unbounded.Append (Out_Buf, Map_Run (S (Run_Start .. S'Last), Upper));
+         Emit_Run (S (Run_Start .. S'Last));
       end if;
-      return Out_Buf;
+   end Case_Walk;
+
+   --  Size, in bytes, of the case mapping of Source (see Case_Walk).
+   function Case_Length (Source : Unbounded_String; Upper : Boolean) return Long_Long_Integer is
+      S     : constant String := To_String (Source);
+      Empty : String (1 .. 0);
+      Total : Long_Long_Integer := 0;
+   begin
+      Case_Walk (S, Upper, Fill => False, Buf => Empty, Total => Total);
+      return Total;
+   end Case_Length;
+
+   function Full_Lower_Length (Source : Unbounded_String) return Long_Long_Integer is
+   begin
+      return Case_Length (Source, Upper => False);
+   end Full_Lower_Length;
+
+   function Full_Upper_Length (Source : Unbounded_String) return Long_Long_Integer is
+   begin
+      return Case_Length (Source, Upper => True);
+   end Full_Upper_Length;
+
+   --  Pass 1 gives the exact size; pass 2 writes exactly that many bytes. The
+   --  precondition of To_Lower / To_Upper (in the facade) keeps the size within
+   --  Natural'Last.
+   function Case_Map (Source : Unbounded_String; Upper : Boolean) return Unbounded_String is
+      S      : constant String := To_String (Source);
+      Empty  : String (1 .. 0);
+      Total  : Long_Long_Integer := 0;
+   begin
+      Case_Walk (S, Upper, Fill => False, Buf => Empty, Total => Total);
+      declare
+         Result : String (1 .. Natural (Total));
+      begin
+         Total := 0;
+         Case_Walk (S, Upper, Fill => True, Buf => Result, Total => Total);
+         return To_Unbounded_String (Result);
+      end;
    end Case_Map;
 
    function To_Lower (Source : Unbounded_String) return Unbounded_String is
