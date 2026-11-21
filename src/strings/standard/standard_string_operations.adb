@@ -189,9 +189,15 @@ package body Standard_String_Operations is
             Raw   : constant String := S (I .. I + Step - 1);
             Lower : constant Natural := Simple_Lower_Code_Point (Code_Point);
          begin
-            --  Keep the mapping only when the byte length of the code point is
-            --  unchanged, so that Length (Result) = Length (Source).
-            if Lower /= Code_Point and then Encode_Scalar (Lower)'Length = Step then
+            --  Map only a canonical sequence: the stored bytes must be exactly the
+            --  UTF-8 of the decoded code point. An overlong sequence (E0 88 BA
+            --  decodes to U+023A) or a surrogate encoding is copied unchanged.
+            --  Keep the mapping only when its byte length is unchanged, so that
+            --  Length (Result) = Length (Source).
+            if Encode_Scalar (Code_Point) = Raw
+              and then Lower /= Code_Point
+              and then Encode_Scalar (Lower)'Length = Step
+            then
                Ada.Strings.Unbounded.Append (Out_Buf, Encode_Scalar (Lower));
             else
                Ada.Strings.Unbounded.Append (Out_Buf, Raw);

@@ -51,4 +51,7 @@ private
    procedure Test_Standard_Ill_Formed_Bytes_Kept
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 
+   procedure Test_Standard_Overlong_And_Out_Of_Range_Kept
+     (T : in out AUnit.Test_Cases.Test_Case'Class);
+
 end Case_Mapping_Test;

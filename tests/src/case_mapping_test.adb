@@ -89,6 +89,10 @@ package body Case_Mapping_Test is
         (T,
          (Routine      => Test_Standard_Ill_Formed_Bytes_Kept'Access,
           Routine_Name => AUnit.Format ("standard: ill-formed bytes kept unchanged")));
+      Add_Routine
+        (T,
+         (Routine      => Test_Standard_Overlong_And_Out_Of_Range_Kept'Access,
+          Routine_Name => AUnit.Format ("standard: overlong, surrogate and out-of-range sequences kept")));
    end Register_Tests;
 
    procedure Test_ASCII_Unchanged_By_Case_Mapping (T : in out AUnit.Test_Cases.Test_Case'Class) is
@@ -203,5 +207,44 @@ package body Case_Mapping_Test is
             "letter after ill-formed bytes not mapped");
       end if;
    end Test_Standard_Ill_Formed_Bytes_Kept;
+
+   procedure Test_Standard_Overlong_And_Out_Of_Range_Kept (T : in out AUnit.Test_Cases.Test_Case'Class) is
+      pragma Unreferenced (T);
+
+      --  Raw is not canonical UTF-8, so the operations must return it unchanged.
+      procedure Check_Kept (Raw : String; Label : String) is
+         Source : constant String_Type := To_String_Type (Raw);
+      begin
+         Assert (Bytes (To_Lower (Source)) = Raw, Label & ": To_Lower changed the bytes");
+         Assert (Bytes (To_Upper (Source)) = Raw, Label & ": To_Upper changed the bytes");
+         Assert (Bytes (Simple_To_Lower (Source)) = Raw, Label & ": Simple_To_Lower changed the bytes");
+      end Check_Kept;
+
+      E0_88_BA : constant String := Character'Val (16#E0#) & Character'Val (16#88#) & Character'Val (16#BA#);
+      E0_88_BE : constant String := Character'Val (16#E0#) & Character'Val (16#88#) & Character'Val (16#BE#);
+      C0_80    : constant String := Character'Val (16#C0#) & Character'Val (16#80#);
+      C1_BF    : constant String := Character'Val (16#C1#) & Character'Val (16#BF#);
+      ED_A0_80 : constant String := Character'Val (16#ED#) & Character'Val (16#A0#) & Character'Val (16#80#);
+      F4_90    : constant String :=
+        Character'Val (16#F4#) & Character'Val (16#90#) & Character'Val (16#80#) & Character'Val (16#80#);
+   begin
+      if Byte_Counting then
+         --  E0 88 BA is an overlong encoding of U+023A (whose lower form is
+         --  U+2C65): it must not be mapped.
+         Check_Kept (E0_88_BA, "overlong U+023A");
+         Check_Kept (E0_88_BE, "overlong U+023E");
+         Check_Kept (C0_80, "overlong NUL (2 bytes)");
+         Check_Kept (C1_BF, "overlong U+007F (2 bytes)");
+         Check_Kept (ED_A0_80, "surrogate U+D800");
+         Check_Kept (F4_90, "U+110000 (above U+10FFFF)");
+         --  Between ASCII letters: the letters are mapped, the bytes are kept.
+         Assert
+           (Bytes (To_Lower (To_String_Type ("A" & E0_88_BA & "B"))) = "a" & E0_88_BA & "b",
+            "lower: overlong between ASCII letters");
+         Assert
+           (Bytes (To_Upper (To_String_Type ("a" & E0_88_BA & "b"))) = "A" & E0_88_BA & "B",
+            "upper: overlong between ASCII letters");
+      end if;
+   end Test_Standard_Overlong_And_Out_Of_Range_Kept;
 
 end Case_Mapping_Test;
