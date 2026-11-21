@@ -10,16 +10,12 @@
 --  code-point storage (the other backends).
 --
 --  @description
---  Expectations are written in code points, so they run on every backend.
---  Two backend classes need care:
---    - Maps_Non_ASCII: backends whose To_Lower / To_Upper map non-ASCII letters
---      (standard, vss, uxstring). On wide_string and wide_wide_string the case
---      mapping is ASCII-only today; those cases then pin the unchanged result.
---    - Full_Case_Mapping: standard and vss (U+0130 gives two code points).
---      uxstring maps per code point with the GNAT tables and the wide backends
---      are ASCII-only; the full-mapping cases are not asserted on those.
+--  Expectations are written in code points and asserted on every backend: the
+--  full Unicode case mapping (generated UCD tables) gives the same result on
+--  standard, wide_string, wide_wide_string, uxstring and vss.
 --    - Byte_Counting: standard, where a String_Type is UTF-8 bytes. Byte-level
---      checks (valid UTF-8 result, ill-formed bytes kept) run only there.
+--      checks (valid UTF-8 result, ill-formed bytes kept, Char_To_Lower /
+--      Char_To_Upper on bytes) run only there.
 
 with AUnit.Test_Cases;
 
@@ -32,29 +28,20 @@ package Case_Mapping_Test is
    overriding procedure Register_Tests (T : in out Test_Case);
 
 private
-
    procedure Test_ASCII_Unchanged_By_Case_Mapping
      (T : in out AUnit.Test_Cases.Test_Case'Class);
-
-   procedure Test_Latin_1_Letter_Mapping
+   procedure Test_Shared_Expectations
      (T : in out AUnit.Test_Cases.Test_Case'Class);
-
    procedure Test_Round_Trip
      (T : in out AUnit.Test_Cases.Test_Case'Class);
-
-   procedure Test_Full_Mapping_Changes_Length
-     (T : in out AUnit.Test_Cases.Test_Case'Class);
-
    procedure Test_Final_Sigma
      (T : in out AUnit.Test_Cases.Test_Case'Class);
-
    procedure Test_Standard_Valid_UTF_8_Bytes
      (T : in out AUnit.Test_Cases.Test_Case'Class);
-
    procedure Test_Standard_Ill_Formed_Bytes_Kept
      (T : in out AUnit.Test_Cases.Test_Case'Class);
-
    procedure Test_Standard_Overlong_And_Out_Of_Range_Kept
      (T : in out AUnit.Test_Cases.Test_Case'Class);
-
+   procedure Test_Standard_Char_Mapping_ASCII_Only
+     (T : in out AUnit.Test_Cases.Test_Case'Class);
 end Case_Mapping_Test;

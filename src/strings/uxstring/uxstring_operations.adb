@@ -115,9 +115,10 @@ package body UXString_Operations is
       return Last;
    end Index_Reverse;
 
+   --  Full case mapping (Anystrings_Simple_Case.Full_Map) on the code points.
    function To_Lower (Source : UXString) return UXString is
    begin
-      return UXStrings.To_Lower (Source);
+      return From_Wide_Wide_String (Anystrings_Simple_Case.Full_Map (To_Wide_Wide_String (Source), Upper => False));
    end To_Lower;
 
    function Simple_To_Lower (Source : UXString) return UXString is
@@ -131,7 +132,7 @@ package body UXString_Operations is
 
    function To_Upper (Source : UXString) return UXString is
    begin
-      return UXStrings.To_Upper (Source);
+      return From_Wide_Wide_String (Anystrings_Simple_Case.Full_Map (To_Wide_Wide_String (Source), Upper => True));
    end To_Upper;
 
    function Starts_With (Source : UXString; Prefix : UXString) return Boolean is

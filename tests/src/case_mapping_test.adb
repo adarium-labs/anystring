@@ -17,22 +17,21 @@ package body Case_Mapping_Test is
       return Wide_Wide_Character'Val (Code);
    end Cp;
 
+   type Codes is array (Positive range <>) of Natural;
+
+   --  The text whose code points are Values.
+   function Text (Values : Codes) return Wide_Wide_String is
+      R : Wide_Wide_String (1 .. Values'Length);
+   begin
+      for I in Values'Range loop
+         R (I - Values'First + 1) := Cp (Values (I));
+      end loop;
+      return R;
+   end Text;
+
    --  True on a backend whose Length counts UTF-8 bytes (standard).
    Byte_Counting : constant Boolean :=
      Length (From_Wide_Wide_String (Wide_Wide_String'(1 => Cp (16#E9#)))) = 2;
-
-   --  True on a backend whose To_Lower maps U+00C9 to U+00E9. Standard, vss and
-   --  uxstring do; wide_string and wide_wide_string are ASCII-only today.
-   Maps_Non_ASCII : constant Boolean :=
-     To_Wide_Wide_String (To_Lower (From_Wide_Wide_String (Wide_Wide_String'(1 => Cp (16#C9#)))))
-     = Wide_Wide_String'(1 => Cp (16#E9#));
-
-   --  True on a backend whose To_Lower is the full mapping (U+0130 gives
-   --  U+0069 U+0307). Standard and vss do; uxstring maps per code point with
-   --  the GNAT tables and wide_string / wide_wide_string are ASCII-only.
-   Full_Case_Mapping : constant Boolean :=
-     To_Wide_Wide_String (To_Lower (From_Wide_Wide_String (Wide_Wide_String'(1 => Cp (16#130#)))))
-     = Wide_Wide_String'(Cp (16#69#), Cp (16#307#));
 
    --  Stored bytes of S. Only called when Byte_Counting is True, where each
    --  element is one byte.
@@ -73,14 +72,10 @@ package body Case_Mapping_Test is
           Routine_Name => AUnit.Format ("ASCII is mapped and round-trips")));
       Add_Routine
         (T,
-         (Routine      => Test_Latin_1_Letter_Mapping'Access,
-          Routine_Name => AUnit.Format ("U+00C9 <-> U+00E9 (A-acute)")));
+         (Routine      => Test_Shared_Expectations'Access,
+          Routine_Name => AUnit.Format ("Shared expectations: ECOLE, sharp s, dotted I, Greek, Cyrillic, Deseret")));
       Add_Routine
         (T, (Routine => Test_Round_Trip'Access, Routine_Name => AUnit.Format ("To_Upper (To_Lower (x)) = x")));
-      Add_Routine
-        (T,
-         (Routine      => Test_Full_Mapping_Changes_Length'Access,
-          Routine_Name => AUnit.Format ("Full mapping: U+0130 and U+00DF change length")));
       Add_Routine
         (T,
          (Routine      => Test_Final_Sigma'Access,
@@ -97,6 +92,10 @@ package body Case_Mapping_Test is
         (T,
          (Routine      => Test_Standard_Overlong_And_Out_Of_Range_Kept'Access,
           Routine_Name => AUnit.Format ("standard: overlong, surrogate and out-of-range sequences kept")));
+      Add_Routine
+        (T,
+         (Routine      => Test_Standard_Char_Mapping_ASCII_Only'Access,
+          Routine_Name => AUnit.Format ("standard: Char_To_Lower / Char_To_Upper map ASCII only")));
    end Register_Tests;
 
    procedure Test_ASCII_Unchanged_By_Case_Mapping (T : in out AUnit.Test_Cases.Test_Case'Class) is
@@ -104,39 +103,80 @@ package body Case_Mapping_Test is
    begin
       Expect_Map ("Hello, World 123!", "hello, world 123!", Upper => False, Label => "ASCII lower");
       Expect_Map ("Hello, World 123!", "HELLO, WORLD 123!", Upper => True, Label => "ASCII upper");
+      Expect_Map ("", "", Upper => False, Label => "empty lower");
+      Expect_Map ("", "", Upper => True, Label => "empty upper");
    end Test_ASCII_Unchanged_By_Case_Mapping;
 
-   procedure Test_Latin_1_Letter_Mapping (T : in out AUnit.Test_Cases.Test_Case'Class) is
+   --  The expectations every backend must meet, in code points.
+   procedure Test_Shared_Expectations (T : in out AUnit.Test_Cases.Test_Case'Class) is
       pragma Unreferenced (T);
-      A_Acute_Upper : constant Wide_Wide_String := (1 => Cp (16#C9#));
-      A_Acute_Lower : constant Wide_Wide_String := (1 => Cp (16#E9#));
    begin
-      if Maps_Non_ASCII then
-         Expect_Map (A_Acute_Upper, A_Acute_Lower, Upper => False, Label => "U+00C9 lower");
-         Expect_Map (A_Acute_Lower, A_Acute_Upper, Upper => True, Label => "U+00E9 upper");
-      else
-         --  ASCII-only backend: the letter is not mapped (existing behaviour).
-         Expect_Map (A_Acute_Upper, A_Acute_Upper, Upper => False, Label => "U+00C9 lower (ASCII-only)");
-         Expect_Map (A_Acute_Lower, A_Acute_Lower, Upper => True, Label => "U+00E9 upper (ASCII-only)");
-      end if;
-   end Test_Latin_1_Letter_Mapping;
+      --  "ÉCOLE" <-> "école"
+      Expect_Map
+        (Text ((16#C9#, 16#43#, 16#4F#, 16#4C#, 16#45#)),
+         Text ((16#E9#, 16#63#, 16#6F#, 16#6C#, 16#65#)),
+         Upper => False,
+         Label => "ECOLE lower");
+      Expect_Map
+        (Text ((16#E9#, 16#63#, 16#6F#, 16#6C#, 16#65#)),
+         Text ((16#C9#, 16#43#, 16#4F#, 16#4C#, 16#45#)),
+         Upper => True,
+         Label => "ecole upper");
+      --  "ß" -> "SS" (full mapping, two code points)
+      Expect_Map (Text ((1 => 16#DF#)), Text ((16#53#, 16#53#)), Upper => True, Label => "sharp s upper");
+      --  "İ" (U+0130) -> U+0069 U+0307
+      Expect_Map
+        (Text ((1 => 16#130#)),
+         Text ((16#69#, 16#307#)),
+         Upper => False,
+         Label => "dotted I lower");
+      --  "ΟΔΥΣΣΕΥΣ" -> "οδυσσευς": the final sigma is U+03C2
+      Expect_Map
+        (Text ((16#39F#, 16#394#, 16#3A5#, 16#3A3#, 16#3A3#, 16#395#, 16#3A5#, 16#3A3#)),
+         Text ((16#3BF#, 16#3B4#, 16#3C5#, 16#3C3#, 16#3C3#, 16#3B5#, 16#3C5#, 16#3C2#)),
+         Upper => False,
+         Label => "Odysseus lower");
+      --  Greek "ΑΒΓΔ" <-> "αβγδ"
+      Expect_Map
+        (Text ((16#391#, 16#392#, 16#393#, 16#394#)),
+         Text ((16#3B1#, 16#3B2#, 16#3B3#, 16#3B4#)),
+         Upper => False,
+         Label => "Greek lower");
+      Expect_Map
+        (Text ((16#3B1#, 16#3B2#, 16#3B3#, 16#3B4#)),
+         Text ((16#391#, 16#392#, 16#393#, 16#394#)),
+         Upper => True,
+         Label => "Greek upper");
+      --  Cyrillic "ПРИВЕТ" <-> "привет"
+      Expect_Map
+        (Text ((16#41F#, 16#420#, 16#418#, 16#412#, 16#415#, 16#422#)),
+         Text ((16#43F#, 16#440#, 16#438#, 16#432#, 16#435#, 16#442#)),
+         Upper => False,
+         Label => "Cyrillic lower");
+      Expect_Map
+        (Text ((16#43F#, 16#440#, 16#438#, 16#432#, 16#435#, 16#442#)),
+         Text ((16#41F#, 16#420#, 16#418#, 16#412#, 16#415#, 16#422#)),
+         Upper => True,
+         Label => "Cyrillic upper");
+      --  Deseret U+10400 <-> U+10428: a supplementary-plane letter, which is a
+      --  surrogate pair on wide_string.
+      Expect_Map (Text ((1 => 16#10400#)), Text ((1 => 16#10428#)), Upper => False, Label => "Deseret lower");
+      Expect_Map (Text ((1 => 16#10428#)), Text ((1 => 16#10400#)), Upper => True, Label => "Deseret upper");
+   end Test_Shared_Expectations;
 
    procedure Test_Round_Trip (T : in out AUnit.Test_Cases.Test_Case'Class) is
       pragma Unreferenced (T);
-      Input   : constant Wide_Wide_String :=
-        Wide_Wide_String'(Cp (16#C0#), Cp (16#C9#), Cp (16#CE#));
+      Input   : constant Wide_Wide_String := Text ((16#C0#, 16#C9#, 16#CE#));
       Source  : constant String_Type := From_Wide_Wide_String (Input);
       Lowered : constant String_Type := To_Lower (Source);
       Back    : constant String_Type := To_Upper (Lowered);
    begin
       Assert (To_Wide_Wide_String (Back) = Input, "To_Upper (To_Lower (x)) /= x");
-      if Maps_Non_ASCII then
-         Expect_Map
-           (Input,
-            Wide_Wide_String'(Cp (16#E0#), Cp (16#E9#), Cp (16#EE#)),
-            Upper => False,
-            Label => "U+00C0 U+00C9 U+00CE lower");
-      end if;
+      Expect_Map
+        (Input,
+         Text ((16#E0#, 16#E9#, 16#EE#)),
+         Upper => False,
+         Label => "U+00C0 U+00C9 U+00CE lower");
       if Byte_Counting then
          Assert (UTF_8_Is_Valid (Bytes (Lowered)), "lower-case result is not valid UTF-8");
          Assert (UTF_8_Is_Valid (Bytes (Back)), "round-trip result is not valid UTF-8");
@@ -144,30 +184,8 @@ package body Case_Mapping_Test is
       end if;
    end Test_Round_Trip;
 
-   procedure Test_Full_Mapping_Changes_Length (T : in out AUnit.Test_Cases.Test_Case'Class) is
-      pragma Unreferenced (T);
-      Dotted_I : constant Wide_Wide_String := (1 => Cp (16#130#));
-      Sharp_S  : constant Wide_Wide_String := (1 => Cp (16#DF#));
-   begin
-      --  Full case mapping, as in vss and standard: U+0130 lower-cases to
-      --  U+0069 U+0307 (two code points), and U+00DF upper-cases to "SS".
-      --  The result may be longer than the input, so To_Lower and To_Upper have
-      --  no Length postcondition.
-      --  Not asserted on uxstring and wide backends (see Full_Case_Mapping):
-      --  they do not give the full mapping, and this suite does not pin them.
-      if Full_Case_Mapping then
-         Expect_Map
-           (Dotted_I,
-            Wide_Wide_String'(Cp (16#69#), Cp (16#307#)),
-            Upper => False,
-            Label => "U+0130 lower (full)");
-         Expect_Map (Sharp_S, Wide_Wide_String'("SS"), Upper => True, Label => "U+00DF upper (full)");
-      end if;
-   end Test_Full_Mapping_Changes_Length;
-
    --  Final_Sigma (SpecialCasing): a capital sigma at the end of a word lower-
-   --  cases to U+03C2; elsewhere to U+03C3. Asserted where Full_Case_Mapping
-   --  holds (standard and vss, which agree on these inputs).
+   --  cases to U+03C2; elsewhere to U+03C3.
    procedure Test_Final_Sigma (T : in out AUnit.Test_Cases.Test_Case'Class) is
       pragma Unreferenced (T);
       Omicron : constant Wide_Wide_Character := Cp (16#39F#);
@@ -177,37 +195,35 @@ package body Case_Mapping_Test is
       Beta    : constant Wide_Wide_Character := Cp (16#392#);
       Space   : constant Wide_Wide_Character := Cp (16#20#);
    begin
-      if Full_Case_Mapping then
-         --  "ΟΔΟΣ" (end of word) -> "οδος"
-         Expect_Map
-           (Omicron & Delta_C & Omicron & Sigma,
-            Cp (16#3BF#) & Cp (16#3B4#) & Cp (16#3BF#) & Cp (16#3C2#),
-            Upper => False,
-            Label => "final sigma at end of word");
-         --  "ΑΣ Β": the space is not case-ignorable, so the sigma is final.
-         Expect_Map
-           (Alpha & Sigma & Space & Beta,
-            Cp (16#3B1#) & Cp (16#3C2#) & Space & Cp (16#3B2#),
-            Upper => False,
-            Label => "final sigma before a space");
-         --  "ΣΑ": no cased letter before the sigma, so it is not final.
-         Expect_Map
-           (Sigma & Alpha,
-            Cp (16#3C3#) & Cp (16#3B1#),
-            Upper => False,
-            Label => "initial sigma");
-         Expect_Map
-           (Wide_Wide_String'(1 => Sigma),
-            Wide_Wide_String'(1 => Cp (16#3C3#)),
-            Upper => False,
-            Label => "isolated sigma");
-         --  Upper case has no context: U+03C2 -> U+03A3.
-         Expect_Map
-           (Wide_Wide_String'(1 => Cp (16#3C2#)),
-            Wide_Wide_String'(1 => Sigma),
-            Upper => True,
-            Label => "final sigma upper");
-      end if;
+      --  "ΟΔΟΣ" (end of word) -> "οδος"
+      Expect_Map
+        (Omicron & Delta_C & Omicron & Sigma,
+         Cp (16#3BF#) & Cp (16#3B4#) & Cp (16#3BF#) & Cp (16#3C2#),
+         Upper => False,
+         Label => "final sigma at end of word");
+      --  "ΑΣ Β": the space is not case-ignorable, so the sigma is final.
+      Expect_Map
+        (Alpha & Sigma & Space & Beta,
+         Cp (16#3B1#) & Cp (16#3C2#) & Space & Cp (16#3B2#),
+         Upper => False,
+         Label => "final sigma before a space");
+      --  "ΣΑ": no cased letter before the sigma, so it is not final.
+      Expect_Map
+        (Sigma & Alpha,
+         Cp (16#3C3#) & Cp (16#3B1#),
+         Upper => False,
+         Label => "initial sigma");
+      Expect_Map
+        (Wide_Wide_String'(1 => Sigma),
+         Wide_Wide_String'(1 => Cp (16#3C3#)),
+         Upper => False,
+         Label => "isolated sigma");
+      --  Upper case has no context: U+03C2 -> U+03A3.
+      Expect_Map
+        (Wide_Wide_String'(1 => Cp (16#3C2#)),
+         Wide_Wide_String'(1 => Sigma),
+         Upper => True,
+         Label => "final sigma upper");
    end Test_Final_Sigma;
 
    procedure Test_Standard_Valid_UTF_8_Bytes (T : in out AUnit.Test_Cases.Test_Case'Class) is
@@ -229,9 +245,9 @@ package body Case_Mapping_Test is
 
    procedure Test_Standard_Ill_Formed_Bytes_Kept (T : in out AUnit.Test_Cases.Test_Case'Class) is
       pragma Unreferenced (T);
-      C9 : constant Character := Character'Val (16#C9#);
-      C0 : constant Character := Character'Val (16#C0#);
-      C3 : constant Character := Character'Val (16#C3#);
+      C9  : constant Character := Character'Val (16#C9#);
+      C0  : constant Character := Character'Val (16#C0#);
+      C3  : constant Character := Character'Val (16#C3#);
       B89 : constant Character := Character'Val (16#89#);
       A9  : constant Character := Character'Val (16#A9#);
    begin
@@ -293,9 +309,9 @@ package body Case_Mapping_Test is
          Assert
            (Bytes (To_Upper (To_String_Type ("a" & E0_88_BA & "b"))) = "A" & E0_88_BA & "B",
             "upper: overlong between ASCII letters");
-         --  The same decoder serves the Latin-1 and code-point boundaries: an
-         --  overlong sequence is ill-formed there too, one U+FFFD per byte
-         --  (maximal subpart), never the code point it spells.
+         --  The egress decoder is algorithm R (one U+FFFD per maximal
+         --  ill-formed subpart), the same model as the code-point boundary:
+         --  an overlong sequence is never the code point it spells.
          Assert
            (To_Latin_1 (To_String_Type (Character'Val (16#E0#) & Character'Val (16#80#) & Character'Val (16#A9#)))
             = "???",
@@ -305,10 +321,32 @@ package body Case_Mapping_Test is
                                         & Character'Val (16#AF#)))
             = "????",
             "To_Latin_1: overlong F0 80 80 AF decoded as /");
+         --  An encoded surrogate is one U+FFFD per byte (three), not one for the
+         --  three bytes.
+         Assert (To_Latin_1 (To_String_Type (ED_A0_80)) = "???", "To_Latin_1: ED A0 80 is not three replacements");
+         --  A truncated three-byte sequence is one maximal subpart (E2 82), then A.
+         Assert
+           (To_Latin_1 (To_String_Type (Character'Val (16#E2#) & Character'Val (16#82#) & "A")) = "?A",
+            "To_Latin_1: truncated E2 82 is not one replacement");
          Assert
            (To_Wide_Wide_String (To_String_Type (E0_88_BA)) = (1 .. 3 => Cp (16#FFFD#)),
             "To_Wide_Wide_String: overlong E0 88 BA decoded as U+023A");
       end if;
    end Test_Standard_Overlong_And_Out_Of_Range_Kept;
+
+   --  standard: a Character is one byte of UTF-8. Char_To_Lower / Char_To_Upper
+   --  map A-Z and a-z only; a byte >= 16#80# is returned unchanged.
+   procedure Test_Standard_Char_Mapping_ASCII_Only (T : in out AUnit.Test_Cases.Test_Case'Class) is
+      pragma Unreferenced (T);
+   begin
+      if Byte_Counting then
+         Assert (To_Lower (Character_Type'Val (16#41#)) = Character_Type'Val (16#61#), "To_Lower A");
+         Assert (To_Upper (Character_Type'Val (16#7A#)) = Character_Type'Val (16#5A#), "To_Upper z");
+         Assert (To_Lower (Character_Type'Val (16#C9#)) = Character_Type'Val (16#C9#), "To_Lower C9 changed");
+         Assert (To_Lower (Character_Type'Val (16#C3#)) = Character_Type'Val (16#C3#), "To_Lower C3 changed");
+         Assert (To_Upper (Character_Type'Val (16#E9#)) = Character_Type'Val (16#E9#), "To_Upper E9 changed");
+         Assert (To_Upper (Character_Type'Val (16#A9#)) = Character_Type'Val (16#A9#), "To_Upper A9 changed");
+      end if;
+   end Test_Standard_Char_Mapping_ASCII_Only;
 
 end Case_Mapping_Test;

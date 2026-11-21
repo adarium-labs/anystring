@@ -114,19 +114,12 @@ package body Wide_String_Operations is
       return Ada.Strings.Wide_Fixed.Index (S, P, Going => Ada.Strings.Backward);
    end Index_Reverse;
 
+   --  Full case mapping (Anystrings_Simple_Case.Full_Map) on the code points of
+   --  the string: surrogate pairs are one code point, and a lone surrogate reads
+   --  as U+FFFD, as in To_UTF_8 and To_Wide_Wide_String.
    function To_Lower (Source : Unbounded_Wide_String) return Unbounded_Wide_String is
-      use Ada.Strings.Wide_Unbounded;
-      S      : constant Wide_String := To_Wide_String (Source);
-      Result : Wide_String (S'Range);
    begin
-      for I in S'Range loop
-         if Wide_Character'Pos (S (I)) in 65 .. 90 then
-            Result (I) := Wide_Character'Val (Wide_Character'Pos (S (I)) + 32);
-         else
-            Result (I) := S (I);
-         end if;
-      end loop;
-      return To_Unbounded_Wide_String (Result);
+      return From_Wide_Wide_String (Anystrings_Simple_Case.Full_Map (To_Wide_Wide_String (Source), Upper => False));
    end To_Lower;
 
    function Simple_To_Lower (Source : Unbounded_Wide_String) return Unbounded_Wide_String is
@@ -139,18 +132,8 @@ package body Wide_String_Operations is
    end Simple_To_Lower;
 
    function To_Upper (Source : Unbounded_Wide_String) return Unbounded_Wide_String is
-      use Ada.Strings.Wide_Unbounded;
-      S      : constant Wide_String := To_Wide_String (Source);
-      Result : Wide_String (S'Range);
    begin
-      for I in S'Range loop
-         if Wide_Character'Pos (S (I)) in 97 .. 122 then
-            Result (I) := Wide_Character'Val (Wide_Character'Pos (S (I)) - 32);
-         else
-            Result (I) := S (I);
-         end if;
-      end loop;
-      return To_Unbounded_Wide_String (Result);
+      return From_Wide_Wide_String (Anystrings_Simple_Case.Full_Map (To_Wide_Wide_String (Source), Upper => True));
    end To_Upper;
 
    function Starts_With (Source : Unbounded_Wide_String; Prefix : Unbounded_Wide_String) return Boolean is

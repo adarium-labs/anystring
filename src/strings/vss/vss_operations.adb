@@ -10,7 +10,6 @@ with Ada.Wide_Wide_Characters.Handling;
 with Anystrings_Simple_Case;
 with VSS.Characters;
 with VSS.Strings.Conversions;
-with VSS.Transformers.Casing;
 
 package body VSS_Operations is
 
@@ -270,9 +269,12 @@ package body VSS_Operations is
       end;
    end Index_Reverse;
 
+   --  Full case mapping from the generated UCD tables (Anystrings_Simple_Case),
+   --  the same code as the other backends, so the result is identical on all
+   --  of them. VSS.Transformers.Casing is no longer used here.
    function To_Lower (Source : Virtual_String) return Virtual_String is
    begin
-      return VSS.Transformers.Casing.To_Lowercase.Transform (Source);
+      return From_Wide_Wide_String (Anystrings_Simple_Case.Full_Map (To_Wide_Wide_String (Source), Upper => False));
    end To_Lower;
 
    function Simple_To_Lower (Source : Virtual_String) return Virtual_String is
@@ -286,7 +288,7 @@ package body VSS_Operations is
 
    function To_Upper (Source : Virtual_String) return Virtual_String is
    begin
-      return VSS.Transformers.Casing.To_Uppercase.Transform (Source);
+      return From_Wide_Wide_String (Anystrings_Simple_Case.Full_Map (To_Wide_Wide_String (Source), Upper => True));
    end To_Upper;
 
    function Starts_With (Source : Virtual_String; Prefix : Virtual_String) return Boolean is
