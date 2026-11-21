@@ -32,6 +32,11 @@
 --  (Ingress_Boundary_Test, which includes strings whose bounds are near
 --  Positive'Last) and by the property gate (Ingress_Replace_Test).
 --
+--  The Post of Decode_Replacing and From_UTF_16 that every code point is at most
+--  U+10FFFF is such a trusted contract. The SPARK On case mapping builders
+--  (Anystrings_Simple_Case) take it as the precondition Is_Valid, which the
+--  tests check at run time (-gnata).
+--
 --  Resource conditions: no function here raises an exception for an argument
 --  that satisfies its precondition, except Storage_Error when the result
 --  (a String or Wide_Wide_String sized by the input) cannot be allocated.
@@ -67,10 +72,14 @@ is
 
    --  @summary Decode Source, replacing each maximal ill-formed subpart by U+FFFD.
    --  @description Decode_Replacing (Source)'Length = Code_Point_Count (Source).
-   --  Allocates the result (Storage_Error if that fails).
+   --  Allocates the result (Storage_Error if that fails). Every code point of
+   --  the result is a scalar value (at most U+10FFFF): the case mapping builders
+   --  rely on that (Anystrings_Simple_Case.Is_Valid).
    function Decode_Replacing (Source : String) return Wide_Wide_String
    with
-     Post => Decode_Replacing'Result'Length <= Source'Length;
+     Post =>
+       Decode_Replacing'Result'Length <= Source'Length
+       and then (for all C of Decode_Replacing'Result => Wide_Wide_Character'Pos (C) <= 16#10_FFFF#);
 
    --  @summary Source with each ill-formed subpart replaced by the three bytes
    --  EF BF BD (the UTF-8 encoding of U+FFFD). Equal to Source when Source is
@@ -94,10 +103,14 @@ is
    --  code point; a lone surrogate is U+FFFD; every other unit is itself.
    --  @description From_UTF_16 (Source)'Length = UTF_16_Scalar_Count (Source).
    --  Total (it never raises for any Wide_String); Source may end at
-   --  Positive'Last. Allocates the result (Storage_Error if that fails).
+   --  Positive'Last. Allocates the result (Storage_Error if that fails). Every
+   --  code point of the result is at most U+10FFFF (a pair gives at most
+   --  U+10FFFF; a lone surrogate gives U+FFFD).
    function From_UTF_16 (Source : Wide_String) return Wide_Wide_String
    with
-     Post => From_UTF_16'Result'Length <= Source'Length;
+     Post =>
+       From_UTF_16'Result'Length <= Source'Length
+       and then (for all C of From_UTF_16'Result => Wide_Wide_Character'Pos (C) <= 16#10_FFFF#);
 
    --  @summary UTF-16 code units of Source. A surrogate or a value above
    --  U+10FFFF is replaced by U+FFFD first (policy P); a leading U+FEFF is kept.

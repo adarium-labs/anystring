@@ -114,7 +114,7 @@ package body Wide_String_Operations is
       return Ada.Strings.Wide_Fixed.Index (S, P, Going => Ada.Strings.Backward);
    end Index_Reverse;
 
-   --  Full case mapping (Anystrings_Simple_Case.Full_Map) on the code points of
+   --  Full case mapping (Anystrings_Simple_Case.Full_Map_UTF_16) on the code points of
    --  the string: surrogate pairs are one code point, and a lone surrogate reads
    --  as U+FFFD, as in To_UTF_8 and To_Wide_Wide_String. The result is encoded in
    --  UTF-16 with exactly the number of units its code points need.
@@ -128,47 +128,11 @@ package body Wide_String_Operations is
       return Anystrings_Simple_Case.Mapped_UTF_16_Units (To_Wide_Wide_String (Source), Upper => True);
    end Full_Upper_Length;
 
-   --  UTF-16 encoding of Scalars (scalar values only). Pass 1 counts the units,
-   --  pass 2 writes exactly that many. The units never exceed Natural'Last: the
-   --  callers' code points are the mapping of a string whose length is bounded
-   --  by the To_Lower / To_Upper precondition.
-   function To_UTF_16_Exact (Scalars : Wide_Wide_String) return Wide_String is
-      Units : Long_Long_Integer := 0;
-   begin
-      for C of Scalars loop
-         Units := Units + (if Wide_Wide_Character'Pos (C) <= 16#FFFF# then 1 else 2);
-      end loop;
-      declare
-         Result : Wide_String (1 .. Natural (Units));
-         J      : Natural := 0;
-      begin
-         for C of Scalars loop
-            declare
-               P : constant Natural := Wide_Wide_Character'Pos (C);
-            begin
-               if P <= 16#FFFF# then
-                  J := J + 1;
-                  Result (J) := Wide_Character'Val (P);
-               else
-                  declare
-                     Off : constant Natural := P - 16#1_0000#;
-                  begin
-                     Result (J + 1) := Wide_Character'Val (16#D800# + Off / 16#400#);
-                     Result (J + 2) := Wide_Character'Val (16#DC00# + Off mod 16#400#);
-                     J := J + 2;
-                  end;
-               end if;
-            end;
-         end loop;
-         return Result;
-      end;
-   end To_UTF_16_Exact;
-
    function To_Lower (Source : Unbounded_Wide_String) return Unbounded_Wide_String is
    begin
       return
         Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String
-          (To_UTF_16_Exact (Anystrings_Simple_Case.Full_Map (To_Wide_Wide_String (Source), Upper => False)));
+          (Anystrings_Simple_Case.Full_Map_UTF_16 (To_Wide_Wide_String (Source), Upper => False));
    end To_Lower;
 
    function Simple_To_Lower (Source : Unbounded_Wide_String) return Unbounded_Wide_String is
@@ -184,7 +148,7 @@ package body Wide_String_Operations is
    begin
       return
         Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String
-          (To_UTF_16_Exact (Anystrings_Simple_Case.Full_Map (To_Wide_Wide_String (Source), Upper => True)));
+          (Anystrings_Simple_Case.Full_Map_UTF_16 (To_Wide_Wide_String (Source), Upper => True));
    end To_Upper;
 
    function Starts_With (Source : Unbounded_Wide_String; Prefix : Unbounded_Wide_String) return Boolean is

@@ -7,9 +7,6 @@
 
 with Ada.Strings;
 with Ada.Strings.Fixed;
-with Ada.Strings.UTF_Encoding;
-with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
-with Anystrings_Simple_Case;
 --  Ada.Strings.Unbounded.Aux exposes the buffer of an Unbounded_String without
 --  a copy, which Code_Point_Length needs to stay allocation-free. It is a GNAT
 --  internal unit; the warning it raises is accepted here and nowhere else.
@@ -18,99 +15,10 @@ pragma Warnings (Off, "non-portable");
 with Ada.Strings.Unbounded.Aux;
 pragma Warnings (On, "non-portable");
 pragma Warnings (On, "internal GNAT unit");
+with Anystrings_UTF_8_Case;
 with Anystrings_UTF_8_Replace;
 
 package body Standard_String_Operations is
-
-   --  Walk one UTF-8 code-point sequence starting at Buf (Start), decoding
-   --  the leading 1..4 bytes per RFC 3629 and reporting:
-   --
-   --    Code_Point — the decoded scalar value.  On malformed input the
-   --                 helper returns U+FFFD (16#FFFD#).
-   --    Step       — the number of source bytes consumed (1 for ASCII,
-   --                 2..4 for multi-byte sequences, 1 for resynchronisation
-   --                 on malformed input).
-   --
-   --  Used by the case mappings only, to find the runs of canonical UTF-8 that
-   --  they may map (see Case_Map). Egress and decoding of code points use
-   --  Anystrings_UTF_8_Replace (algorithm R).
-   procedure Decode_One_UTF_8_Code_Point (Buf : String; Start : Natural; Code_Point : out Natural; Step : out Natural);
-
-   procedure Decode_One_UTF_8_Code_Point (Buf : String; Start : Natural; Code_Point : out Natural; Step : out Natural)
-   is
-      function Is_Cont (C : Character) return Boolean
-      is (Character'Pos (C) in 16#80# .. 16#BF#);
-
-      Lead : constant Natural := Character'Pos (Buf (Start));
-   begin
-      --  Every test of the form "Buf'Last - Start >= K" below keeps Start + K from
-      --  being formed past Buf'Last (it overflows when Buf'Last is Positive'Last).
-      --  Default for malformed input: U+FFFD, single-byte resync. A run that
-      --  holds any such sequence is copied unchanged by Case_Map.
-      Code_Point := 16#FFFD#;
-      Step := 1;
-
-      if Lead <= 16#7F# then
-         --  1-byte ASCII.
-         Code_Point := Lead;
-         Step := 1;
-
-      elsif Lead in 16#C2# .. 16#DF# and then Buf'Last - Start >= 1 and then Is_Cont (Buf (Start + 1)) then
-         --  2-byte sequence: 110xxxxx 10xxxxxx — encodes U+0080..U+07FF.
-         Code_Point := (Lead mod 32) * 64 + (Character'Pos (Buf (Start + 1)) mod 64);
-         Step := 2;
-
-      elsif Lead in 16#E0# .. 16#EF#
-        and then Buf'Last - Start >= 2
-        and then Is_Cont (Buf (Start + 1))
-        and then Is_Cont (Buf (Start + 2))
-      then
-         --  3-byte sequence: 1110xxxx 10xxxxxx 10xxxxxx
-         --  — encodes U+0800..U+FFFF (with surrogates U+D800..U+DFFF
-         --  treated as replacement).
-         Code_Point :=
-           (Lead mod 16)
-           * 4_096
-           + (Character'Pos (Buf (Start + 1)) mod 64) * 64
-           + (Character'Pos (Buf (Start + 2)) mod 64);
-         Step := 3;
-         if Code_Point in 16#D800# .. 16#DFFF# then
-            Code_Point := 16#FFFD#;
-         elsif Code_Point < 16#800# then
-            --  Overlong: E0 80..9F is not a shortest form. Resynchronise at the
-            --  lead byte, as for any other ill-formed sequence.
-            Code_Point := 16#FFFD#;
-            Step := 1;
-         end if;
-
-      elsif Lead in 16#F0# .. 16#F4#
-        and then Buf'Last - Start >= 3
-        and then Is_Cont (Buf (Start + 1))
-        and then Is_Cont (Buf (Start + 2))
-        and then Is_Cont (Buf (Start + 3))
-      then
-         --  4-byte sequence: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-         --  — encodes U+10000..U+10FFFF.
-         Code_Point :=
-           (Lead mod 8)
-           * 262_144
-           + (Character'Pos (Buf (Start + 1)) mod 64) * 4_096
-           + (Character'Pos (Buf (Start + 2)) mod 64) * 64
-           + (Character'Pos (Buf (Start + 3)) mod 64);
-         Step := 4;
-         if Code_Point > 16#10_FFFF# then
-            Code_Point := 16#FFFD#;
-         elsif Code_Point < 16#1_0000# then
-            --  Overlong: F0 80..8F is not a shortest form.
-            Code_Point := 16#FFFD#;
-            Step := 1;
-         end if;
-      end if;
-   --  Any other lead byte (bare continuation 0x80..0xBF, overlong
-   --  starters 0xC0..0xC1, out-of-range 0xF5..0xFF, or truncated
-   --  multi-byte sequence) falls through to the default
-   --  (U+FFFD, single-byte resync) set above.
-   end Decode_One_UTF_8_Code_Point;
 
    function Index (Source : Unbounded_String; Pattern : Unbounded_String) return Natural is
       S : constant String := To_String (Source);
@@ -145,194 +53,33 @@ package body Standard_String_Operations is
       return Ada.Strings.Fixed.Index (S, P, Going => Ada.Strings.Backward);
    end Index_Reverse;
 
-   --  Simple lower-case mapping of one scalar value (0 .. U+10FFFF), shared by
-   --  every backend (Anystrings_Simple_Case). Surrogates and out-of-range
-   --  values are returned unchanged.
-   function Simple_Lower_Code_Point (CP : Natural) return Natural is
-   begin
-      if CP > 16#10_FFFF# then
-         return CP;
-      end if;
-      return Wide_Wide_Character'Pos (Anystrings_Simple_Case.Lower (Wide_Wide_Character'Val (CP)));
-   end Simple_Lower_Code_Point;
-
-   --  UTF-8 encoding of one scalar value, 1 .. 4 bytes.
-   function Encode_Scalar (CP : Natural) return String is
-   begin
-      if CP <= 16#7F# then
-         return (1 => Character'Val (CP));
-      elsif CP <= 16#7FF# then
-         return (1 => Character'Val (16#C0# + CP / 64), 2 => Character'Val (16#80# + CP mod 64));
-      elsif CP <= 16#FFFF# then
-         return
-           (1 => Character'Val (16#E0# + CP / 4_096),
-            2 => Character'Val (16#80# + (CP / 64) mod 64),
-            3 => Character'Val (16#80# + CP mod 64));
-      else
-         return
-           (1 => Character'Val (16#F0# + CP / 262_144),
-            2 => Character'Val (16#80# + (CP / 4_096) mod 64),
-            3 => Character'Val (16#80# + (CP / 64) mod 64),
-            4 => Character'Val (16#80# + CP mod 64));
-      end if;
-   end Encode_Scalar;
+   --  Case mappings. All the walking, sizing and index arithmetic is in
+   --  Anystrings_UTF_8_Case (SPARK_Mode On, proved free of run-time errors);
+   --  the bodies here only convert between Unbounded_String and String.
 
    function Simple_To_Lower (Source : Unbounded_String) return Unbounded_String is
-      S          : constant String := To_String (Source);
-      Out_Buf    : Unbounded_String;
-      I          : Positive;
-      Code_Point : Natural;
-      Step       : Natural;
    begin
-      if S'Length = 0 then
-         return Out_Buf;
-      end if;
-      I := S'First;
-      loop
-         Decode_One_UTF_8_Code_Point (S, I, Code_Point, Step);
-         declare
-            Raw   : constant String := S (I .. I + Step - 1);
-            Lower : constant Natural := Simple_Lower_Code_Point (Code_Point);
-         begin
-            --  Map only a canonical sequence: the stored bytes must be exactly the
-            --  UTF-8 of the decoded code point. An overlong sequence (E0 88 BA
-            --  decodes to U+023A) or a surrogate encoding is copied unchanged.
-            --  Keep the mapping only when its byte length is unchanged, so that
-            --  Length (Result) = Length (Source).
-            if Encode_Scalar (Code_Point) = Raw
-              and then Lower /= Code_Point
-              and then Encode_Scalar (Lower)'Length = Step
-            then
-               Ada.Strings.Unbounded.Append (Out_Buf, Encode_Scalar (Lower));
-            else
-               Ada.Strings.Unbounded.Append (Out_Buf, Raw);
-            end if;
-         end;
-         exit when Step > S'Last - I;
-         I := I + Step;
-      end loop;
-      return Out_Buf;
+      return To_Unbounded_String (Anystrings_UTF_8_Case.Simple_Lower (To_String (Source)));
    end Simple_To_Lower;
-
-   --  Case mapping of the UTF-8 storage S, in two passes (see Full_Map in
-   --  Anystrings_Simple_Case). The storage is walked code point by code point:
-   --  every ill-formed sequence (as decoded by Decode_One_UTF_8_Code_Point and
-   --  not re-encoded to the same bytes) is copied unchanged and ends the current
-   --  run; every maximal run of canonical sequences is decoded, mapped with the
-   --  full mapping (Final_Sigma context inside the run) and encoded.
-   --
-   --  Fill = False: Total is the number of bytes the mapping produces (pass 1).
-   --  Fill = True: the same bytes are written to Buf (Buf'First ..), which must
-   --  hold exactly Total bytes of pass 1 (pass 2). Buf is not read when Fill is
-   --  False.
-   --
-   --  Arithmetic: Total is Long_Long_Integer and counts at most 4 bytes per
-   --  code point of S, far from overflow. In pass 2, Total < Buf'Length <=
-   --  Natural'Last before each write, so Buf'First + Natural (Total) and the
-   --  write range stay within Buf.
-   procedure Case_Walk
-     (S     : String;
-      Upper : Boolean;
-      Fill  : Boolean;
-      Buf   : in out String;
-      Total : in out Long_Long_Integer)
-   is
-      Run_Start : Positive;
-      I         : Positive;
-      Code_Point : Natural;
-      Step      : Natural;
-
-      procedure Put (X : String) is
-         First : Natural;
-      begin
-         if Fill then
-            First := Buf'First + Natural (Total);
-            Buf (First .. First + X'Length - 1) := X;
-         end if;
-         Total := Total + Long_Long_Integer (X'Length);
-      end Put;
-
-      procedure Emit_Run (Run : String) is
-         CPs   : constant Wide_Wide_String := Anystrings_UTF_8_Replace.Decode_Replacing (Run);
-         Chars : Anystrings_Simple_Case.Mapped_Chars;
-         Count : Anystrings_Simple_Case.Map_Count;
-      begin
-         for K in CPs'Range loop
-            Anystrings_Simple_Case.Map_At (CPs, K, Upper, Chars, Count);
-            for J in 1 .. Count loop
-               Put (Encode_Scalar (Wide_Wide_Character'Pos (Chars (J))));
-            end loop;
-         end loop;
-      end Emit_Run;
-   begin
-      if S'Length = 0 then
-         return;
-      end if;
-      I         := S'First;
-      Run_Start := S'First;
-      loop
-         Decode_One_UTF_8_Code_Point (S, I, Code_Point, Step);
-         if Encode_Scalar (Code_Point) /= S (I .. I + Step - 1) then
-            if Run_Start < I then
-               Emit_Run (S (Run_Start .. I - 1));
-            end if;
-            Put (S (I .. I + Step - 1));
-            Run_Start := I + Step;
-         end if;
-         exit when Step > S'Last - I;
-         I := I + Step;
-      end loop;
-      if Run_Start <= S'Last then
-         Emit_Run (S (Run_Start .. S'Last));
-      end if;
-   end Case_Walk;
-
-   --  Size, in bytes, of the case mapping of Source (see Case_Walk).
-   function Case_Length (Source : Unbounded_String; Upper : Boolean) return Long_Long_Integer is
-      S     : constant String := To_String (Source);
-      Empty : String (1 .. 0);
-      Total : Long_Long_Integer := 0;
-   begin
-      Case_Walk (S, Upper, Fill => False, Buf => Empty, Total => Total);
-      return Total;
-   end Case_Length;
 
    function Full_Lower_Length (Source : Unbounded_String) return Long_Long_Integer is
    begin
-      return Case_Length (Source, Upper => False);
+      return Anystrings_UTF_8_Case.Case_Length (To_String (Source), Upper => False);
    end Full_Lower_Length;
 
    function Full_Upper_Length (Source : Unbounded_String) return Long_Long_Integer is
    begin
-      return Case_Length (Source, Upper => True);
+      return Anystrings_UTF_8_Case.Case_Length (To_String (Source), Upper => True);
    end Full_Upper_Length;
-
-   --  Pass 1 gives the exact size; pass 2 writes exactly that many bytes. The
-   --  precondition of To_Lower / To_Upper (in the facade) keeps the size within
-   --  Natural'Last.
-   function Case_Map (Source : Unbounded_String; Upper : Boolean) return Unbounded_String is
-      S      : constant String := To_String (Source);
-      Empty  : String (1 .. 0);
-      Total  : Long_Long_Integer := 0;
-   begin
-      Case_Walk (S, Upper, Fill => False, Buf => Empty, Total => Total);
-      declare
-         Result : String (1 .. Natural (Total));
-      begin
-         Total := 0;
-         Case_Walk (S, Upper, Fill => True, Buf => Result, Total => Total);
-         return To_Unbounded_String (Result);
-      end;
-   end Case_Map;
 
    function To_Lower (Source : Unbounded_String) return Unbounded_String is
    begin
-      return Case_Map (Source, Upper => False);
+      return To_Unbounded_String (Anystrings_UTF_8_Case.Case_Map (To_String (Source), Upper => False));
    end To_Lower;
 
    function To_Upper (Source : Unbounded_String) return Unbounded_String is
    begin
-      return Case_Map (Source, Upper => True);
+      return To_Unbounded_String (Anystrings_UTF_8_Case.Case_Map (To_String (Source), Upper => True));
    end To_Upper;
 
    function Starts_With (Source : Unbounded_String; Prefix : Unbounded_String) return Boolean is

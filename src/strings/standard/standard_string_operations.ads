@@ -150,7 +150,10 @@ package Standard_String_Operations is
    --
    --  @description
    --  Each maximal run of well-formed UTF-8 is mapped by
-   --  Anystrings_Simple_Case.Full_Map, with Final_Sigma decided inside the run.
+   --  Anystrings_UTF_8_Case (on Anystrings_Simple_Case), with Final_Sigma
+   --  decided inside the run. That unit is SPARK_Mode On and proved free of
+   --  run-time errors, whatever the length of the source; this body only
+   --  converts to and from String.
    --  Ill-formed bytes are copied unchanged and end the run. The byte length of
    --  the result may differ from the input (e.g. U+0130 lower-cases to U+0069
    --  U+0307). Its length is Full_Lower_Length (Source) / Full_Upper_Length
