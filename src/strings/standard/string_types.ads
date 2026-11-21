@@ -323,9 +323,14 @@ is
    --  @summary Simple lower-case mapping: one code point in, one code point
    --  out (Unicode simple mapping, not the full mapping of To_Lower).
    --  @description
-   --  Length is the byte length on this backend. A code point whose lower-case
-   --  form has a different UTF-8 length is kept as it is, so the contract holds
-   --  in bytes. Trusted, not proved (SPARK_Mode Off body), see src/strings/AGENTS.md.
+   --  Length is the byte length on this backend, so the postcondition says the
+   --  result has the same number of bytes as Source. A code point whose simple
+   --  lower-case form has a different UTF-8 length is kept unchanged. Its
+   --  length class differs (1 byte below U+0080, 2 below U+0800, 3 below
+   --  U+10000, 4 above): 25 code points in Unicode 15.1, e.g. U+0130 (-> i,
+   --  2 to 1 byte), U+1E9E (-> U+00DF, 3 to 2), U+212A KELVIN SIGN (-> k,
+   --  3 to 1). The full list is in src/strings/AGENTS.md. Other backends map
+   --  these code points. Trusted, not proved (SPARK_Mode Off body).
    function Simple_To_Lower (Source : String_Type) return String_Type
    with Global => null, Post => Length (Simple_To_Lower'Result) = Length (Source);
 

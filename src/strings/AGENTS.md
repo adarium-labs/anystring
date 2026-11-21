@@ -51,7 +51,46 @@ Notes:
 - All wide and wide_wide based backends guard against code points outside U+0000..U+10FFFF and the UTF-16 surrogate range U+D800..U+DFFF. Classifiers return `False` for these; `Char_To_Lower` / `Char_To_Upper` return the input unchanged. This is required because `Ada.Wide_Wide_Characters.Handling` raises `Constraint_Error` on non-scalar arguments.
 - `standard` cannot classify code points > U+00FF (e.g. Arabic-Indic digits, Greek capitals); attempting to construct such a `Character` value raises `Constraint_Error` at construction time.
 - `wide_string` *can* classify Unicode code points in the BMP via `Ada.Wide_Characters.Handling`, but is treated as ASCII-only for `Is_Whitespace` and `Is_Line_Terminator` by contract, for symmetry with `standard`.
-- `Simple_To_Lower` (not a generic formal; declared in each `string_types.ads` with `Post => Length (Simple_To_Lower'Result) = Length (Source)`, trusted because the bodies are SPARK Off) maps one code point to one code point with the UCD Simple_Lowercase_Mapping, read through `VSS.Characters` in the shared unit `src/anystrings_simple_case.adb`. Every backend uses that unit, because the GNAT tables behind `Ada.Wide_Wide_Characters.Handling.To_Lower` miss U+0130 and U+1E9E. `Char_To_Lower` and the full-mapping `To_Lower` are unchanged. On `standard`, `Length` counts bytes, so a mapping whose UTF-8 length differs (e.g. U+0130 → `i`, U+1E9E → U+00DF) is not applied; the bytes are copied unchanged, and malformed bytes are copied unchanged.
+- `Simple_To_Lower` (not a generic formal; declared in each `string_types.ads` with `Post => Length (Simple_To_Lower'Result) = Length (Source)`, trusted because the bodies are SPARK Off) maps one code point to one code point with the UCD Simple_Lowercase_Mapping, read through `VSS.Characters` in the shared unit `src/anystrings_simple_case.adb`. Every backend uses that unit, because the GNAT tables behind `Ada.Wide_Wide_Characters.Handling.To_Lower` miss U+0130 and U+1E9E. `Char_To_Lower` and the full-mapping `To_Lower` are unchanged. On `standard`, `Length` counts bytes, so a mapping whose UTF-8 length differs is not applied and the code point is kept unchanged. Those are the 25 code points below (Unicode 15.1 simple lower-case mappings, checked against the library's table on every scalar value U+0080..U+10FFFF). The rule: the two forms fall in different UTF-8 length classes (1 byte < U+0080 ≤ 2 bytes < U+0800 ≤ 3 bytes < U+10000 ≤ 4 bytes).
+
+| Code point | Name | Simple lower | Bytes |
+|---|---|---|---|
+| U+0130 | LATIN CAPITAL LETTER I WITH DOT ABOVE | U+0069 | 2 → 1 |
+| U+023A | LATIN CAPITAL LETTER A WITH STROKE | U+2C65 | 2 → 3 |
+| U+023E | LATIN CAPITAL LETTER T WITH DIAGONAL STROKE | U+2C66 | 2 → 3 |
+| U+1E9E | LATIN CAPITAL LETTER SHARP S | U+00DF | 3 → 2 |
+| U+2126 | OHM SIGN | U+03C9 | 3 → 2 |
+| U+212A | KELVIN SIGN | U+006B | 3 → 1 |
+| U+212B | ANGSTROM SIGN | U+00E5 | 3 → 2 |
+| U+2C62 | LATIN CAPITAL LETTER L WITH MIDDLE TILDE | U+026B | 3 → 2 |
+| U+2C64 | LATIN CAPITAL LETTER R WITH TAIL | U+027D | 3 → 2 |
+| U+2C6D | LATIN CAPITAL LETTER ALPHA | U+0251 | 3 → 2 |
+| U+2C6E | LATIN CAPITAL LETTER M WITH HOOK | U+0271 | 3 → 2 |
+| U+2C6F | LATIN CAPITAL LETTER TURNED A | U+0250 | 3 → 2 |
+| U+2C70 | LATIN CAPITAL LETTER TURNED ALPHA | U+0252 | 3 → 2 |
+| U+2C7E | LATIN CAPITAL LETTER S WITH SWASH TAIL | U+023F | 3 → 2 |
+| U+2C7F | LATIN CAPITAL LETTER Z WITH SWASH TAIL | U+0240 | 3 → 2 |
+| U+A78D | LATIN CAPITAL LETTER TURNED H | U+0265 | 3 → 2 |
+| U+A7AA | LATIN CAPITAL LETTER H WITH HOOK | U+0266 | 3 → 2 |
+| U+A7AB | LATIN CAPITAL LETTER REVERSED OPEN E | U+025C | 3 → 2 |
+| U+A7AC | LATIN CAPITAL LETTER SCRIPT G | U+0261 | 3 → 2 |
+| U+A7AD | LATIN CAPITAL LETTER L WITH BELT | U+026C | 3 → 2 |
+| U+A7AE | LATIN CAPITAL LETTER SMALL CAPITAL I | U+026A | 3 → 2 |
+| U+A7B0 | LATIN CAPITAL LETTER TURNED K | U+029E | 3 → 2 |
+| U+A7B1 | LATIN CAPITAL LETTER TURNED T | U+0287 | 3 → 2 |
+| U+A7B2 | LATIN CAPITAL LETTER J WITH CROSSED-TAIL | U+029D | 3 → 2 |
+| U+A7C5 | LATIN CAPITAL LETTER S WITH HOOK | U+0282 | 3 → 2 |
+
+`To_Lower` and `To_Upper` on `standard` are the full mapping and do change byte length (U+0130 lower-cases to U+0069 U+0307, 2 → 3 bytes; U+00DF upper-cases to `SS`), so they have no `Length` postcondition.
+
+`To_Lower` / `To_Upper` differ by backend (not aligned yet, follow-up):
+
+| Backend | Mapping | U+0130 lower | U+00DF upper |
+|---|---|---|---|
+| `standard` | full, VSS tables, per run of well-formed UTF-8 (same as `vss`) | `i` + U+0307 | `SS` |
+| `vss` | full, VSS (`VSS.Transformers.Casing`) | `i` + U+0307 | `SS` |
+| `uxstring` | per code point, GNAT `Ada.Wide_Wide_Characters.Handling` tables | not `i` + U+0307 (not asserted further) | not checked |
+| `wide_string`, `wide_wide_string` | ASCII letters only (A–Z, a–z) | unchanged | unchanged |
 
 ### Filesystem boundary path encoding
 
