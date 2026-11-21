@@ -94,7 +94,7 @@ Notes:
 
 ### Unicode case data and dependencies
 
-The case tables are generated, not hand-written: `src/anystrings_ucd_case.ads/.adb` from the UCD 15.1.0 files vendored in `tools/ucd/data/15.1.0`, by `tools/ucd/regenerate.sh` (generator and regeneration steps in `tools/ucd/README.md`). Do not edit the generated files. The shared case code (`src/anystrings_simple_case.adb`) uses only these tables.
+The case tables are generated, not hand-written: `src/anystrings_ucd_case.ads/.adb` from the UCD 15.1.0 files vendored in `tools/ucd/data/15.1.0`. Regenerate with `alr exec -- tools/ucd/regenerate.sh` (or `tools/ucd/regenerate.sh` when `gprbuild` is on PATH); the output is deterministic, so `git diff --exit-code` on the two files is clean for unchanged data. Changing the Unicode version is described in `tools/ucd/README.md`. Do not edit the generated files. The shared case code (`src/anystrings_simple_case.adb`) uses only these tables.
 
 Which external crate each backend's library closure reaches (checked from the ALI dependency records of the library build):
 
