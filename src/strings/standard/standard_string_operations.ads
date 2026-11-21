@@ -144,6 +144,15 @@ package Standard_String_Operations is
    function Index_Reverse (Source : Unbounded_String; Pattern : Unbounded_String) return Natural;
 
    --  Case conversion
+
+   --  @summary Full Unicode case mapping of UTF-8 storage (same mapping as the
+   --  vss backend, per code point with the VSS tables).
+   --
+   --  @description
+   --  Each maximal run of well-formed UTF-8 is mapped with the VSS full mapping.
+   --  Ill-formed bytes are copied unchanged and end the run. The byte length of
+   --  the result may differ from the input (e.g. U+0130 lower-cases to U+0069
+   --  U+0307), so these functions carry no Length postcondition.
    function To_Lower (Source : Unbounded_String) return Unbounded_String;
 
    --  @summary Simple lower-case mapping, one code point in, one code point out.

@@ -8,6 +8,9 @@
 with Ada.Strings;
 with Ada.Strings.Fixed;
 with Anystrings_Simple_Case;
+with VSS.Strings;
+with VSS.Strings.Conversions;
+with VSS.Transformers.Casing;
 --  Ada.Strings.Unbounded.Aux exposes the buffer of an Unbounded_String without
 --  a copy, which Code_Point_Length needs to stay allocation-free. It is a GNAT
 --  internal unit; the warning it raises is accepted here and nowhere else.
@@ -137,12 +140,6 @@ package body Standard_String_Operations is
       return Ada.Strings.Fixed.Index (S, P, Going => Ada.Strings.Backward);
    end Index_Reverse;
 
-   function To_Lower (Source : Unbounded_String) return Unbounded_String is
-      S : constant String := To_String (Source);
-   begin
-      return To_Unbounded_String (Ada.Characters.Handling.To_Lower (S));
-   end To_Lower;
-
    --  Simple lower-case mapping of one scalar value (0 .. U+10FFFF), shared by
    --  every backend (Anystrings_Simple_Case). Surrogates and out-of-range
    --  values are returned unchanged.
@@ -206,10 +203,60 @@ package body Standard_String_Operations is
       return Out_Buf;
    end Simple_To_Lower;
 
-   function To_Upper (Source : Unbounded_String) return Unbounded_String is
-      S : constant String := To_String (Source);
+   --  Full case mapping of one well-formed UTF-8 run, with the VSS mapping the
+   --  vss and uxstring backends use. Final sigma is decided within the run.
+   function Map_Run (Run : String; Upper : Boolean) return String is
+      Text : constant VSS.Strings.Virtual_String := VSS.Strings.Conversions.To_Virtual_String (Run);
    begin
-      return To_Unbounded_String (Ada.Characters.Handling.To_Upper (S));
+      if Upper then
+         return VSS.Strings.Conversions.To_UTF_8_String (VSS.Transformers.Casing.To_Uppercase.Transform (Text));
+      end if;
+      return VSS.Strings.Conversions.To_UTF_8_String (VSS.Transformers.Casing.To_Lowercase.Transform (Text));
+   end Map_Run;
+
+   --  Case mapping of UTF-8 storage, code point by code point. Each maximal run of
+   --  well-formed sequences is mapped by Map_Run. Every ill-formed sequence (as
+   --  decoded by Decode_One_UTF_8_Code_Point, re-encoded and compared with the
+   --  stored bytes) is copied unchanged and ends the run. Byte length may change.
+   function Case_Map (Source : Unbounded_String; Upper : Boolean) return Unbounded_String is
+      S          : constant String := To_String (Source);
+      Out_Buf    : Unbounded_String;
+      I          : Positive;
+      Run_Start  : Positive;
+      Code_Point : Natural;
+      Step       : Natural;
+   begin
+      if S'Length = 0 then
+         return Out_Buf;
+      end if;
+      I := S'First;
+      Run_Start := S'First;
+      loop
+         Decode_One_UTF_8_Code_Point (S, I, Code_Point, Step);
+         if Encode_Scalar (Code_Point) /= S (I .. I + Step - 1) then
+            if Run_Start < I then
+               Ada.Strings.Unbounded.Append (Out_Buf, Map_Run (S (Run_Start .. I - 1), Upper));
+            end if;
+            Ada.Strings.Unbounded.Append (Out_Buf, S (I .. I + Step - 1));
+            Run_Start := I + Step;
+         end if;
+         exit when Step > S'Last - I;
+         I := I + Step;
+      end loop;
+      if Run_Start <= S'Last then
+         Ada.Strings.Unbounded.Append (Out_Buf, Map_Run (S (Run_Start .. S'Last), Upper));
+      end if;
+      return Out_Buf;
+   end Case_Map;
+
+   function To_Lower (Source : Unbounded_String) return Unbounded_String is
+   begin
+      return Case_Map (Source, Upper => False);
+   end To_Lower;
+
+   function To_Upper (Source : Unbounded_String) return Unbounded_String is
+   begin
+      return Case_Map (Source, Upper => True);
    end To_Upper;
 
    function Starts_With (Source : Unbounded_String; Prefix : Unbounded_String) return Boolean is
