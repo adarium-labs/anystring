@@ -134,6 +134,44 @@ The other four backends are unchanged. The interface-identity rule between
 in terms of `String_Type`, but not for the representation of `String_Type`
 (a private type on uxstring, a concrete type elsewhere).
 
+## Case mapping: arithmetic proved, glue trusted
+
+`To_Lower` / `To_Upper` size their result in a first pass and write it in a
+second (see `src/strings/AGENTS.md`). The length contract of the facade is
+trusted (the facade bodies are Off), but every index, length and overflow check
+behind it is proved, on every backend, by two `SPARK_Mode => On` units that
+`anystrings.gpr` analyses with the rest of the library:
+
+| Unit | What it holds | Checks proved (standard run) |
+|------|---------------|------------------------------|
+| `anystrings_simple_case` | `Final_Sigma`, `Map_At`, the sizes of a mapped run in code points / UTF-16 units / UTF-8 bytes, the builders `Full_Map`, `Full_Map_UTF_16`, `Put_Mapped_UTF_8` | 26 subprograms, 0 unproved |
+| `anystrings_utf_8_case` | the `standard` walker: `Decode`, `Run_Last`, pieces, `Case_Length` (pass 1), `Case_Map` (pass 2), `Simple_Lower` | 12 subprograms, 0 unproved |
+
+How the second pass is shown to stay inside the first pass's buffer. A ghost
+function (`Prefix_Size` in the first unit, `Rest_Size` in the second) is the size
+of the part of the mapping already written (resp. still to write). Every loop
+keeps its running count equal to it, the buffer length is the whole size, and
+the postcondition of the ghost function bounds each step by what is left. The
+same invariant bounds every sum by `12 * N` in `Long_Long_Integer`, so no sum
+overflows whatever `N <= Natural'Last` is. An index is only formed after the
+test that it exists (`K < Run'Last` before `K + 1`; `Step <= S'Last - I + 1`
+before `I + (Step - 1)`), so a source of `Natural'Last` elements is handled
+like any other. The ghost code and the postconditions of these two units are not
+executed (`Assertion_Policy (Ghost => Ignore, Post => Ignore)` in the unit): run
+at `-gnata` they would make each loop quadratic or recursive. Their `Pre` is
+still checked at run time.
+
+Not proved, by design of the units around them:
+- `Anystrings_UTF_8_Replace.Decode_Replacing` and `From_UTF_16` (`SPARK_Mode`
+  Off bodies) state in their `Post` that every code point is at most U+10FFFF.
+  The builders take that as a precondition (`Is_Valid`); the postcondition is
+  trusted for the body, and the precondition is checked at run time in the tests.
+- The glue bodies (`To_Lower`, `To_Upper`, `Full_*_Length`, `Simple_To_Lower` of
+  each backend) convert between the backend type and `String` or
+  `Wide_Wide_String`, and call the proved functions. They contain no arithmetic.
+  The `Natural (Full_Lower_Length (Source))` conversion in the facade `Post` is
+  part of a subprogram skipped as `body is SPARK_Mode => Off`.
+
 ## Off units (trusted, checked at run time)
 
 The following are `SPARK_Mode => Off`. Their contracts are declared in SPARK

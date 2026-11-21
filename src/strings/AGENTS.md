@@ -81,7 +81,7 @@ Notes:
 | U+A7B2 | LATIN CAPITAL LETTER J WITH CROSSED-TAIL | U+029D | 3 → 2 |
 | U+A7C5 | LATIN CAPITAL LETTER S WITH HOOK | U+0282 | 3 → 2 |
 
-`To_Lower` and `To_Upper` are the full Unicode case mapping on every backend: the UnicodeData simple mappings, the unconditional SpecialCasing entries and the Final_Sigma rule (Unicode §3.13). All five backends call the same code, `Anystrings_Simple_Case.Full_Map`, on the same generated tables, so they return the same code points for the same text. The mapping changes byte length on `standard` (U+0130 lower-cases to U+0069 U+0307, 2 → 3 bytes; U+00DF upper-cases to `SS`), so `To_Lower` / `To_Upper` have no `Length` postcondition.
+`To_Lower` and `To_Upper` are the full Unicode case mapping on every backend: the UnicodeData simple mappings, the unconditional SpecialCasing entries and the Final_Sigma rule (Unicode §3.13). All five backends map with the same code, `Anystrings_Simple_Case` (`Full_Map`, `Full_Map_UTF_16`, `Put_Mapped_UTF_8`; `standard` walks its UTF-8 through `Anystrings_UTF_8_Case`, which uses it), on the same generated tables, so they return the same code points for the same text. The mapping changes byte length on `standard` (U+0130 lower-cases to U+0069 U+0307, 2 → 3 bytes; U+00DF upper-cases to `SS`), so `To_Lower` / `To_Upper` have no `Length` postcondition.
 
 Only the way each backend reads the code points differs:
 
@@ -97,7 +97,8 @@ Length of the mapping (contract). `Full_Lower_Length (S)` and `Full_Upper_Length
 
 - `To_Lower` / `To_Upper`: `Pre => Full_Lower_Length (Source) <= Long_Long_Integer (Natural'Last)` (resp. Upper), and `Post => Length (To_Lower'Result) = Natural (Full_Lower_Length (Source))`.
 - The precondition is not clamped and there is no exception path: a string whose mapping would be longer than `Natural'Last` is outside the contract.
-- The bodies are SPARK Off, so the contract is trusted there (as `Simple_To_Lower`); `pragma Assume` is not used.
+- The facade bodies are SPARK Off, so the length contract is trusted there (as `Simple_To_Lower`); `pragma Assume` is not used.
+- The arithmetic behind the contract is proved, not inspected. `Anystrings_Simple_Case` (code points, UTF-16 units, UTF-8 bytes of a run) and `Anystrings_UTF_8_Case` (the `standard` walker: pieces, sizes, two passes, `Simple_Lower`) are SPARK On, and GNATprove proves every overflow, index and range check in them, including that pass 2 never writes past the buffer sized by pass 1 (a ghost prefix-size model, see the unit headers) and that nothing overflows when a source has `Natural'Last` elements. What stays outside the proof, see `docs/proof-boundaries.md`: the `Post` of `Anystrings_UTF_8_Replace.Decode_Replacing` / `From_UTF_16` (`SPARK_Mode` Off bodies) that every code point is at most U+10FFFF, which the builders take as a precondition; and the glue bodies that convert `Unbounded_String`, `Wide_Unbounded_String`, `UXString` or `Virtual_String` to and from the `String` / `Wide_Wide_String` the proved units take. The ghost code and the postconditions of the two proved units are not executed (`Assertion_Policy`), so the test builds do not run quadratic or recursive checks on them.
 
 | Backend | Length unit of `Full_*_Length` and `Length` |
 |---|---|

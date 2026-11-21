@@ -10,7 +10,7 @@ They provide:
   and 13), used by `Simple_To_Lower` on every backend;
 - the full lower-case and upper-case mappings (`SpecialCasing.txt`,
   unconditional entries), used by `To_Lower` and `To_Upper` on every backend
-  (`Anystrings_Simple_Case.Full_Map`);
+  (`Anystrings_Simple_Case`);
 - the `Final_Sigma` entry and the `Cased` and `Case_Ignorable` properties
   (`DerivedCoreProperties.txt`), used for the Final_Sigma rule.
 
