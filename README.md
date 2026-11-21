@@ -96,7 +96,7 @@ packages** of `String_Types` — each is independently opt-in via its own
 
 | Package                     | What's in it                                                       |
 |-----------------------------|--------------------------------------------------------------------|
-| `String_Types`              | `String_Type`, `Character_Type`, `Empty_String`, comparison & concat operators, conversion (`To_String_Type`, `To_Latin_1`, `To_UTF_8`, `From_UTF_8` with `UTF_8_Decode_Result`), character classifiers (`Is_Digit`, `Is_Letter`, …), case mapping, substring search & replace, prefix/suffix predicates, hashing |
+| `String_Types`              | `String_Type`, `Character_Type`, `Empty_String`, comparison & concat operators, conversion (`To_String_Type`, `To_Latin_1`, `To_UTF_8`, `From_UTF_8` with `UTF_8_Decode_Result`), character classifiers (`Is_Digit`, `Is_Letter`, …), case mapping (`To_Lower`, `To_Upper`, and the length-preserving `Simple_To_Lower`: one code point in, one out), substring search & replace, prefix/suffix predicates, hashing |
 | `String_Types.Command_Line` | `Argument_Count`, `Argument`, `Command_Name`, `Exit_Status` subtype, `Success`/`Failure` constants, `Set_Exit_Status` |
 | `String_Types.Environment`  | `Get_Env`, `Set_Env`, `Env_Exists`, `Clear_Env`, `Iterate_Env`, plus the filter/processor access types |
 | `String_Types.Directories`  | `Exists`, `Kind`, `Create_Directory`, `Delete_File`, `Rename`, plus `File_Kind` subtype and `Directory`/`Ordinary_File`/`Special_File` constants — TOTAL by contract (`NFR-DIR-001`): no exceptions cross the boundary |

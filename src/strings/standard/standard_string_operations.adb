@@ -7,6 +7,7 @@
 
 with Ada.Strings;
 with Ada.Strings.Fixed;
+with Anystrings_Simple_Case;
 --  Ada.Strings.Unbounded.Aux exposes the buffer of an Unbounded_String without
 --  a copy, which Code_Point_Length needs to stay allocation-free. It is a GNAT
 --  internal unit; the warning it raises is accepted here and nowhere else.
@@ -141,6 +142,69 @@ package body Standard_String_Operations is
    begin
       return To_Unbounded_String (Ada.Characters.Handling.To_Lower (S));
    end To_Lower;
+
+   --  Simple lower-case mapping of one scalar value (0 .. U+10FFFF), shared by
+   --  every backend (Anystrings_Simple_Case). Surrogates and out-of-range
+   --  values are returned unchanged.
+   function Simple_Lower_Code_Point (CP : Natural) return Natural is
+   begin
+      if CP > 16#10_FFFF# then
+         return CP;
+      end if;
+      return Wide_Wide_Character'Pos (Anystrings_Simple_Case.Lower (Wide_Wide_Character'Val (CP)));
+   end Simple_Lower_Code_Point;
+
+   --  UTF-8 encoding of one scalar value, 1 .. 4 bytes.
+   function Encode_Scalar (CP : Natural) return String is
+   begin
+      if CP <= 16#7F# then
+         return (1 => Character'Val (CP));
+      elsif CP <= 16#7FF# then
+         return (1 => Character'Val (16#C0# + CP / 64), 2 => Character'Val (16#80# + CP mod 64));
+      elsif CP <= 16#FFFF# then
+         return
+           (1 => Character'Val (16#E0# + CP / 4_096),
+            2 => Character'Val (16#80# + (CP / 64) mod 64),
+            3 => Character'Val (16#80# + CP mod 64));
+      else
+         return
+           (1 => Character'Val (16#F0# + CP / 262_144),
+            2 => Character'Val (16#80# + (CP / 4_096) mod 64),
+            3 => Character'Val (16#80# + (CP / 64) mod 64),
+            4 => Character'Val (16#80# + CP mod 64));
+      end if;
+   end Encode_Scalar;
+
+   function Simple_To_Lower (Source : Unbounded_String) return Unbounded_String is
+      S          : constant String := To_String (Source);
+      Out_Buf    : Unbounded_String;
+      I          : Positive;
+      Code_Point : Natural;
+      Step       : Natural;
+   begin
+      if S'Length = 0 then
+         return Out_Buf;
+      end if;
+      I := S'First;
+      loop
+         Decode_One_UTF_8_Code_Point (S, I, Code_Point, Step);
+         declare
+            Raw   : constant String := S (I .. I + Step - 1);
+            Lower : constant Natural := Simple_Lower_Code_Point (Code_Point);
+         begin
+            --  Keep the mapping only when the byte length of the code point is
+            --  unchanged, so that Length (Result) = Length (Source).
+            if Lower /= Code_Point and then Encode_Scalar (Lower)'Length = Step then
+               Ada.Strings.Unbounded.Append (Out_Buf, Encode_Scalar (Lower));
+            else
+               Ada.Strings.Unbounded.Append (Out_Buf, Raw);
+            end if;
+         end;
+         exit when Step > S'Last - I;
+         I := I + Step;
+      end loop;
+      return Out_Buf;
+   end Simple_To_Lower;
 
    function To_Upper (Source : Unbounded_String) return Unbounded_String is
       S : constant String := To_String (Source);

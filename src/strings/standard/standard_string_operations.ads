@@ -145,6 +145,17 @@ package Standard_String_Operations is
 
    --  Case conversion
    function To_Lower (Source : Unbounded_String) return Unbounded_String;
+
+   --  @summary Simple lower-case mapping, one code point in, one code point out.
+   --
+   --  @description
+   --  Decodes the stored UTF-8 one code point at a time and maps each with the
+   --  Unicode simple lower-case mapping. A mapping that would change the UTF-8
+   --  byte length of its code point is not applied, so the result has the same
+   --  Length (bytes) as Source. Bytes that are not part of a well-formed
+   --  sequence are copied unchanged.
+   function Simple_To_Lower (Source : Unbounded_String) return Unbounded_String;
+
    function To_Upper (Source : Unbounded_String) return Unbounded_String;
 
    --  Prefix/suffix checking

@@ -191,6 +191,9 @@ is
    function To_Lower (Source : String_Type) return String_Type
    is (Conv.From_UXString (UXString_Operations.To_Lower (Conv.To_UXString (Source))));
 
+   function Simple_To_Lower (Source : String_Type) return String_Type
+   is (Conv.From_UXString (UXString_Operations.Simple_To_Lower (Conv.To_UXString (Source))));
+
    function To_Upper (Source : String_Type) return String_Type
    is (Conv.From_UXString (UXString_Operations.To_Upper (Conv.To_UXString (Source))));
 

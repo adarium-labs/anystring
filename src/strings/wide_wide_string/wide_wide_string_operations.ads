@@ -115,6 +115,12 @@ package Wide_Wide_String_Operations is
    function To_Lower
      (Source : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String;
 
+   --  @summary Simple lower-case mapping, one slot (code point) in, one out.
+   --  @description
+   --  Each slot is mapped with Char_To_Lower, so the length is unchanged.
+   function Simple_To_Lower
+     (Source : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String;
+
    function To_Upper
      (Source : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String;
 

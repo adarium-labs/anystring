@@ -10,6 +10,7 @@ with Ada.Strings.Unbounded;
 with Ada.Strings.UTF_Encoding;
 with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 with Ada.Wide_Wide_Characters.Handling;
+with Anystrings_Simple_Case;
 with Anystrings_UTF_8_Replace;
 
 package body UXString_Operations is
@@ -118,6 +119,15 @@ package body UXString_Operations is
    begin
       return UXStrings.To_Lower (Source);
    end To_Lower;
+
+   function Simple_To_Lower (Source : UXString) return UXString is
+      Scalars : Wide_Wide_String := To_Wide_Wide_String (Source);
+   begin
+      for I in Scalars'Range loop
+         Scalars (I) := Anystrings_Simple_Case.Lower (Scalars (I));
+      end loop;
+      return From_Wide_Wide_String (Scalars);
+   end Simple_To_Lower;
 
    function To_Upper (Source : UXString) return UXString is
    begin

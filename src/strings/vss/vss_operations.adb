@@ -7,6 +7,7 @@
 
 with Ada.Strings.Wide_Wide_Fixed;
 with Ada.Wide_Wide_Characters.Handling;
+with Anystrings_Simple_Case;
 with VSS.Characters;
 with VSS.Strings.Conversions;
 with VSS.Transformers.Casing;
@@ -273,6 +274,15 @@ package body VSS_Operations is
    begin
       return VSS.Transformers.Casing.To_Lowercase.Transform (Source);
    end To_Lower;
+
+   function Simple_To_Lower (Source : Virtual_String) return Virtual_String is
+      Scalars : Wide_Wide_String := To_Wide_Wide_String (Source);
+   begin
+      for I in Scalars'Range loop
+         Scalars (I) := Anystrings_Simple_Case.Lower (Scalars (I));
+      end loop;
+      return From_Wide_Wide_String (Scalars);
+   end Simple_To_Lower;
 
    function To_Upper (Source : Virtual_String) return Virtual_String is
    begin

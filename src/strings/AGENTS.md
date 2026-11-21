@@ -51,6 +51,7 @@ Notes:
 - All wide and wide_wide based backends guard against code points outside U+0000..U+10FFFF and the UTF-16 surrogate range U+D800..U+DFFF. Classifiers return `False` for these; `Char_To_Lower` / `Char_To_Upper` return the input unchanged. This is required because `Ada.Wide_Wide_Characters.Handling` raises `Constraint_Error` on non-scalar arguments.
 - `standard` cannot classify code points > U+00FF (e.g. Arabic-Indic digits, Greek capitals); attempting to construct such a `Character` value raises `Constraint_Error` at construction time.
 - `wide_string` *can* classify Unicode code points in the BMP via `Ada.Wide_Characters.Handling`, but is treated as ASCII-only for `Is_Whitespace` and `Is_Line_Terminator` by contract, for symmetry with `standard`.
+- `Simple_To_Lower` (not a generic formal; declared in each `string_types.ads` with `Post => Length (Simple_To_Lower'Result) = Length (Source)`, trusted because the bodies are SPARK Off) maps one code point to one code point with the UCD Simple_Lowercase_Mapping, read through `VSS.Characters` in the shared unit `src/anystrings_simple_case.adb`. Every backend uses that unit, because the GNAT tables behind `Ada.Wide_Wide_Characters.Handling.To_Lower` miss U+0130 and U+1E9E. `Char_To_Lower` and the full-mapping `To_Lower` are unchanged. On `standard`, `Length` counts bytes, so a mapping whose UTF-8 length differs (e.g. U+0130 → `i`, U+1E9E → U+00DF) is not applied; the bytes are copied unchanged, and malformed bytes are copied unchanged.
 
 ### Filesystem boundary path encoding
 

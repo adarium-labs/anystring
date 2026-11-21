@@ -12,6 +12,7 @@ with Ada.Strings.UTF_Encoding;
 with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 with Ada.Wide_Characters.Handling;
 with Anystrings_Conv;
+with Anystrings_Simple_Case;
 with Anystrings_UTF_8_Replace;
 
 package body Wide_String_Operations is
@@ -127,6 +128,15 @@ package body Wide_String_Operations is
       end loop;
       return To_Unbounded_Wide_String (Result);
    end To_Lower;
+
+   function Simple_To_Lower (Source : Unbounded_Wide_String) return Unbounded_Wide_String is
+      Scalars : Wide_Wide_String := To_Wide_Wide_String (Source);
+   begin
+      for I in Scalars'Range loop
+         Scalars (I) := Anystrings_Simple_Case.Lower (Scalars (I));
+      end loop;
+      return From_Wide_Wide_String (Scalars);
+   end Simple_To_Lower;
 
    function To_Upper (Source : Unbounded_Wide_String) return Unbounded_Wide_String is
       use Ada.Strings.Wide_Unbounded;

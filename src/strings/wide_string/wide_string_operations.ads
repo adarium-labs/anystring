@@ -130,6 +130,13 @@ package Wide_String_Operations is
       Pattern : Unbounded_Wide_String) return Natural;
 
    function To_Lower (Source : Unbounded_Wide_String) return Unbounded_Wide_String;
+
+   --  @summary Simple lower-case mapping, one code point in, one code point out.
+   --  @description
+   --  Works on code points: a surrogate pair is mapped as one code point and
+   --  keeps its two units. Length (units) is unchanged for well-formed storage.
+   function Simple_To_Lower (Source : Unbounded_Wide_String) return Unbounded_Wide_String;
+
    function To_Upper (Source : Unbounded_Wide_String) return Unbounded_Wide_String;
 
    function Starts_With

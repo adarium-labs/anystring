@@ -296,6 +296,12 @@ is
 
    function To_Lower (Source : String_Type) return String_Type renames Wide_Wide_String_Operations.To_Lower;
 
+   --  @summary Simple lower-case mapping: one code point in, one code point
+   --  out (Unicode simple mapping, not the full mapping of To_Lower).
+   --  Trusted, not proved (SPARK_Mode Off body), see src/strings/AGENTS.md.
+   function Simple_To_Lower (Source : String_Type) return String_Type
+   with Global => null, Post => Length (Simple_To_Lower'Result) = Length (Source);
+
    function To_Upper (Source : String_Type) return String_Type renames Wide_Wide_String_Operations.To_Upper;
 
    function Starts_With (Source : String_Type; Prefix : String_Type) return Boolean

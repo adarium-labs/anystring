@@ -12,6 +12,7 @@ with Ada.Strings.UTF_Encoding;
 with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 with Ada.Wide_Wide_Characters.Handling;
 with Anystrings_Conv;
+with Anystrings_Simple_Case;
 
 package body Wide_Wide_String_Operations is
 
@@ -144,6 +145,18 @@ package body Wide_Wide_String_Operations is
       end loop;
       return To_Unbounded_Wide_Wide_String (Result);
    end To_Lower;
+
+   function Simple_To_Lower
+     (Source : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String
+   is
+      use Ada.Strings.Wide_Wide_Unbounded;
+      S : Wide_Wide_String := To_Wide_Wide_String (Source);
+   begin
+      for I in S'Range loop
+         S (I) := Anystrings_Simple_Case.Lower (S (I));
+      end loop;
+      return To_Unbounded_Wide_Wide_String (S);
+   end Simple_To_Lower;
 
    function To_Upper (Source : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String is
       use Ada.Strings.Wide_Wide_Unbounded;

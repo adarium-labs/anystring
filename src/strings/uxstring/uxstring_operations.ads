@@ -98,6 +98,13 @@ package UXString_Operations is
 
    --  Case conversion
    function To_Lower (Source : UXString) return UXString;
+
+   --  @summary Simple lower-case mapping, one code point in, one code point out.
+   --  @description
+   --  Maps each code point with Char_To_Lower (the Unicode simple mapping), so
+   --  the code-point count is unchanged. Unlike To_Lower, no full mapping.
+   function Simple_To_Lower (Source : UXString) return UXString;
+
    function To_Upper (Source : UXString) return UXString;
 
    --  Prefix/suffix checking

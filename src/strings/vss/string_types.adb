@@ -21,6 +21,9 @@ is
    function Is_Empty (Source : String_Type) return Boolean
    is (VSS_Operations.Is_Empty (Source));
 
+   function Simple_To_Lower (Source : String_Type) return String_Type
+   is (VSS_Operations.Simple_To_Lower (Source));
+
    function "&" (Left : String_Type; Right : String_Type) return String_Type
    is (VSS_Operations.Concat_Strings (Left, Right));
 

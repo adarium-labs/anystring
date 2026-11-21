@@ -34,6 +34,7 @@ with Text_IO_Test;
 with String_Extension_Test;
 with Empty_String_Default_Test;
 with Length_Contracts_Test;
+with Simple_To_Lower_Test;
 with Ingress_Replace_Test;
 with Ingress_Argv_Test;
 with Ingress_Boundary_Test;
@@ -58,6 +59,7 @@ procedure Anystrings_Test_Runner_No_Width is
       S.Add_Test (new Char_Classification_Test.Test_Case);
       S.Add_Test (new String_Extension_Test.Test_Case);
       S.Add_Test (new Length_Contracts_Test.Test_Case);
+      S.Add_Test (new Simple_To_Lower_Test.Test_Case);
       S.Add_Test (new Ingress_Replace_Test.Test_Case);
       S.Add_Test (new Ingress_Argv_Test.Test_Case);
       S.Add_Test (new Ingress_Boundary_Test.Test_Case);
