@@ -293,6 +293,21 @@ package body Case_Mapping_Test is
          Assert
            (Bytes (To_Upper (To_String_Type ("a" & E0_88_BA & "b"))) = "A" & E0_88_BA & "B",
             "upper: overlong between ASCII letters");
+         --  The same decoder serves the Latin-1 and code-point boundaries: an
+         --  overlong sequence is ill-formed there too, one U+FFFD per byte
+         --  (maximal subpart), never the code point it spells.
+         Assert
+           (To_Latin_1 (To_String_Type (Character'Val (16#E0#) & Character'Val (16#80#) & Character'Val (16#A9#)))
+            = "???",
+            "To_Latin_1: overlong E0 80 A9 decoded as A9");
+         Assert
+           (To_Latin_1 (To_String_Type (Character'Val (16#F0#) & Character'Val (16#80#) & Character'Val (16#80#)
+                                        & Character'Val (16#AF#)))
+            = "????",
+            "To_Latin_1: overlong F0 80 80 AF decoded as /");
+         Assert
+           (To_Wide_Wide_String (To_String_Type (E0_88_BA)) = (1 .. 3 => Cp (16#FFFD#)),
+            "To_Wide_Wide_String: overlong E0 88 BA decoded as U+023A");
       end if;
    end Test_Standard_Overlong_And_Out_Of_Range_Kept;
 

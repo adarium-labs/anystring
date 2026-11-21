@@ -79,6 +79,11 @@ package body Standard_String_Operations is
          Step := 3;
          if Code_Point in 16#D800# .. 16#DFFF# then
             Code_Point := 16#FFFD#;
+         elsif Code_Point < 16#800# then
+            --  Overlong: E0 80..9F is not a shortest form. Resynchronise at the
+            --  lead byte, as for any other ill-formed sequence.
+            Code_Point := 16#FFFD#;
+            Step := 1;
          end if;
 
       elsif Lead in 16#F0# .. 16#F4#
@@ -98,6 +103,10 @@ package body Standard_String_Operations is
          Step := 4;
          if Code_Point > 16#10_FFFF# then
             Code_Point := 16#FFFD#;
+         elsif Code_Point < 16#1_0000# then
+            --  Overlong: F0 80..8F is not a shortest form.
+            Code_Point := 16#FFFD#;
+            Step := 1;
          end if;
       end if;
    --  Any other lead byte (bare continuation 0x80..0xBF, overlong
