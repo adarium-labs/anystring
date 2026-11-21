@@ -145,11 +145,12 @@ package Standard_String_Operations is
 
    --  Case conversion
 
-   --  @summary Full Unicode case mapping of UTF-8 storage (same mapping as the
-   --  vss backend, per code point with the VSS tables).
+   --  @summary Full Unicode case mapping of UTF-8 storage. The results are the
+   --  same as the vss backend's, from the generated UCD 15.1.0 tables.
    --
    --  @description
-   --  Each maximal run of well-formed UTF-8 is mapped with the VSS full mapping.
+   --  Each maximal run of well-formed UTF-8 is mapped by
+   --  Anystrings_Simple_Case.Full_Map, with Final_Sigma decided inside the run.
    --  Ill-formed bytes are copied unchanged and end the run. The byte length of
    --  the result may differ from the input (e.g. U+0130 lower-cases to U+0069
    --  U+0307), so these functions carry no Length postcondition.

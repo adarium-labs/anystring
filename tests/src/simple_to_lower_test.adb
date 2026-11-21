@@ -59,6 +59,10 @@ package body Simple_To_Lower_Test is
           Routine_Name => AUnit.Format ("Supplementary plane letter (Deseret)")));
       Add_Routine
         (T,
+         (Routine      => Test_Generated_Samples'Access,
+          Routine_Name => AUnit.Format ("Generated UCD samples: Q, U+00DD, Omega, Cyrillic, OHM, KELVIN")));
+      Add_Routine
+        (T,
          (Routine      => Test_Malformed_Bytes_Standard_Only'Access,
           Routine_Name => AUnit.Format ("standard: ill-formed bytes kept unchanged")));
    end Register_Tests;
@@ -144,5 +148,25 @@ package body Simple_To_Lower_Test is
          end;
       end if;
    end Test_Malformed_Bytes_Standard_Only;
+
+   --  Known simple mappings (UnicodeData.txt, Unicode 15.1), read from the
+   --  generated Anystrings_UCD_Case tables through Simple_To_Lower.
+   procedure Test_Generated_Samples (T : in out AUnit.Test_Cases.Test_Case'Class) is
+      pragma Unreferenced (T);
+   begin
+      Expect (Wide_Wide_String'(1 => Cp (16#51#)), Wide_Wide_String'(1 => Cp (16#71#)), "Q -> q");
+      Expect (Wide_Wide_String'(1 => Cp (16#DD#)), Wide_Wide_String'(1 => Cp (16#FD#)), "U+00DD -> U+00FD");
+      Expect (Wide_Wide_String'(1 => Cp (16#3A9#)), Wide_Wide_String'(1 => Cp (16#3C9#)), "Omega -> omega");
+      Expect (Wide_Wide_String'(1 => Cp (16#416#)), Wide_Wide_String'(1 => Cp (16#436#)), "Cyrillic ZHE -> zhe");
+      --  OHM SIGN (3 bytes) -> omega (2 bytes), KELVIN SIGN (3) -> k (1): the
+      --  byte length changes, so standard keeps them.
+      if Byte_Counting then
+         Expect (Wide_Wide_String'(1 => Cp (16#2126#)), Wide_Wide_String'(1 => Cp (16#2126#)), "OHM (bytes)");
+         Expect (Wide_Wide_String'(1 => Cp (16#212A#)), Wide_Wide_String'(1 => Cp (16#212A#)), "KELVIN (bytes)");
+      else
+         Expect (Wide_Wide_String'(1 => Cp (16#2126#)), Wide_Wide_String'(1 => Cp (16#3C9#)), "OHM -> omega");
+         Expect (Wide_Wide_String'(1 => Cp (16#212A#)), Wide_Wide_String'(1 => Cp (16#6B#)), "KELVIN -> k");
+      end if;
+   end Test_Generated_Samples;
 
 end Simple_To_Lower_Test;

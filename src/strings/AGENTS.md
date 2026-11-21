@@ -51,7 +51,7 @@ Notes:
 - All wide and wide_wide based backends guard against code points outside U+0000..U+10FFFF and the UTF-16 surrogate range U+D800..U+DFFF. Classifiers return `False` for these; `Char_To_Lower` / `Char_To_Upper` return the input unchanged. This is required because `Ada.Wide_Wide_Characters.Handling` raises `Constraint_Error` on non-scalar arguments.
 - `standard` cannot classify code points > U+00FF (e.g. Arabic-Indic digits, Greek capitals); attempting to construct such a `Character` value raises `Constraint_Error` at construction time.
 - `wide_string` *can* classify Unicode code points in the BMP via `Ada.Wide_Characters.Handling`, but is treated as ASCII-only for `Is_Whitespace` and `Is_Line_Terminator` by contract, for symmetry with `standard`.
-- `Simple_To_Lower` (not a generic formal; declared in each `string_types.ads` with `Post => Length (Simple_To_Lower'Result) = Length (Source)`, trusted because the bodies are SPARK Off) maps one code point to one code point with the UCD Simple_Lowercase_Mapping, read through `VSS.Characters` in the shared unit `src/anystrings_simple_case.adb`. Every backend uses that unit, because the GNAT tables behind `Ada.Wide_Wide_Characters.Handling.To_Lower` miss U+0130 and U+1E9E. `Char_To_Lower` and the full-mapping `To_Lower` are unchanged. On `standard`, `Length` counts bytes, so a mapping whose UTF-8 length differs is not applied and the code point is kept unchanged. Those are the 25 code points below (Unicode 15.1 simple lower-case mappings, checked against the library's table on every scalar value U+0080..U+10FFFF). The rule: the two forms fall in different UTF-8 length classes (1 byte < U+0080 ≤ 2 bytes < U+0800 ≤ 3 bytes < U+10000 ≤ 4 bytes).
+- `Simple_To_Lower` (not a generic formal; declared in each `string_types.ads` with `Post => Length (Simple_To_Lower'Result) = Length (Source)`, trusted because the bodies are SPARK Off) maps one code point to one code point with the UCD Simple_Lowercase_Mapping, from the generated table `src/anystrings_ucd_case.adb` (UCD 15.1.0, see `tools/ucd/README.md`) through the shared unit `src/anystrings_simple_case.adb`. Every backend uses that unit, because the GNAT tables behind `Ada.Wide_Wide_Characters.Handling.To_Lower` miss U+0130 and U+1E9E. `Char_To_Lower` and the full-mapping `To_Lower` are unchanged. On `standard`, `Length` counts bytes, so a mapping whose UTF-8 length differs is not applied and the code point is kept unchanged. Those are the 25 code points below (Unicode 15.1 simple lower-case mappings, checked against the library's table on every scalar value U+0080..U+10FFFF). The rule: the two forms fall in different UTF-8 length classes (1 byte < U+0080 ≤ 2 bytes < U+0800 ≤ 3 bytes < U+10000 ≤ 4 bytes).
 
 | Code point | Name | Simple lower | Bytes |
 |---|---|---|---|
@@ -87,10 +87,26 @@ Notes:
 
 | Backend | Mapping | U+0130 lower | U+00DF upper |
 |---|---|---|---|
-| `standard` | full, VSS tables, per run of well-formed UTF-8 (same as `vss`) | `i` + U+0307 | `SS` |
+| `standard` | full, generated UCD 15.1.0 tables, per run of well-formed UTF-8, Final_Sigma within the run (same results as `vss`, checked on every scalar value) | `i` + U+0307 | `SS` |
 | `vss` | full, VSS (`VSS.Transformers.Casing`) | `i` + U+0307 | `SS` |
 | `uxstring` | per code point, GNAT `Ada.Wide_Wide_Characters.Handling` tables | not `i` + U+0307 (not asserted further) | not checked |
 | `wide_string`, `wide_wide_string` | ASCII letters only (A–Z, a–z) | unchanged | unchanged |
+
+### Unicode case data and dependencies
+
+The case tables are generated, not hand-written: `src/anystrings_ucd_case.ads/.adb` from the UCD 15.1.0 files vendored in `tools/ucd/data/15.1.0`, by `tools/ucd/regenerate.sh` (generator and regeneration steps in `tools/ucd/README.md`). Do not edit the generated files. The shared case code (`src/anystrings_simple_case.adb`) uses only these tables.
+
+Which external crate each backend's library closure reaches (checked from the ALI dependency records of the library build):
+
+| Backend | VSS in the closure | Other external crate |
+|---|---|---|
+| `standard` | no | none |
+| `wide_string` | no | none |
+| `wide_wide_string` | no | none |
+| `uxstring` | no | `uxstrings` |
+| `vss` | yes (its operations and `To_Lower`/`To_Upper` use `VSS.Transformers.Casing`) | `vss_text` |
+
+`alire.toml` still declares `vss_text` and `uxstrings` as dependencies, because the `vss` and `uxstring` backends need them. The default `standard` build therefore links neither.
 
 ### Filesystem boundary path encoding
 

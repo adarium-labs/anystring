@@ -7,10 +7,9 @@
 
 with Ada.Strings;
 with Ada.Strings.Fixed;
+with Ada.Strings.UTF_Encoding;
+with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 with Anystrings_Simple_Case;
-with VSS.Strings;
-with VSS.Strings.Conversions;
-with VSS.Transformers.Casing;
 --  Ada.Strings.Unbounded.Aux exposes the buffer of an Unbounded_String without
 --  a copy, which Code_Point_Length needs to stay allocation-free. It is a GNAT
 --  internal unit; the warning it raises is accepted here and nowhere else.
@@ -209,15 +208,16 @@ package body Standard_String_Operations is
       return Out_Buf;
    end Simple_To_Lower;
 
-   --  Full case mapping of one well-formed UTF-8 run, with the VSS mapping the
-   --  vss and uxstring backends use. Final sigma is decided within the run.
+   --  Full case mapping of one well-formed UTF-8 run (Anystrings_Simple_Case.
+   --  Full_Map: the same full mapping as the vss backend, Final_Sigma within the
+   --  run). Run decodes to exactly its own code points, so no U+FFFD is made.
    function Map_Run (Run : String; Upper : Boolean) return String is
-      Text : constant VSS.Strings.Virtual_String := VSS.Strings.Conversions.To_Virtual_String (Run);
    begin
-      if Upper then
-         return VSS.Strings.Conversions.To_UTF_8_String (VSS.Transformers.Casing.To_Uppercase.Transform (Text));
-      end if;
-      return VSS.Strings.Conversions.To_UTF_8_String (VSS.Transformers.Casing.To_Lowercase.Transform (Text));
+      return
+        Ada.Strings.UTF_Encoding.Wide_Wide_Strings.Encode
+          (Item          => Anystrings_Simple_Case.Full_Map (Anystrings_UTF_8_Replace.Decode_Replacing (Run), Upper),
+           Output_Scheme => Ada.Strings.UTF_Encoding.UTF_8,
+           Output_BOM    => False);
    end Map_Run;
 
    --  Case mapping of UTF-8 storage, code point by code point. Each maximal run of

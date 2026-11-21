@@ -48,6 +48,9 @@ private
    procedure Test_Supplementary_Plane
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 
+   procedure Test_Generated_Samples
+     (T : in out AUnit.Test_Cases.Test_Case'Class);
+
    procedure Test_Malformed_Bytes_Standard_Only
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 

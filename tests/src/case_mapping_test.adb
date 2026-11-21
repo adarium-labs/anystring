@@ -83,6 +83,10 @@ package body Case_Mapping_Test is
           Routine_Name => AUnit.Format ("Full mapping: U+0130 and U+00DF change length")));
       Add_Routine
         (T,
+         (Routine      => Test_Final_Sigma'Access,
+          Routine_Name => AUnit.Format ("Final_Sigma: word-final, before space, initial, isolated")));
+      Add_Routine
+        (T,
          (Routine      => Test_Standard_Valid_UTF_8_Bytes'Access,
           Routine_Name => AUnit.Format ("standard: result bytes are valid UTF-8")));
       Add_Routine
@@ -160,6 +164,51 @@ package body Case_Mapping_Test is
          Expect_Map (Sharp_S, Wide_Wide_String'("SS"), Upper => True, Label => "U+00DF upper (full)");
       end if;
    end Test_Full_Mapping_Changes_Length;
+
+   --  Final_Sigma (SpecialCasing): a capital sigma at the end of a word lower-
+   --  cases to U+03C2; elsewhere to U+03C3. Asserted where Full_Case_Mapping
+   --  holds (standard and vss, which agree on these inputs).
+   procedure Test_Final_Sigma (T : in out AUnit.Test_Cases.Test_Case'Class) is
+      pragma Unreferenced (T);
+      Omicron : constant Wide_Wide_Character := Cp (16#39F#);
+      Delta_C : constant Wide_Wide_Character := Cp (16#394#);
+      Sigma   : constant Wide_Wide_Character := Cp (16#3A3#);
+      Alpha   : constant Wide_Wide_Character := Cp (16#391#);
+      Beta    : constant Wide_Wide_Character := Cp (16#392#);
+      Space   : constant Wide_Wide_Character := Cp (16#20#);
+   begin
+      if Full_Case_Mapping then
+         --  "ΟΔΟΣ" (end of word) -> "οδος"
+         Expect_Map
+           (Omicron & Delta_C & Omicron & Sigma,
+            Cp (16#3BF#) & Cp (16#3B4#) & Cp (16#3BF#) & Cp (16#3C2#),
+            Upper => False,
+            Label => "final sigma at end of word");
+         --  "ΑΣ Β": the space is not case-ignorable, so the sigma is final.
+         Expect_Map
+           (Alpha & Sigma & Space & Beta,
+            Cp (16#3B1#) & Cp (16#3C2#) & Space & Cp (16#3B2#),
+            Upper => False,
+            Label => "final sigma before a space");
+         --  "ΣΑ": no cased letter before the sigma, so it is not final.
+         Expect_Map
+           (Sigma & Alpha,
+            Cp (16#3C3#) & Cp (16#3B1#),
+            Upper => False,
+            Label => "initial sigma");
+         Expect_Map
+           (Wide_Wide_String'(1 => Sigma),
+            Wide_Wide_String'(1 => Cp (16#3C3#)),
+            Upper => False,
+            Label => "isolated sigma");
+         --  Upper case has no context: U+03C2 -> U+03A3.
+         Expect_Map
+           (Wide_Wide_String'(1 => Cp (16#3C2#)),
+            Wide_Wide_String'(1 => Sigma),
+            Upper => True,
+            Label => "final sigma upper");
+      end if;
+   end Test_Final_Sigma;
 
    procedure Test_Standard_Valid_UTF_8_Bytes (T : in out AUnit.Test_Cases.Test_Case'Class) is
       pragma Unreferenced (T);

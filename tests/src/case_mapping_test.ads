@@ -45,6 +45,9 @@ private
    procedure Test_Full_Mapping_Changes_Length
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 
+   procedure Test_Final_Sigma
+     (T : in out AUnit.Test_Cases.Test_Case'Class);
+
    procedure Test_Standard_Valid_UTF_8_Bytes
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 
