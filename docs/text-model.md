@@ -369,6 +369,8 @@ How the code points are read depends on the storage:
 (`src/strings/AGENTS.md`, the 25 code points of `standard`). On `standard` a mapping whose UTF-8 length
 differs is not applied.
 
-Character level: `Char_To_Lower` and `Char_To_Upper` on `standard` map ASCII A–Z
-and a–z only. A `Character` there is one byte of UTF-8, so a byte at or above
-16#80# is returned unchanged: the lead byte C3 of U+00C9 is not turned into E3.
+Character level: on `standard` a `Character` is one byte of UTF-8, so `Char_Is_Lower`,
+`Char_Is_Upper`, `Char_To_Lower` and `Char_To_Upper` are ASCII only. A byte at or
+above 16#80# is neither lower nor upper case and is returned unchanged by the
+mapping: the lead byte C3 of U+00C9 is not turned into E3. The per-backend table is in
+`src/strings/AGENTS.md`.

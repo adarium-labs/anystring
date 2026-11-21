@@ -384,7 +384,7 @@ is
    function Is_Whitespace (C : Character_Type) return Boolean renames Standard_String_Operations.Char_Is_Whitespace;
 
    --  @summary ASCII only: A-Z and a-z change, a byte >= 16#80# (one byte of
-   --  UTF-8) is returned unchanged. The string-level To_Lower / To_Upper map
+   --  UTF-8) is returned unchanged. Is_Lower / Is_Upper are ASCII only too. The string-level To_Lower / To_Upper map
    --  the full Unicode mapping.
    function To_Lower (C : Character_Type) return Character_Type renames Standard_String_Operations.Char_To_Lower;
 

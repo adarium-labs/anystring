@@ -267,7 +267,8 @@ package Standard_String_Operations is
 
    --  Character Classification & Case Mapping
    ---------------------------------------------------------------------------
-   --  Delegates to Ada.Characters.Handling. Length/Element on this backend
+   --  Delegates to Ada.Characters.Handling, except the case predicates and
+   --  mapping, which are ASCII only (see below). Length/Element on this backend
    --  count bytes (Latin-1), so these predicates classify Latin-1 code
    --  points only — code points > U+00FF are not representable here.
 
@@ -291,11 +292,11 @@ package Standard_String_Operations is
 
    function Char_Is_Line_Terminator (C : Character) return Boolean;
 
-   function Char_Is_Lower (C : Character) return Boolean
-   renames Ada.Characters.Handling.Is_Lower;
+   --  ASCII only, as Char_To_Lower / Char_To_Upper: a byte >= 16#80# (one byte
+   --  of UTF-8) is neither lower nor upper case. Only a-z and A-Z are.
+   function Char_Is_Lower (C : Character) return Boolean;
 
-   function Char_Is_Upper (C : Character) return Boolean
-   renames Ada.Characters.Handling.Is_Upper;
+   function Char_Is_Upper (C : Character) return Boolean;
 
    --  ASCII whitespace: SP, HT, LF, VT, FF, CR.
    function Char_Is_Whitespace (C : Character) return Boolean;

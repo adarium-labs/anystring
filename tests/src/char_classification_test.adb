@@ -263,10 +263,23 @@ package body Char_Classification_Test is
       --  Character_Type covers at least U+0000..U+00FF.
       Assert (Is_Letter (Make_Char (16#00E9#)),
               "U+00E9 should be classified as a letter");
-      Assert (Is_Lower (Make_Char (16#00E9#)),
-              "U+00E9 should be lower-case");
-      Assert (Is_Upper (Make_Char (16#00C9#)),
-              "U+00C9 should be upper-case");
+      if Max_Code_Point > 16#FF# then
+         Assert (Is_Lower (Make_Char (16#00E9#)),
+                 "U+00E9 should be lower-case");
+         Assert (Is_Upper (Make_Char (16#00C9#)),
+                 "U+00C9 should be upper-case");
+      else
+         --  standard: a Character is one UTF-8 byte. A byte >= 16#80# is neither
+         --  lower nor upper case (only A-Z and a-z are).
+         Assert (not Is_Lower (Make_Char (16#00E9#)),
+                 "byte E9 should not be lower-case on standard");
+         Assert (not Is_Upper (Make_Char (16#00C9#)),
+                 "byte C9 should not be upper-case on standard");
+         Assert (Is_Upper (Make_Char (Character'Pos ('A'))),
+                 "'A' should be upper-case on standard");
+         Assert (Is_Lower (Make_Char (Character'Pos ('a'))),
+                 "'a' should be lower-case on standard");
+      end if;
    end Test_Latin_1_Supplement_Letter;
 
    procedure Test_Latin_1_Supplement_Case

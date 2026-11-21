@@ -8,6 +8,7 @@
 with AUnit.Assertions; use AUnit.Assertions;
 with AUnit.Test_Cases; use AUnit.Test_Cases;
 with String_Types;     use String_Types;
+with Latin_1_Count_Probe;
 
 package body Case_Mapping_Test is
 
@@ -324,6 +325,13 @@ package body Case_Mapping_Test is
          --  An encoded surrogate is one U+FFFD per byte (three), not one for the
          --  three bytes.
          Assert (To_Latin_1 (To_String_Type (ED_A0_80)) = "???", "To_Latin_1: ED A0 80 is not three replacements");
+         --  F4 90 is not a valid start (the second byte must be 80..8F), so F4 is one
+         --  replacement, and each of 90, 80, 80 is a stray byte: four in all. The
+         --  Replaced_Count check (To_Latin_1_If_Possible) is made by the probe.
+         Assert (To_Latin_1 (To_String_Type (F4_90)) = "????", "To_Latin_1: F4 90 80 80 is not four replacements");
+         Assert
+           (Latin_1_Count_Probe.Replaced_Count_Matches (F4_90, 4),
+            "To_Latin_1_If_Possible: F4 90 80 80 is not Lossy with Replaced_Count = 4");
          --  A truncated three-byte sequence is one maximal subpart (E2 82), then A.
          Assert
            (To_Latin_1 (To_String_Type (Character'Val (16#E2#) & Character'Val (16#82#) & "A")) = "?A",
@@ -340,6 +348,10 @@ package body Case_Mapping_Test is
       pragma Unreferenced (T);
    begin
       if Byte_Counting then
+         Assert (not Is_Upper (Character_Type'Val (16#C9#)), "Is_Upper C9 should be false");
+         Assert (Is_Upper (Character_Type'Val (16#41#)), "Is_Upper A should be true");
+         Assert (Is_Lower (Character_Type'Val (16#61#)), "Is_Lower a should be true");
+         Assert (not Is_Lower (Character_Type'Val (16#E9#)), "Is_Lower E9 should be false");
          Assert (To_Lower (Character_Type'Val (16#41#)) = Character_Type'Val (16#61#), "To_Lower A");
          Assert (To_Upper (Character_Type'Val (16#7A#)) = Character_Type'Val (16#5A#), "To_Upper z");
          Assert (To_Lower (Character_Type'Val (16#C9#)) = Character_Type'Val (16#C9#), "To_Lower C9 changed");

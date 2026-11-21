@@ -93,7 +93,15 @@ Only the way each backend reads the code points differs:
 | `uxstring` | code points (`To_Wide_Wide_String`), mapped and rebuilt; no new dependency | none (UXString stores scalar values only) |
 | `vss` | code points (`To_Wide_Wide_String`), mapped and rebuilt; `VSS.Transformers.Casing` is no longer used | none (VSS stores scalar values only) |
 
-Character level: `Char_To_Lower` / `Char_To_Upper` on `standard` (a `Character` is one byte of UTF-8) map ASCII A–Z and a–z only; a byte ≥ 16#80# is returned unchanged, so the lead byte of U+00C9 (C3) is never altered. The other backends keep their character-level mapping (`Ada.Wide_Characters.Handling` / `Ada.Wide_Wide_Characters.Handling`), which this change does not alter.
+Character level (case predicates and mapping). On `standard` a `Character` is one byte of UTF-8, so `Char_Is_Lower`, `Char_Is_Upper`, `Char_To_Lower` and `Char_To_Upper` are ASCII only: a byte ≥ 16#80# is neither lower nor upper case and is returned unchanged by the mapping, so the lead byte of U+00C9 (C3) is never altered or taken for a letter case.
+
+| Backend | `Is_Lower` / `Is_Upper` | `Char_To_Lower` / `Char_To_Upper` |
+|---|---|---|
+| `standard` | ASCII a–z / A–Z only; bytes ≥ 16#80# are neither | ASCII only; bytes ≥ 16#80# unchanged |
+| `wide_string` | `Ada.Wide_Characters.Handling` (GNAT tables) | `Ada.Wide_Characters.Handling` (GNAT tables) |
+| `wide_wide_string`, `uxstring`, `vss` | `Ada.Wide_Wide_Characters.Handling`, guarded against non-scalars | same tables, guarded |
+
+`Char_Is_Letter` and `Char_Is_Alphanumeric` on `standard` still use the Latin-1 letter categories of `Ada.Characters.Handling`. They are letter categories, not case, so this change leaves them alone.
 
 ### Unicode case data and dependencies
 

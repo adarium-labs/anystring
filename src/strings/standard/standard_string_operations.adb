@@ -444,6 +444,19 @@ package body Standard_String_Operations is
       return P in 16#09# .. 16#0D# or else P = 16#20#;
    end Char_Is_Whitespace;
 
+   --  ASCII only (see the spec): a byte >= 16#80# is neither lower nor upper.
+   function Char_Is_Lower (C : Character) return Boolean is
+      P : constant Natural := Character'Pos (C);
+   begin
+      return P in 16#61# .. 16#7A#;
+   end Char_Is_Lower;
+
+   function Char_Is_Upper (C : Character) return Boolean is
+      P : constant Natural := Character'Pos (C);
+   begin
+      return P in 16#41# .. 16#5A#;
+   end Char_Is_Upper;
+
    --  ASCII only (see the spec): bytes >= 16#80# are returned unchanged.
    function Char_To_Lower (C : Character) return Character is
       P : constant Natural := Character'Pos (C);

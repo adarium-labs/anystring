@@ -37,7 +37,15 @@ project Anystrings_Tests is
    end case;
    for Excluded_Source_Files use Width_Test_Excluded;
 
-   for Source_Dirs use ("src/", "config/");
+   --  latin_1_count_probe.adb: the body that checks To_Latin_1_If_Possible's
+   --  Replaced_Count exists only on standard (probe_standard/); the other
+   --  backends compile probe_stub/ (see src/latin_1_count_probe.ads).
+   case String_Type is
+      when "standard" =>
+         for Source_Dirs use ("src/", "config/", "probe_standard/");
+      when others =>
+         for Source_Dirs use ("src/", "config/", "probe_stub/");
+   end case;
    for Object_Dir use
      "obj/" & external ("STRING_TYPE", "standard") & Wide_Env_Output_Suffix & "/"
      & Anystrings_Tests_Config.Build_Profile;
