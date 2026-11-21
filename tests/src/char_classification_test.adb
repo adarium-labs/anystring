@@ -274,10 +274,19 @@ package body Char_Classification_Test is
    is
       pragma Unreferenced (T);
    begin
-      Assert (To_Lower (Make_Char (16#00C9#)) = Make_Char (16#00E9#),
-              "To_Lower (U+00C9) should equal U+00E9");
-      Assert (To_Upper (Make_Char (16#00E9#)) = Make_Char (16#00C9#),
-              "To_Upper (U+00E9) should equal U+00C9");
+      if Max_Code_Point > 16#FF# then
+         Assert (To_Lower (Make_Char (16#00C9#)) = Make_Char (16#00E9#),
+                 "To_Lower (U+00C9) should equal U+00E9");
+         Assert (To_Upper (Make_Char (16#00E9#)) = Make_Char (16#00C9#),
+                 "To_Upper (U+00E9) should equal U+00C9");
+      else
+         --  standard: a Character is one UTF-8 byte; Char_To_Lower / Char_To_Upper
+         --  map ASCII only, so a Latin-1 letter is returned unchanged.
+         Assert (To_Lower (Make_Char (16#00C9#)) = Make_Char (16#00C9#),
+                 "To_Lower (byte C9) should be unchanged on standard");
+         Assert (To_Upper (Make_Char (16#00E9#)) = Make_Char (16#00E9#),
+                 "To_Upper (byte E9) should be unchanged on standard");
+      end if;
    end Test_Latin_1_Supplement_Case;
 
    procedure Test_Unicode_Beyond_Latin_1

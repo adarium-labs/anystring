@@ -300,10 +300,12 @@ package Standard_String_Operations is
    --  ASCII whitespace: SP, HT, LF, VT, FF, CR.
    function Char_Is_Whitespace (C : Character) return Boolean;
 
-   function Char_To_Lower (C : Character) return Character
-   renames Ada.Characters.Handling.To_Lower;
+   --  ASCII only. On this backend a Character is one byte of UTF-8 storage, so
+   --  a byte >= 16#80# is a lead or continuation byte, never a letter: it is
+   --  returned unchanged (the Latin-1 mapping of Ada.Characters.Handling would
+   --  turn the lead byte C3 of U+00C9 into E3). Only A-Z and a-z change.
+   function Char_To_Lower (C : Character) return Character;
 
-   function Char_To_Upper (C : Character) return Character
-   renames Ada.Characters.Handling.To_Upper;
+   function Char_To_Upper (C : Character) return Character;
 
 end Standard_String_Operations;

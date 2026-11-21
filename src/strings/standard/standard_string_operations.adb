@@ -26,16 +26,14 @@ package body Standard_String_Operations is
    --  the leading 1..4 bytes per RFC 3629 and reporting:
    --
    --    Code_Point — the decoded scalar value.  On malformed input the
-   --                 helper returns U+FFFD (16#FFFD#) as a deterministic
-   --                 replacement (FUNC-CONV-006: To_Latin_1 is total).
+   --                 helper returns U+FFFD (16#FFFD#).
    --    Step       — the number of source bytes consumed (1 for ASCII,
    --                 2..4 for multi-byte sequences, 1 for resynchronisation
    --                 on malformed input).
    --
-   --  This helper is local to the body because both To_Latin_1 and
-   --  To_Latin_1_If_Possible need to consume exactly the same byte-walking
-   --  semantics, and the only difference between them is whether a
-   --  replacement is counted.
+   --  Used by the case mappings only, to find the runs of canonical UTF-8 that
+   --  they may map (see Case_Map). Egress and decoding of code points use
+   --  Anystrings_UTF_8_Replace (algorithm R).
    procedure Decode_One_UTF_8_Code_Point (Buf : String; Start : Natural; Code_Point : out Natural; Step : out Natural);
 
    procedure Decode_One_UTF_8_Code_Point (Buf : String; Start : Natural; Code_Point : out Natural; Step : out Natural)
@@ -47,9 +45,8 @@ package body Standard_String_Operations is
    begin
       --  Every test of the form "Buf'Last - Start >= K" below keeps Start + K from
       --  being formed past Buf'Last (it overflows when Buf'Last is Positive'Last).
-      --  Default for malformed input: U+FFFD, single-byte resync. This helper
-      --  serves the Latin-1 egress only; To_Wide_Wide_String and the ingress
-      --  paths use Anystrings_UTF_8_Replace (one U+FFFD per maximal subpart).
+      --  Default for malformed input: U+FFFD, single-byte resync. A run that
+      --  holds any such sequence is copied unchanged by Case_Map.
       Code_Point := 16#FFFD#;
       Step := 1;
 
@@ -338,51 +335,37 @@ package body Standard_String_Operations is
    end To_UTF_8;
 
    --  @relation FUNC-CONV-006, FUNC-CONV-007
+   --  Decodes with algorithm R (Anystrings_UTF_8_Replace), the model of
+   --  docs/text-model.md section 9.5: one U+FFFD per maximal ill-formed subpart,
+   --  so an encoded surrogate (ED A0 80) is three U+FFFD, one per byte. A code
+   --  point above U+00FF is written as '?'.
    function To_Latin_1 (Source : Unbounded_String) return String is
-      Buf     : constant String := To_String (Source);
-      Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
-      I       : Natural := Buf'First;
+      Scalars : constant Wide_Wide_String := Anystrings_UTF_8_Replace.Decode_Replacing (To_String (Source));
+      Out_Buf : String (1 .. Scalars'Length);
    begin
-      while I <= Buf'Last loop
-         declare
-            CP   : Natural;
-            Step : Natural;
-         begin
-            Decode_One_UTF_8_Code_Point (Buf, I, CP, Step);
-            if CP <= 16#FF# then
-               Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (CP));
-            else
-               Ada.Strings.Unbounded.Append (Out_Buf, '?');
-            end if;
-            exit when Step > Buf'Last - I;
-            I := I + Step;
-         end;
+      for I in Scalars'Range loop
+         if Wide_Wide_Character'Pos (Scalars (I)) <= 16#FF# then
+            Out_Buf (I - Scalars'First + 1) := Character'Val (Wide_Wide_Character'Pos (Scalars (I)));
+         else
+            Out_Buf (I - Scalars'First + 1) := '?';
+         end if;
       end loop;
-      return Ada.Strings.Unbounded.To_String (Out_Buf);
+      return Out_Buf;
    end To_Latin_1;
 
    --  @relation FUNC-CONV-008, FUNC-CONV-009
    function To_Latin_1_If_Possible (Source : Unbounded_String) return Anystrings_Conv.Latin_1_Conv_Result is
-      Buf     : constant String := To_String (Source);
+      Scalars : constant Wide_Wide_String := Anystrings_UTF_8_Replace.Decode_Replacing (To_String (Source));
       Out_Buf : Ada.Strings.Unbounded.Unbounded_String;
-      I       : Natural := Buf'First;
       Repls   : Natural := 0;
    begin
-      while I <= Buf'Last loop
-         declare
-            CP   : Natural;
-            Step : Natural;
-         begin
-            Decode_One_UTF_8_Code_Point (Buf, I, CP, Step);
-            if CP <= 16#FF# then
-               Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (CP));
-            else
-               Ada.Strings.Unbounded.Append (Out_Buf, '?');
-               Repls := Repls + 1;
-            end if;
-            exit when Step > Buf'Last - I;
-            I := I + Step;
-         end;
+      for I in Scalars'Range loop
+         if Wide_Wide_Character'Pos (Scalars (I)) <= 16#FF# then
+            Ada.Strings.Unbounded.Append (Out_Buf, Character'Val (Wide_Wide_Character'Pos (Scalars (I))));
+         else
+            Ada.Strings.Unbounded.Append (Out_Buf, '?');
+            Repls := Repls + 1;
+         end if;
       end loop;
       return
         (Status         => (if Repls = 0 then Anystrings_Conv.Ok else Anystrings_Conv.Lossy),
@@ -460,6 +443,25 @@ package body Standard_String_Operations is
       --  HT (0x09), LF (0x0A), VT (0x0B), FF (0x0C), CR (0x0D), SP (0x20).
       return P in 16#09# .. 16#0D# or else P = 16#20#;
    end Char_Is_Whitespace;
+
+   --  ASCII only (see the spec): bytes >= 16#80# are returned unchanged.
+   function Char_To_Lower (C : Character) return Character is
+      P : constant Natural := Character'Pos (C);
+   begin
+      if P in 16#41# .. 16#5A# then
+         return Character'Val (P + 16#20#);
+      end if;
+      return C;
+   end Char_To_Lower;
+
+   function Char_To_Upper (C : Character) return Character is
+      P : constant Natural := Character'Pos (C);
+   begin
+      if P in 16#61# .. 16#7A# then
+         return Character'Val (P - 16#20#);
+      end if;
+      return C;
+   end Char_To_Upper;
 
    --  Encode a Unicode scalar code-point as 1..4 UTF-8 bytes appended to
    --  Out_Buf. Local helper factored out to keep the three Tier-2
