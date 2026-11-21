@@ -51,7 +51,7 @@ Notes:
 - All wide and wide_wide based backends guard against code points outside U+0000..U+10FFFF and the UTF-16 surrogate range U+D800..U+DFFF. Classifiers return `False` for these; `Char_To_Lower` / `Char_To_Upper` return the input unchanged. This is required because `Ada.Wide_Wide_Characters.Handling` raises `Constraint_Error` on non-scalar arguments.
 - `standard` cannot classify code points > U+00FF (e.g. Arabic-Indic digits, Greek capitals); attempting to construct such a `Character` value raises `Constraint_Error` at construction time.
 - `wide_string` *can* classify Unicode code points in the BMP via `Ada.Wide_Characters.Handling`, but is treated as ASCII-only for `Is_Whitespace` and `Is_Line_Terminator` by contract, for symmetry with `standard`.
-- `Simple_To_Lower` (not a generic formal; declared in each `string_types.ads` with `Post => Length (Simple_To_Lower'Result) = Length (Source)`, trusted because the bodies are SPARK Off) maps one code point to one code point with the UCD Simple_Lowercase_Mapping, from the generated table `src/anystrings_ucd_case.adb` (UCD 15.1.0, see `tools/ucd/README.md`) through the shared unit `src/anystrings_simple_case.adb`. Every backend uses that unit, because the GNAT tables behind `Ada.Wide_Wide_Characters.Handling.To_Lower` miss U+0130 and U+1E9E. `Char_To_Lower` and the full-mapping `To_Lower` are unchanged. On `standard`, `Length` counts bytes, so a mapping whose UTF-8 length differs is not applied and the code point is kept unchanged. Those are the 25 code points below (Unicode 15.1 simple lower-case mappings, checked against the library's table on every scalar value U+0080..U+10FFFF). The rule: the two forms fall in different UTF-8 length classes (1 byte < U+0080 ≤ 2 bytes < U+0800 ≤ 3 bytes < U+10000 ≤ 4 bytes).
+- `Simple_To_Lower` (not a generic formal; declared in each `string_types.ads` with `Post => Length (Simple_To_Lower'Result) = Length (Source)`, trusted because the bodies are SPARK Off) maps one code point to one code point with the UCD Simple_Lowercase_Mapping, from the generated table `src/anystrings_ucd_case.adb` (UCD 15.1.0, see `tools/ucd/README.md`) through the shared unit `src/anystrings_simple_case.adb`. Every backend uses that unit, because the GNAT tables behind `Ada.Wide_Wide_Characters.Handling.To_Lower` miss U+0130 and U+1E9E. The string-level `To_Lower` / `To_Upper` use the full mapping (table below). On `standard`, `Length` counts bytes, so a mapping whose UTF-8 length differs is not applied and the code point is kept unchanged. Those are the 25 code points below (Unicode 15.1 simple lower-case mappings, checked against the library's table on every scalar value U+0080..U+10FFFF). The rule: the two forms fall in different UTF-8 length classes (1 byte < U+0080 ≤ 2 bytes < U+0800 ≤ 3 bytes < U+10000 ≤ 4 bytes).
 
 | Code point | Name | Simple lower | Bytes |
 |---|---|---|---|
@@ -81,16 +81,19 @@ Notes:
 | U+A7B2 | LATIN CAPITAL LETTER J WITH CROSSED-TAIL | U+029D | 3 → 2 |
 | U+A7C5 | LATIN CAPITAL LETTER S WITH HOOK | U+0282 | 3 → 2 |
 
-`To_Lower` and `To_Upper` on `standard` are the full mapping and do change byte length (U+0130 lower-cases to U+0069 U+0307, 2 → 3 bytes; U+00DF upper-cases to `SS`), so they have no `Length` postcondition.
+`To_Lower` and `To_Upper` are the full Unicode case mapping on every backend: the UnicodeData simple mappings, the unconditional SpecialCasing entries and the Final_Sigma rule (Unicode §3.13). All five backends call the same code, `Anystrings_Simple_Case.Full_Map`, on the same generated tables, so they return the same code points for the same text. The mapping changes byte length on `standard` (U+0130 lower-cases to U+0069 U+0307, 2 → 3 bytes; U+00DF upper-cases to `SS`), so `To_Lower` / `To_Upper` have no `Length` postcondition.
 
-`To_Lower` / `To_Upper` differ by backend (not aligned yet, follow-up):
+Only the way each backend reads the code points differs:
 
-| Backend | Mapping | U+0130 lower | U+00DF upper |
-|---|---|---|---|
-| `standard` | full, generated UCD 15.1.0 tables, per run of well-formed UTF-8, Final_Sigma within the run (same results as `vss`, checked on every scalar value) | `i` + U+0307 | `SS` |
-| `vss` | full, VSS (`VSS.Transformers.Casing`) | `i` + U+0307 | `SS` |
-| `uxstring` | per code point, GNAT `Ada.Wide_Wide_Characters.Handling` tables | not `i` + U+0307 (not asserted further) | not checked |
-| `wide_string`, `wide_wide_string` | ASCII letters only (A–Z, a–z) | unchanged | unchanged |
+| Backend | Code points read from storage | Ill-formed storage |
+|---|---|---|
+| `standard` | UTF-8 bytes; each maximal run of well-formed sequences is mapped on its own (Final_Sigma context stays inside the run) | an ill-formed sequence is copied unchanged and ends the run; byte length may change only in mapped runs |
+| `wide_string` | UTF-16 code units: a surrogate pair is one code point (via `To_Wide_Wide_String`) | a lone surrogate reads as U+FFFD, as in `To_UTF_8` |
+| `wide_wide_string` | one code point per `Wide_Wide_Character` | a value that is not a scalar value is copied unchanged |
+| `uxstring` | code points (`To_Wide_Wide_String`), mapped and rebuilt; no new dependency | none (UXString stores scalar values only) |
+| `vss` | code points (`To_Wide_Wide_String`), mapped and rebuilt; `VSS.Transformers.Casing` is no longer used | none (VSS stores scalar values only) |
+
+Character level: `Char_To_Lower` / `Char_To_Upper` on `standard` (a `Character` is one byte of UTF-8) map ASCII A–Z and a–z only; a byte ≥ 16#80# is returned unchanged, so the lead byte of U+00C9 (C3) is never altered. The other backends keep their character-level mapping (`Ada.Wide_Characters.Handling` / `Ada.Wide_Wide_Characters.Handling`), which this change does not alter.
 
 ### Unicode case data and dependencies
 
@@ -104,7 +107,7 @@ Which external crate each backend's library closure reaches (checked from the AL
 | `wide_string` | no | none |
 | `wide_wide_string` | no | none |
 | `uxstring` | no | `uxstrings` |
-| `vss` | yes (its operations and `To_Lower`/`To_Upper` use `VSS.Transformers.Casing`) | `vss_text` |
+| `vss` | yes (its operations use `VSS.Strings`; `To_Lower`/`To_Upper` use the generated tables) | `vss_text` |
 
 `alire.toml` still declares `vss_text` and `uxstrings` as dependencies, because the `vss` and `uxstring` backends need them. The default `standard` build therefore links neither.
 

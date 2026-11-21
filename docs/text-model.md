@@ -342,3 +342,33 @@ plain `String` / `Wide_String` and do have such tests, in
 `Ingress_Boundary_Test`). `Width_Clusters_Test.Test_Walks_End_At_The_Last_Cluster`
 checks the exit on a string whose last cluster is multi-byte; it is functional
 coverage of the exit, and does not reproduce the overflow.
+
+## 11. Case mapping
+
+`To_Lower` and `To_Upper` on a `String_Type` are the full Unicode case mapping
+(UnicodeData simple mappings, unconditional SpecialCasing entries, and the
+Final_Sigma rule of Unicode §3.13) on every backend. The result is the same code
+points on `standard`, `wide_string`, `wide_wide_string`, `uxstring` and `vss`,
+from the generated UCD 15.1.0 tables. The length may change (U+00DF upper-cases
+to `SS`; U+0130 lower-cases to U+0069 U+0307), so there is no `Length` contract
+for them.
+
+How the code points are read depends on the storage:
+
+- `standard` maps each maximal run of well-formed UTF-8 on its own. An ill-formed
+  sequence (for example an overlong form, a surrogate or a stray continuation byte)
+  is copied unchanged and ends the run, so the bytes that were not understood are
+  kept.
+- `wide_string` reads surrogate pairs as one code point. A lone surrogate reads as
+  U+FFFD, as in `To_UTF_8`.
+- `wide_wide_string` maps one code point per `Wide_Wide_Character`. A value that is
+  not a scalar value is copied unchanged.
+- `uxstring` and `vss` store scalar values only.
+
+`Simple_To_Lower` maps one code point to one code point and keeps the length
+(`src/strings/AGENTS.md`, the 25 code points of `standard`). On `standard` a mapping whose UTF-8 length
+differs is not applied.
+
+Character level: `Char_To_Lower` and `Char_To_Upper` on `standard` map ASCII A–Z
+and a–z only. A `Character` there is one byte of UTF-8, so a byte at or above
+16#80# is returned unchanged: the lead byte C3 of U+00C9 is not turned into E3.
