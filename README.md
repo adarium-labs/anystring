@@ -27,7 +27,7 @@ choice is the right one in some context and the wrong one in another.
 |---------------------|-------------------------------------------------|--------------------------------------|
 | `standard` (default)| `Ada.Strings.Unbounded.Unbounded_String`        | **UTF-8 bytes**                      |
 | `wide_string`       | `Ada.Strings.Wide_Unbounded` (`Wide_Character`) | `Wide_Character` **code units**      |
-| `wide_wide_string`  | `Ada.Strings.Wide_Wide_Unbounded`               | `Wide_Wide_Character` **slots**      |
+| `wide_wide_string`  | private, over `Ada.Strings.Wide_Wide_Unbounded` | `Wide_Wide_Character` **slots**      |
 | `uxstring`          | `UXStrings.UXString`                            | **Unicode code points**              |
 | `vss`               | `VSS.Strings.Virtual_String`                    | **Unicode code points**              |
 | `custom`            | your own backend at `STRING_PATH`               | up to you                            |

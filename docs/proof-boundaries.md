@@ -50,7 +50,7 @@ Both projects were proved with `--mode=all --level=2 --checks-as-errors=on`.
 |---------|----------------------------|---------------------------|-------|
 | `standard` | 80 / 0 | 109 / 0 | Bodies SPARK On, proved from `Ada.Strings.Unbounded` contracts |
 | `wide_string` | 20 / 0 | 49 / 0 | Off bodies: spec-level checks only |
-| `wide_wide_string` | 20 / 0 | 49 / 0 | Off bodies: spec-level checks only |
+| `wide_wide_string` | 20 / 0 | 49 / 0 | Off bodies: spec-level checks only; `String_Type` is a private wrapper (`String_Empty_Value`, text-model section 9.6) |
 | `vss` | 10 / 0 | 42 / 0 | Off bodies and OS-boundary units, see below |
 | `uxstring` | 18 / 0 | 43 / 0 | `String_Type` is a private wrapper, see "uxstring: private wrapper type" |
 
@@ -132,7 +132,7 @@ renames, for the same reason. Their specs are `SPARK_Mode => Off`.
 The other four backends are unchanged. The interface-identity rule between
 `string_types.ads` files therefore holds for the operation set and signatures
 in terms of `String_Type`, but not for the representation of `String_Type`
-(a private type on uxstring, a concrete type elsewhere).
+(a private type on uxstring and wide_wide_string, a concrete type on standard, wide_string and vss).
 
 ## Case mapping: arithmetic proved, glue trusted
 

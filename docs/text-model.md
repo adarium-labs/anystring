@@ -27,7 +27,7 @@ against `src/strings/AGENTS.md` (§ NOTES, § Character classification).
 |--------------------|------------------------------------------|-------------------------------------|------------------------------------|------------------------------------|---------------------------|
 | `standard`         | `Ada.Strings.Unbounded.Unbounded_String` | `Character` (0..255, Latin-1)       | **bytes** (UTF-8 storage)          | i-th **byte** as `Character`       | byte range                |
 | `wide_string`      | `Ada.Strings.Wide_Unbounded`             | `Wide_Character` (0..U+FFFF)        | **`Wide_Character` code units**    | i-th `Wide_Character`              | `Wide_Character` range    |
-| `wide_wide_string` | `Ada.Strings.Wide_Wide_Unbounded`        | `Wide_Wide_Character` (0..U+10FFFF) | **`Wide_Wide_Character` slots**    | i-th `Wide_Wide_Character`         | `Wide_Wide_Character` rng |
+| `wide_wide_string` | private, over `Ada.Strings.Wide_Wide_Unbounded` | `Wide_Wide_Character` (0..U+10FFFF) | **`Wide_Wide_Character` slots**    | i-th `Wide_Wide_Character`         | `Wide_Wide_Character` rng |
 | `uxstring`         | `UXStrings.UXString`                     | `Unicode_Character`                 | **Unicode code points**            | i-th **code point**                | code-point range          |
 | `vss`              | `VSS.Strings.Virtual_String`             | `Wide_Wide_Character`               | **Unicode code points**            | i-th **code point**                | code-point range          |
 
@@ -294,10 +294,37 @@ value is stored as U+FFFD, the replacement of `From_Wide_Wide_String`. The polic
 covers `From_Character`, `"&"` and `Append_Character` / `Prepend_Character` with a
 character, and the padding operations, which append the pad character: `Head`,
 `Tail` and, on the width build, `Pad_To_Width` (on its left, right or both sides).
-The replacement happens in the constructor, so no stored value holds a surrogate
-or a value above U+10FFFF.
+The replacement happens in the constructor. Where the constructors are the only way to
+build a value (the first two bullets below), no stored value holds a surrogate or a value
+above U+10FFFF.
 
-Per back end:
+How the invariant holds, per back end:
+
+- `wide_wide_string` and `uxstring`: **by type**. `String_Type` is private: on
+  `wide_wide_string` its full view wraps an `Unbounded_Wide_Wide_String`
+  (`String_Empty_Value`), on `uxstring` it wraps a `UXStrings.UXString`
+  (`UXString_Wrapper`). The only way to build or change a value is an operation of
+  `String_Types`, and every such operation stores scalars. The decode results
+  (`UTF_8_Decode_Result`, `WWS_Decode_Result`) are private for the same reason. Before
+  this change, on `wide_wide_string` `String_Type` was a public subtype of
+  `Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String`, so
+  `To_Unbounded_Wide_Wide_String` and `Append` stored U+D800 unchanged. A test cannot
+  show that a compilation is rejected (see `Scalar_Ingress_Test`); the privacy is
+  the enforcement.
+- `vss`: **by construction**. `String_Type` is `VSS.Strings.Virtual_String`, which holds
+  only valid code points; the character is converted with `To_Valid_Virtual_Character`.
+- `wide_string`: **by decoding**. `String_Type` is still a public subtype of
+  `Ada.Strings.Wide_Unbounded.Unbounded_Wide_String`, so the native operations can store
+  a lone surrogate. The API edge does not depend on that storage being clean: the
+  constructors store U+FFFD, and decoding to code points (`From_UTF_16`, which backs
+  `To_Wide_Wide_String` and the Wide_Wide boundary) replaces a lone surrogate by U+FFFD.
+  Making it private would be a change of its own; it is not part of this section's fix.
+- `standard`: **by decoding**. `String_Type` is still a public subtype of
+  `Ada.Strings.Unbounded.Unbounded_String`, and it stores bytes. The code points that leave
+  the backend come from `Decode_Replacing`, which replaces every ill-formed sequence.
+  See the `standard` bullet below for what the constructors do not cover.
+
+Constructor behaviour, per back end:
 
 - `wide_wide_string` and `uxstring`: a `Character_Type` value above U+10FFFF or in
   U+D800..U+DFFF is stored as U+FFFD.

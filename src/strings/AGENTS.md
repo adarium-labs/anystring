@@ -22,9 +22,9 @@ strings/
 
 The package name collision on `string_types.ads` is intentional — it's how directory swap selects a backend without consumer-side changes.
 
-### Exception: `uxstring` has a private `String_Type`
+### Exception: `uxstring` and `wide_wide_string` have a private `String_Type`
 
-On the other four backends `String_Type` is a concrete type (`subtype` of the underlying string). On `uxstring` it is a **private type** declared in `UXString_Wrapper` (not in `String_Types`: `Empty_String` must be a constant, see `docs/proof-boundaries.md`), whose full view, a record holding a `UXStrings.UXString`, sits in a `SPARK_Mode => Off` private part. `UXStrings.UXString` has an `Iterable` aspect whose functions read globals, which GNATprove rejects in any SPARK-On unit that mentions the type; hiding it behind the private type is what lets SPARK clients use the length contracts on this backend (see `docs/proof-boundaries.md`).
+On `standard`, `wide_string` and `vss` `String_Type` is a concrete type (`subtype` of the underlying string). On `wide_wide_string` it is a private type declared in `String_Empty_Value`, whose full view wraps an `Unbounded_Wide_Wide_String`; the reason is the scalar invariant (docs/text-model.md, section 9.6), not SPARK. On `uxstring` it is a **private type** declared in `UXString_Wrapper` (not in `String_Types`: `Empty_String` must be a constant, see `docs/proof-boundaries.md`), whose full view, a record holding a `UXStrings.UXString`, sits in a `SPARK_Mode => Off` private part. `UXStrings.UXString` has an `Iterable` aspect whose functions read globals, which GNATprove rejects in any SPARK-On unit that mentions the type; hiding it behind the private type is what lets SPARK clients use the length contracts on this backend (see `docs/proof-boundaries.md`).
 
 Consequences for this layer:
 - `uxstring/string_types.ads` has real declarations for every operation (no renames of `UXString`-typed subprograms) and `string_types.adb` (SPARK Off) has the bodies: unwrap with `UXString_Wrapper.Convert.To_UXString`, call `UXString_Operations` / `UXString_Strings`, wrap with `From_UXString`. The operation set and signatures in terms of `String_Type` are still identical to the other backends.
