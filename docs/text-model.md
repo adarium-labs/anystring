@@ -302,8 +302,8 @@ How the invariant holds, per back end:
 
 - `wide_wide_string` and `uxstring`: **by type**. `String_Type` is private: on
   `wide_wide_string` its full view wraps an `Unbounded_Wide_Wide_String`
-  (`String_Empty_Value`), on `uxstring` it wraps a `UXStrings.UXString`
-  (`UXString_Wrapper`). The only way to build or change a value is an operation of
+  (private part of `String_Types`, bridge `Wrap` / `Unwrap`), on `uxstring` it wraps a
+  `UXStrings.UXString` (same place, same bridge). The only way to build or change a value is an operation of
   `String_Types`, and every such operation stores scalars. The decode results
   (`UTF_8_Decode_Result`, `WWS_Decode_Result`) are private for the same reason. Before
   this change, on `wide_wide_string` `String_Type` was a public subtype of

@@ -16,7 +16,7 @@ Both use `--no-subprojects`, so dependency crates are never analysed.
 |-------------|----------|
 | `Length (Source)` | `Global => null` |
 | `Null_String_Value` | `Global => null`; `Post => Length (Null_String_Value'Result) = 0` |
-| `Empty_String` | `Empty_String : constant String_Type := Null_String_Value;` on every backend, so `Length (Empty_String) = 0` is provable. On uxstring `String_Type` and `Null_String_Value` come from `UXString_Wrapper` (see below) |
+| `Empty_String` | On standard, wide_string and vss `Empty_String : constant String_Type := Null_String_Value;`, so `Length (Empty_String) = 0` is provable. On wide_wide_string and uxstring `Empty_String` is a deferred constant completed in the SPARK_Mode Off private part, so its length is not provable there; the proof uses `Null_String_Value`, which has the same contract |
 | `Is_Empty (Source)` | `Post => Is_Empty'Result = (Length (Source) = 0)` |
 | `"&"` String & String | `Pre => Length (Right) <= Natural'Last - Length (Left)`; `Post => Length ("&"'Result) = Length (Left) + Length (Right)` |
 | `"&"` String & Character, Character & String | `Pre => Length < Natural'Last`; `Post` adds 1 |
@@ -50,11 +50,13 @@ Both projects were proved with `--mode=all --level=2 --checks-as-errors=on`.
 |---------|----------------------------|---------------------------|-------|
 | `standard` | 80 / 0 | 109 / 0 | Bodies SPARK On, proved from `Ada.Strings.Unbounded` contracts |
 | `wide_string` | 20 / 0 | 49 / 0 | Off bodies: spec-level checks only |
-| `wide_wide_string` | 20 / 0 | 49 / 0 | Off bodies: spec-level checks only; `String_Type` is a private wrapper (`String_Empty_Value`, text-model section 9.6) |
+| `wide_wide_string` | 20 / 0 | 49 / 0 | Off bodies: spec-level checks only; `String_Type` is private, its full view and the bridge `Wrap` / `Unwrap` in the private part of `String_Types` (text-model section 9.6); `string_types-width.ads` is SPARK Off |
 | `vss` | 10 / 0 | 42 / 0 | Off bodies and OS-boundary units, see below |
-| `uxstring` | 18 / 0 | 43 / 0 | `String_Type` is a private wrapper, see "uxstring: private wrapper type" |
+| `uxstring` | 18 / 0 | 43 / 0 | `String_Type` is private, its full view and the bridge in the private part of `String_Types`, see "uxstring: private String_Type" |
 
-## uxstring: private wrapper type
+The check counts of the `wide_wide_string` and `uxstring` rows are from the earlier run. They were not recounted after the bridge change. The unproved count was re-verified on both backends and both projects (0).
+
+## uxstring: private String_Type
 
 `UXStrings.UXString` cannot be mentioned by any SPARK-On unit. GNATprove
 (`--mode=all`, the 15.1 default) aborts with
@@ -74,40 +76,43 @@ type visible in SPARK to be globals-free. Even
 `--mode=check` does not report it. The crate must not be modified here.
 
 What fixes it, and why it is not hiding anything. On uxstring `String_Type` is a
-private type declared in `UXString_Wrapper`; its full view (a record holding a
-`UXStrings.UXString`) is in that package's `SPARK_Mode => Off` private part. SPARK clients see an
+private type declared in `String_Types`; its full view (a record holding a
+`UXStrings.UXString`) is in the `SPARK_Mode => Off` private part of `String_Types`. SPARK clients see an
 abstract private type plus the declared contracts, and never see
 `UXStrings.UXString`. This is the same trust model as the other backends'
 Off bodies: the contracts are declared in SPARK, the implementation is outside
 SPARK, and the tests (built with `-gnata`) check the contracts at run time.
 
-Why the type lives in its own package. `String_Types.Empty_String` must be a
+Why the type is declared in `String_Types`. `String_Types.Empty_String` must be a
 constant. A constant of a private type cannot be initialised in the visible
-part of the package that declares the type, and a deferred constant would hide
-its value from SPARK. As a function (the first version of this change) it broke
+part of the package that declares the type. A deferred constant hides its
+value from SPARK, so the length proof uses `Null_String_Value`. As a function (the first version of this change) it broke
 consumers at run time: a record component such as
 `Msg : Failure_Text := Empty_String`, with `Failure_Text` a subtype with a
 `Dynamic_Predicate`, copied the function result into the component without
 `Adjust` and then finalized the temporary, so the `UXString` buffer was freed
 twice (`malloc(): unaligned fastbin chunk detected`, found with an
-AddressSanitizer build of aclida). `UXString_Wrapper` (with `Elaborate_Body`)
-declares the private type, `Length` and `Null_String_Value`;
-`String_Types.Empty_String` is `constant := Null_String_Value`, like the other
-backends. `UXString_Wrapper.Convert` (SPARK Off) gives the bodies of
-`String_Types` and its children the conversions to and from `UXStrings.UXString`.
+AddressSanitizer build of aclida). The cure is a constant. `String_Types` now
+holds the private type, `Wrap` and `Unwrap` in its private part, and
+`Empty_String` is a deferred constant completed there, as on wide_wide_string.
+`UXString_Wrapper` and its `Convert` child are gone: `Convert` was public, so a
+client could turn any `UXStrings.UXString` into a `String_Type`. A private child
+unit would have hidden it, but GNAT only lets descendants of the parent with
+a private unit, and the children of `String_Types` are not descendants of
+`UXString_Wrapper`.
 The regression test is `tests/src/empty_string_default_test.adb`.
 
 Units that mention `UXStrings.UXString` and are therefore `SPARK_Mode => Off`
 (a leading `pragma SPARK_Mode (Off);` on the instance units, an aspect on the
 others):
-- `uxstring_wrapper.ads` (private part only), `uxstring_wrapper-convert.ads`,
+- `string_types.ads` (private part only),
   `uxstring_operations.ads`, `uxstring_strings.ads` (the `Anystrings`
   instance), `uxstring_utf_8_results.ads`, `uxstring_wws_decode_results.ads`
   (result instances), `uxstring_utf_8_bridge.ads`, `uxstring_wws_bridge.ads`
 - the OS-boundary units `uxstring_environment.ads`, `uxstring_text_io.ads`,
   `uxstring_command_line.ads`, `uxstring_directories.ads`, `uxstring_width.ads`
 
-Checked by removal, one at a time: the pragma on `uxstring_operations.ads`, on each of the three instance units, and on the two bridges (both together) is needed; without it gnatprove aborts with the message above. The OS-boundary units were not minimised individually.
+Checked by removal, one at a time: the pragma on `uxstring_operations.ads`, on each of the three instance units, and on the two bridges (both together) was needed (the bridges are gone; `String_Types` now has the SPARK Off private part instead, and it proves with 0 unproved); without it gnatprove aborts with the message above. The OS-boundary units were not minimised individually.
 
 ### Public API difference on the uxstring backend
 
