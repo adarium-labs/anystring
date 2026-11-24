@@ -149,6 +149,50 @@ package body Scalar_Ingress_Test is
       end loop;
    end Test_Latin_1_Native_Strings_Scalar;
 
+   --------------------------------------------------------------------------
+   --  Values derived from a source that held non-scalars keep only scalars.
+   --  On wide_wide_string String_Type is private, so a client cannot store a
+   --  raw Unbounded value that skips the constructors (docs/text-model.md,
+   --  section 9.6); this checks the derivations the API exposes.
+
+   procedure Test_Derived_Values_Keep_Scalars
+     (T : in out AUnit.Test_Cases.Test_Case'Class)
+   is
+      pragma Unreferenced (T);
+      Surrogate : constant Wide_Wide_Character := Wide_Wide_Character'Val (16#D800#);
+      Too_High  : constant Wide_Wide_Character := Wide_Wide_Character'Val (16#11_0000#);
+      Fffd      : constant Wide_Wide_Character := Wide_Wide_Character'Val (16#FFFD#);
+      Input     : constant Wide_Wide_String (1 .. 4) := (1 => 'a', 2 => Surrogate, 3 => 'b', 4 => Too_High);
+      Expected  : constant Wide_Wide_String (1 .. 4) := (1 => 'a', 2 => Fffd, 3 => 'b', 4 => Fffd);
+      Src       : constant Str := String_Types.From_Wide_Wide_String (Input);
+      A         : constant Str := String_Types.To_String_Type ("a");
+      X         : constant Str := String_Types.To_String_Type ("x");
+   begin
+      Assert (Code_Points_Of (Src) = Expected, "source: non-scalars replaced by U+FFFD");
+      Assert_All_Scalar (String_Types."&" (Src, Src), "concatenation");
+      Assert_All_Scalar (String_Types.Slice (Src, 2, 3), "Slice");
+      Assert_All_Scalar (String_Types.To_Upper (Src), "To_Upper");
+      Assert_All_Scalar (String_Types.To_Lower (Src), "To_Lower");
+      Assert_All_Scalar (String_Types.Replace (Src, A, X), "Replace");
+      Assert_All_Scalar (String_Types.Trim (Src), "Trim");
+      Assert_All_Scalar (String_Types.Head (Src, 6, ' '), "Head");
+      Assert_All_Scalar (String_Types.Tail (Src, 6, ' '), "Tail");
+      --  Character_Type holds U+D800 on the code-point backends only. The
+      --  argument goes through a function so the value is not a static
+      --  out-of-range Val on standard, where the branch is never taken.
+      if Representable (16#D800#) then
+         declare
+            function Char_Of (CP : Natural) return Char is (Char'Val (CP));
+
+            Surr_C : constant Char := Char_Of (16#D800#);
+         begin
+            Assert_All_Scalar (String_Types.Append_Character (Src, Surr_C), "Append_Character");
+            Assert (Code_Points_Of (String_Types.Append_Character (Src, Surr_C)) = Expected & Fffd,
+                    "Append_Character of a surrogate stores U+FFFD");
+         end;
+      end if;
+   end Test_Derived_Values_Keep_Scalars;
+
    overriding function Name (T : Test_Case) return AUnit.Message_String is
       pragma Unreferenced (T);
    begin
@@ -166,6 +210,9 @@ package body Scalar_Ingress_Test is
       Add_Routine
         (T, (Routine      => Test_Latin_1_Native_Strings_Scalar'Access,
              Routine_Name => AUnit.Format ("Latin-1 and native strings store scalars only")));
+      Add_Routine
+        (T, (Routine      => Test_Derived_Values_Keep_Scalars'Access,
+             Routine_Name => AUnit.Format ("Derived values (concat, slice, case, replace, trim, head, tail) stay scalar")));
    end Register_Tests;
 
 end Scalar_Ingress_Test;

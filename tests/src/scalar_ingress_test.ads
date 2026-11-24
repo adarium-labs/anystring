@@ -17,6 +17,12 @@
 --  the Latin-1 rows are skipped there too because standard stores raw bytes
 --  (docs/text-model.md, section 9.2).
 --
+--  The compile-time half of the invariant, that a wide_wide_string String_Type
+--  cannot be built from a raw Unbounded_Wide_Wide_String, cannot be stated as
+--  an AUnit test (a rejected compilation is not a runtime result). It is
+--  documented in docs/text-model.md, section 9.6, and enforced by String_Type
+--  being private.
+--
 --  SPARK Status: Not Applicable (test code)
 
 with AUnit.Test_Cases;
@@ -35,6 +41,9 @@ private
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 
    procedure Test_Scalar_Characters_Unchanged
+     (T : in out AUnit.Test_Cases.Test_Case'Class);
+
+   procedure Test_Derived_Values_Keep_Scalars
      (T : in out AUnit.Test_Cases.Test_Case'Class);
 
    procedure Test_Latin_1_Native_Strings_Scalar
