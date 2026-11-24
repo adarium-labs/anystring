@@ -40,6 +40,7 @@ with Ingress_Replace_Test;
 with Ingress_Argv_Test;
 with Ingress_Boundary_Test;
 with Ingress_Env_Test;
+with Scalar_Ingress_Test;
 
 procedure Anystrings_Test_Runner_No_Width is
 
@@ -66,6 +67,7 @@ procedure Anystrings_Test_Runner_No_Width is
       S.Add_Test (new Ingress_Argv_Test.Test_Case);
       S.Add_Test (new Ingress_Boundary_Test.Test_Case);
       S.Add_Test (new Ingress_Env_Test.Test_Case);
+      S.Add_Test (new Scalar_Ingress_Test.Test_Case);
       S.Add_Test (new Empty_String_Default_Test.Test_Case);
       S.Add_Test (new Cmdline_Test.Test_Case);
       S.Add_Test (new Filesystem_Test.Test_Case);

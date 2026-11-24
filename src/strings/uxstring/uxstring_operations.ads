@@ -42,10 +42,10 @@ package UXString_Operations is
    function Concat_Strings (Left : UXString; Right : UXString) return UXString renames UXStrings."&";
 
    --  Concatenation of a string and a character
-   function Concat_String_Character (Left : UXString; Right : Unicode_Character) return UXString renames UXStrings."&";
+   function Concat_String_Character (Left : UXString; Right : Unicode_Character) return UXString;
 
    --  Concatenation of a character and a string
-   function Concat_Character_String (Left : Unicode_Character; Right : UXString) return UXString renames UXStrings."&";
+   function Concat_Character_String (Left : Unicode_Character; Right : UXString) return UXString;
 
    --  Concatenation of UXString and Latin-1 String
    function Concat_String_Latin_1 (Left : UXString; Right : String) return UXString;

@@ -214,10 +214,22 @@ package body Wide_Wide_String_Operations is
       return Ada.Strings.Wide_Wide_Unbounded.Trim (Source, Ada.Strings.Both);
    end Trim;
 
+   --  Same policy as From_Wide_Wide_String: a surrogate or a value above
+   --  U+10FFFF is stored as U+FFFD.
    function From_Character (C : Wide_Wide_Character) return Unbounded_Wide_Wide_String is
    begin
-      return Ada.Strings.Wide_Wide_Unbounded.To_Unbounded_Wide_Wide_String ([1 => C]);
+      return From_Wide_Wide_String ([1 => C]);
    end From_Character;
+
+   function Concat_String_Character
+     (Left  : Unbounded_Wide_Wide_String;
+      Right : Wide_Wide_Character) return Unbounded_Wide_Wide_String
+   is (Concat_Strings (Left, From_Character (Right)));
+
+   function Concat_Character_String
+     (Left  : Wide_Wide_Character;
+      Right : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String
+   is (Concat_Strings (From_Character (Left), Right));
 
    --  @relation FUNC-UTF8-003, FUNC-UTF8-005, FUNC-UTF8-006, FUNC-UTF8-007, NFR-UTF8-007
    function To_UTF_8 (Source : Unbounded_Wide_Wide_String) return String is

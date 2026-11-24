@@ -33,15 +33,14 @@ package Wide_Wide_String_Operations is
       Right : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String
      renames Ada.Strings.Wide_Wide_Unbounded."&";
 
+   --  A non-scalar character is stored as U+FFFD (From_Character).
    function Concat_String_Character
      (Left  : Unbounded_Wide_Wide_String;
-      Right : Wide_Wide_Character) return Unbounded_Wide_Wide_String
-     renames Ada.Strings.Wide_Wide_Unbounded."&";
+      Right : Wide_Wide_Character) return Unbounded_Wide_Wide_String;
 
    function Concat_Character_String
      (Left  : Wide_Wide_Character;
-      Right : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String
-     renames Ada.Strings.Wide_Wide_Unbounded."&";
+      Right : Unbounded_Wide_Wide_String) return Unbounded_Wide_Wide_String;
 
    function Concat_String_Latin_1
      (Left  : Unbounded_Wide_Wide_String;

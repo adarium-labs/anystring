@@ -194,10 +194,21 @@ package body Wide_String_Operations is
       return Ada.Strings.Wide_Unbounded.Trim (Source, Ada.Strings.Both);
    end Trim;
 
+   --  A lone surrogate is stored as U+FFFD, as in From_Wide_Wide_String.
    function From_Character (C : Wide_Character) return Unbounded_Wide_String is
    begin
-      return Ada.Strings.Wide_Unbounded.To_Unbounded_Wide_String ([1 => C]);
+      return From_Wide_Wide_String ([1 => Wide_Wide_Character'Val (Wide_Character'Pos (C))]);
    end From_Character;
+
+   function Concat_String_Character
+     (Left  : Unbounded_Wide_String;
+      Right : Wide_Character) return Unbounded_Wide_String
+   is (Concat_Strings (Left, From_Character (Right)));
+
+   function Concat_Character_String
+     (Left  : Wide_Character;
+      Right : Unbounded_Wide_String) return Unbounded_Wide_String
+   is (Concat_Strings (From_Character (Left), Right));
 
    --  Code points first: a valid surrogate pair is one code point (encoded as
    --  four bytes), a lone surrogate is one U+FFFD. Encoding the raw code units

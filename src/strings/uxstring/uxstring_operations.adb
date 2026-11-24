@@ -182,10 +182,18 @@ package body UXString_Operations is
       return UXStrings.Trim (Source, Ada.Strings.Both);
    end Trim;
 
+   --  Same policy as From_Wide_Wide_String: UXStrings stores a surrogate or a
+   --  value above U+10FFFF as given, so the replacement is done here.
    function From_Character (C : Unicode_Character) return UXString is
    begin
-      return UXStrings.From_Unicode (C);
+      return From_Wide_Wide_String ([1 => C]);
    end From_Character;
+
+   function Concat_String_Character (Left : UXString; Right : Unicode_Character) return UXString
+   is (Concat_Strings (Left, From_Character (Right)));
+
+   function Concat_Character_String (Left : Unicode_Character; Right : UXString) return UXString
+   is (Concat_Strings (From_Character (Left), Right));
 
    --  UTF-8 of the stored code points. UXS5 stores whatever it is given, so a
    --  surrogate or a value above U+10FFFF can be stored; each one becomes
