@@ -20,7 +20,7 @@ package Length_Client
   with SPARK_Mode
 is
 
-   --  Length (Empty_String) = 0 and Is_Empty (Empty_String).
+   --  Length (Null_String_Value) = 0 and Is_Empty (Null_String_Value).
    procedure Empty_Has_Zero_Length
    with Global => null;
 

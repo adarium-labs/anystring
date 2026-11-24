@@ -11,8 +11,10 @@ is
 
    procedure Empty_Has_Zero_Length is
    begin
-      pragma Assert (Length (Empty_String) = 0);
-      pragma Assert (Is_Empty (Empty_String));
+      --  Empty_String is a deferred constant (its value is in the SPARK_Mode
+      --  Off private part), so the proof goes through Null_String_Value.
+      pragma Assert (Length (Null_String_Value) = 0);
+      pragma Assert (Is_Empty (Null_String_Value));
    end Empty_Has_Zero_Length;
 
    procedure Concat_Adds_Lengths (A, B : String_Type) is
