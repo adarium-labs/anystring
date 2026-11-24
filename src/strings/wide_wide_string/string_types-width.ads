@@ -26,7 +26,6 @@
 --            FUNC-WIDTH-016, NFR-WIDTH-001, NFR-WIDTH-003, NFR-WIDTH-004,
 --            NFR-WIDTH-005
 
-with String_Empty_Value.Convert;
 with Wide_Wide_Width;
 
 package String_Types.Width
@@ -88,7 +87,7 @@ is
    --  ---- Default_Ellipsis (FUNC-WIDTH-015) ----
 
    Default_Ellipsis : constant String_Type :=
-     String_Empty_Value.Convert.From_Unbounded (Wide_Wide_Width.Default_Ellipsis);
+     Wrap (Wide_Wide_Width.Default_Ellipsis);
 
    --  ---- Scalar queries ----
 

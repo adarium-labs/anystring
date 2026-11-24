@@ -12,9 +12,9 @@
 --  This is the UXString variant of String_Types. It provides full
 --  Unicode support with proper code point handling.
 --
---  Unlike the other backends, `String_Type` is a PRIVATE type here (declared in
---  UXString_Wrapper). Its full view (a record holding a UXStrings.UXString)
---  lives in a SPARK_Mode Off private part. The reason is that UXStrings.UXString carries an Iterable
+--  Unlike the other backends, `String_Type` is a PRIVATE type here. Its full
+--  view (a record holding a UXStrings.UXString) lives in a SPARK_Mode Off
+--  private part of this package. The reason is that UXStrings.UXString carries an Iterable
 --  aspect whose functions read globals, which GNATprove refuses in SPARK; a
 --  private type with an Off full view keeps that type out of every SPARK
 --  client. The length contracts below are therefore usable by SPARK clients
@@ -32,8 +32,8 @@
 with Ada.Containers;
 with Anystrings_UTF_8;
 with Anystrings_Invalid_Policy;
-with UXString_Wrapper;
 
+private with UXStrings;
 private with UXString_UTF_8_Results;
 private with UXString_WWS_Decode_Results;
 
@@ -41,22 +41,24 @@ package String_Types
   with SPARK_Mode
 is
 
-   --  Private on this backend, declared in UXString_Wrapper (see there).
-   subtype String_Type is UXString_Wrapper.String_Type;
+   --  Private on this backend. The full view (a record holding a
+   --  UXStrings.UXString) is in the private part below, and the only bridge to
+   --  it, Wrap and Unwrap, is private too: a client cannot store a non-scalar
+   --  value (docs/text-model.md, section 9.6).
+   type String_Type is private;
    subtype Character_Type is Wide_Wide_Character;
 
    function Length (Source : String_Type) return Natural
-   is (UXString_Wrapper.Length (Source))
    with Global => null;
 
    function Is_Empty (Source : String_Type) return Boolean
    with Global => null, Post => Is_Empty'Result = (Length (Source) = 0);
 
    function Null_String_Value return String_Type
-   is (UXString_Wrapper.Null_String_Value)
    with Global => null, Post => Length (Null_String_Value'Result) = 0;
 
-   Empty_String : constant String_Type := Null_String_Value;
+   --  Completed in the private part (a deferred constant).
+   Empty_String : constant String_Type;
 
    function Get_Length (Source : String_Type) return Natural;
 
@@ -381,8 +383,21 @@ is
 private
    pragma SPARK_Mode (Off);
 
-   --  The full views are outside SPARK: they hold a String_Type, whose full
-   --  view holds a UXStrings.UXString (see UXString_Wrapper).
+   --  The full view of String_Type, and the only bridge to UXStrings.UXString.
+   --  Wrap and Unwrap are private: a client cannot name them. The children of
+   --  String_Types see this part and use the bridge.
+
+   type String_Type is record
+      Value : UXStrings.UXString;
+   end record;
+
+   function Wrap (Source : UXStrings.UXString) return String_Type
+   is ((Value => Source));
+
+   function Unwrap (Source : String_Type) return UXStrings.UXString
+   is (Source.Value);
+
+   Empty_String : constant String_Type := (Value => UXStrings.Null_UXString);
 
    type UTF_8_Decode_Result is record
       Inner : UXString_UTF_8_Results.UTF_8_Decode_Result;

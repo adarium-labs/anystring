@@ -27,7 +27,6 @@
 
 with UXString_Width;
 
-private with UXString_Wrapper.Convert;
 
 package String_Types.Width
   with SPARK_Mode => Off
@@ -152,6 +151,6 @@ private
       Inner : UXString_Width.Grapheme_View;
    end record;
 
-   Default_Ellipsis : constant String_Type := UXString_Wrapper.Convert.From_UXString (UXString_Width.Default_Ellipsis);
+   Default_Ellipsis : constant String_Type := Wrap (UXString_Width.Default_Ellipsis);
 
 end String_Types.Width;

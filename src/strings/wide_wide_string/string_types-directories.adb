@@ -5,25 +5,21 @@
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
-with String_Empty_Value.Convert;
-
 package body String_Types.Directories with SPARK_Mode => Off is
 
-   package Conv renames String_Empty_Value.Convert;
-
    function Exists (Path : String_Type) return Boolean
-   is (Wide_Wide_Directories.Exists (Conv.To_Unbounded (Path)));
+   is (Wide_Wide_Directories.Exists (Unwrap (Path)));
 
    function Kind (Path : String_Type) return File_Kind
-   is (Wide_Wide_Directories.Kind (Conv.To_Unbounded (Path)));
+   is (Wide_Wide_Directories.Kind (Unwrap (Path)));
 
    function Create_Directory (Path : String_Type) return Boolean
-   is (Wide_Wide_Directories.Create_Directory (Conv.To_Unbounded (Path)));
+   is (Wide_Wide_Directories.Create_Directory (Unwrap (Path)));
 
    function Delete_File (Path : String_Type) return Boolean
-   is (Wide_Wide_Directories.Delete_File (Conv.To_Unbounded (Path)));
+   is (Wide_Wide_Directories.Delete_File (Unwrap (Path)));
 
    function Rename (Old_Path, New_Path : String_Type) return Boolean
-   is (Wide_Wide_Directories.Rename (Conv.To_Unbounded (Old_Path), Conv.To_Unbounded (New_Path)));
+   is (Wide_Wide_Directories.Rename (Unwrap (Old_Path), Unwrap (New_Path)));
 
 end String_Types.Directories;

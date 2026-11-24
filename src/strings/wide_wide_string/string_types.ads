@@ -6,21 +6,22 @@
 -------------------------------------------------------------------------------
 
 with Ada.Containers;
-with String_Empty_Value;
 with Wide_Wide_String_Operations;
 with Wide_Wide_UTF_8_Results;
 with Wide_Wide_WWS_Decode_Results;
 with Anystrings_UTF_8;
 with Anystrings_Conv;
 with Anystrings_Invalid_Policy;
+private with Ada.Strings.Wide_Wide_Unbounded;
 
 --  @summary
 --  The wide_wide_string variant of String_Types.
 --
 --  @description
---  String_Type is PRIVATE on this backend, declared in String_Empty_Value
---  (see there). Its full view holds an Unbounded_Wide_Wide_String, but no
---  client can reach that view: the only way to build or change a value is an
+--  String_Type is PRIVATE on this backend. Its full view (in the private part)
+--  holds an Unbounded_Wide_Wide_String, and the only bridge between the two,
+--  Wrap and Unwrap, is private too: it is visible to this package and its
+--  children, never to a client. So no client can reach that view: the only way to build or change a value is an
 --  operation of this package, and every such operation stores scalar values
 --  only (docs/text-model.md, section 9.6). The decode results are private for
 --  the same reason, since they hold a String_Type.
@@ -32,21 +33,20 @@ package String_Types
   with SPARK_Mode
 is
 
-   subtype String_Type is String_Empty_Value.String_Type;
+   type String_Type is private;
    subtype Character_Type is Wide_Wide_Character;
 
    function Length (Source : String_Type) return Natural
-   is (String_Empty_Value.Length (Source))
    with Global => null;
 
    function Is_Empty (Source : String_Type) return Boolean
    with Global => null, Post => Is_Empty'Result = (Length (Source) = 0);
 
    function Null_String_Value return String_Type
-   is (String_Empty_Value.Null_String_Value)
    with Global => null, Post => Length (Null_String_Value'Result) = 0;
 
-   Empty_String : constant String_Type := Null_String_Value;
+   --  Completed in the private part (a deferred constant).
+   Empty_String : constant String_Type;
 
    function Get_Length (Source : String_Type) return Natural;
 
@@ -379,8 +379,23 @@ is
 private
    pragma SPARK_Mode (Off);
 
-   --  The full views are outside SPARK: they hold a String_Type, whose full
-   --  view holds an Unbounded_Wide_Wide_String (see String_Empty_Value).
+   --  The full view of String_Type, and the only bridge to the unbounded
+   --  representation. Wrap and Unwrap are private: a client cannot name them,
+   --  so it cannot store a non-scalar value (docs/text-model.md, section 9.6).
+   --  The children of String_Types see this part and use the bridge.
+
+   type String_Type is record
+      Value : Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String;
+   end record;
+
+   function Wrap (Source : Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String) return String_Type
+   is ((Value => Source));
+
+   function Unwrap (Source : String_Type) return Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String
+   is (Source.Value);
+
+   Empty_String : constant String_Type :=
+     (Value => Ada.Strings.Wide_Wide_Unbounded.Null_Unbounded_Wide_Wide_String);
 
    type UTF_8_Decode_Result is record
       Inner : Wide_Wide_UTF_8_Results.UTF_8_Decode_Result;
