@@ -1,20 +1,22 @@
---  String_Types.Command_Line - Command-line bridge re-exports
+-------------------------------------------------------------------------------
+--  String_Types.Command_Line - Command-line bridge
 --
 --  Copyright (c) 2025
 --  SPDX-License-Identifier: Apache-2.0
---
+-------------------------------------------------------------------------------
+
 --  @summary
 --  Child package of String_Types exposing the Ada.Command_Line bridge.
 --
 --  @description
---  Pure renames of the per-backend Wide_Wide_Command_Line implementation
+--  Wrappers around the per-backend Wide_Wide_Command_Line implementation
 --  package, so that consumers can opt in to the command-line API with
---  with String_Types.Command_Line; without forcing
---  Ada.Command_Line into the dependency closure of every
---  with String_Types;.
+--  `with String_Types.Command_Line;` without forcing Ada.Command_Line into
+--  the dependency closure of every `with String_Types;`. Results are wrapped
+--  as String_Type (see the body).
 --
 --  Public surface is identical across all five backends
---  (FUNC-FACADE-003), only the rename targets differ.
+--  (FUNC-FACADE-003).
 --
 --  @relation FUNC-FACADE-002, FUNC-FACADE-003, FUNC-FACADE-004
 --  @relation FUNC-CMDLINE-001, FUNC-CMDLINE-002, FUNC-CMDLINE-003,
@@ -28,11 +30,9 @@ package String_Types.Command_Line with SPARK_Mode is
    function Argument_Count return Natural
      renames Wide_Wide_Command_Line.Argument_Count;
 
-   function Argument (Number : Positive) return String_Type
-     renames Wide_Wide_Command_Line.Argument;
+   function Argument (Number : Positive) return String_Type;
 
-   function Command_Name return String_Type
-     renames Wide_Wide_Command_Line.Command_Name;
+   function Command_Name return String_Type;
 
    subtype Exit_Status is Wide_Wide_Command_Line.Exit_Status;
 

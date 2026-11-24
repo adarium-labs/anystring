@@ -1,25 +1,30 @@
 -------------------------------------------------------------------------------
---  String_Empty_Value - the empty String_Type and its length (wide_wide_string)
+--  String_Empty_Value - the private String_Type of the wide_wide_string backend
 --
 --  Copyright (c) 2025
 --  SPDX-License-Identifier: Apache-2.0
 -------------------------------------------------------------------------------
 
 --  @summary
---  Source of the empty value behind String_Types.Empty_String.
+--  Declares the private wrapper over Unbounded_Wide_Wide_String that
+--  String_Types re-exports as `String_Type`, with the empty value.
 --
 --  @description
---  String_Types initialises its public constant Empty_String by calling
---  Null_String_Value while its specification elaborates. A body declared in
---  string_types.adb is not elaborated yet at that point. The function lives
---  here instead, and Elaborate_Body makes the body elaborate immediately
---  after this specification, before String_Types.
+--  The wrapper keeps the Ada unbounded type out of the public API. A
+--  String_Type value can only be built or changed through the operations of
+--  String_Types, and those sanitise code points: every non-scalar becomes
+--  U+FFFD or is skipped (docs/text-model.md, section 9.6).
 --
---  The body is SPARK_Mode => Off. Length and Null_String_Value carry their
---  contracts as trusted postconditions, checked at run time by the test
---  suite, which is built with assertions enabled.
+--  Why this unit and not String_Types itself: String_Types initialises
+--  Empty_String from Null_String_Value while its specification elaborates, so
+--  the body must be elaborated first (Elaborate_Body). The child
+--  String_Empty_Value.Convert gives String_Types and its children access to
+--  the unbounded value.
+--
+--  The full view is in a SPARK_Mode Off private part. The length contracts
+--  are trusted and checked at run time by the test suite (assertions on).
 
-with Wide_Wide_String_Operations;
+with Ada.Strings.Wide_Wide_Unbounded;
 
 package String_Empty_Value
   with SPARK_Mode
@@ -27,12 +32,19 @@ is
 
    pragma Elaborate_Body;
 
-   subtype String_Type is Wide_Wide_String_Operations.Unbounded_Wide_Wide_String;
+   type String_Type is private;
 
    function Length (Source : String_Type) return Natural
    with Global => null;
 
    function Null_String_Value return String_Type
    with Global => null, Post => Length (Null_String_Value'Result) = 0;
+
+private
+   pragma SPARK_Mode (Off);
+
+   type String_Type is record
+      Value : Ada.Strings.Wide_Wide_Unbounded.Unbounded_Wide_Wide_String;
+   end record;
 
 end String_Empty_Value;

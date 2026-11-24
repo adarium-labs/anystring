@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
---  String_Types.Text_IO - Text_IO bridge re-exports
+--  String_Types.Text_IO - Text_IO bridge
 --
 --  Copyright (c) 2025
 --  SPDX-License-Identifier: Apache-2.0
@@ -9,13 +9,14 @@
 --  Child package of String_Types exposing the Text_IO bridge.
 --
 --  @description
---  Pure renames of the per-backend Wide_Wide_Text_IO implementation
---  package, so that consumers can opt in to the Text I/O API with
+--  Wrappers around the per-backend Wide_Wide_Text_IO implementation package,
+--  so that consumers can opt in to the Text I/O API with
 --  `with String_Types.Text_IO;` without forcing Ada.Wide_Wide_Text_IO into
---  the dependency closure of every `with String_Types;`.
+--  the dependency closure of every `with String_Types;`. The String_Type
+--  operands are unwrapped and the results wrapped (see the body).
 --
 --  Public surface is identical across all five backends
---  (FUNC-FACADE-003), only the rename targets differ.
+--  (FUNC-FACADE-003).
 --
 --  @relation FUNC-FACADE-002, FUNC-FACADE-003, FUNC-FACADE-009, NFR-FACADE-002
 
@@ -46,15 +47,15 @@ package String_Types.Text_IO with SPARK_Mode is
    function Standard_Output return File_Type renames Wide_Wide_Text_IO.Standard_Output;
    function Standard_Error return File_Type renames Wide_Wide_Text_IO.Standard_Error;
 
-   procedure Put (Item : String_Type) renames Wide_Wide_Text_IO.Put;
-   procedure Put (File : File_Type; Item : String_Type) renames Wide_Wide_Text_IO.Put;
-   procedure Put_Line (Item : String_Type) renames Wide_Wide_Text_IO.Put_Line;
-   procedure Put_Line (File : File_Type; Item : String_Type) renames Wide_Wide_Text_IO.Put_Line;
+   procedure Put (Item : String_Type);
+   procedure Put (File : File_Type; Item : String_Type);
+   procedure Put_Line (Item : String_Type);
+   procedure Put_Line (File : File_Type; Item : String_Type);
 
-   function Get_Line return String_Type renames Wide_Wide_Text_IO.Get_Line;
-   function Get_Line (File : File_Type) return String_Type renames Wide_Wide_Text_IO.Get_Line;
-   procedure Get_Line (Item : out String_Type) renames Wide_Wide_Text_IO.Get_Line;
-   procedure Get_Line (File : File_Type; Item : out String_Type) renames Wide_Wide_Text_IO.Get_Line;
+   function Get_Line return String_Type;
+   function Get_Line (File : File_Type) return String_Type;
+   procedure Get_Line (Item : out String_Type);
+   procedure Get_Line (File : File_Type; Item : out String_Type);
 
    procedure New_Line renames Wide_Wide_Text_IO.New_Line;
    procedure New_Line (File : File_Type) renames Wide_Wide_Text_IO.New_Line;
