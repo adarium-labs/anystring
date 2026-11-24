@@ -292,8 +292,10 @@ that builds or changes a `String_Type` from a `Character_Type` or a `Wide_Wide_S
 stores only Unicode scalar values (U+0000..U+D7FF, U+E000..U+10FFFF). A non-scalar
 value is stored as U+FFFD, the replacement of `From_Wide_Wide_String`. The policy
 covers `From_Character`, `"&"` and `Append_Character` / `Prepend_Character` with a
-character, and the `Head` / `Tail` padding, which appends the pad character. The replacement happens in the constructor, so no stored value holds a
-surrogate or a value above U+10FFFF.
+character, and the padding operations, which append the pad character: `Head`,
+`Tail` and, on the width build, `Pad_To_Width` (on its left, right or both sides).
+The replacement happens in the constructor, so no stored value holds a surrogate
+or a value above U+10FFFF.
 
 Per back end:
 

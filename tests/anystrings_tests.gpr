@@ -31,7 +31,8 @@ project Anystrings_Tests is
             "width_clusters_test.ads", "width_clusters_test.adb",
             "width_helpers_test.ads",  "width_helpers_test.adb",
             "width_config_test.ads",   "width_config_test.adb",
-            "width_parity_test.ads",   "width_parity_test.adb");
+            "width_parity_test.ads",   "width_parity_test.adb",
+            "scalar_ingress_width_test.ads", "scalar_ingress_width_test.adb");
       when "true" =>
          Width_Test_Excluded := ("anystrings_test_runner_no_width.adb");
    end case;
