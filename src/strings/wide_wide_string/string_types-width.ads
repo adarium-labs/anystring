@@ -86,8 +86,8 @@ is
 
    --  ---- Default_Ellipsis (FUNC-WIDTH-015) ----
 
-   Default_Ellipsis : constant String_Type :=
-     Wrap (Wide_Wide_Width.Default_Ellipsis);
+   --  Completed in the private part (it needs the private bridge of String_Types).
+   Default_Ellipsis : constant String_Type;
 
    --  ---- Scalar queries ----
 
@@ -167,5 +167,7 @@ private
    type Grapheme_View is record
       Inner : Wide_Wide_Width.Grapheme_View;
    end record;
+
+   Default_Ellipsis : constant String_Type := Wrap (Wide_Wide_Width.Default_Ellipsis);
 
 end String_Types.Width;
