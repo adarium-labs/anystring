@@ -285,6 +285,35 @@ An encoded surrogate, `ED A0 80`, gives three replacements as well, one per byte
 one U+FFFD on its own, and `A0` and `80` are stray continuation bytes. So
 `To_Latin_1` gives `???`.
 
+### 9.6 Scalar values only: every constructor and mutator
+
+On `wide_string`, `wide_wide_string`, `uxstring` and `vss`, every public operation
+that builds or changes a `String_Type` from a `Character_Type` or a `Wide_Wide_String`
+stores only Unicode scalar values (U+0000..U+D7FF, U+E000..U+10FFFF). A non-scalar
+value is stored as U+FFFD, the replacement of `From_Wide_Wide_String`. The policy
+covers `From_Character`, `"&"` and `Append_Character` / `Prepend_Character` with a
+character, and the `Head` / `Tail` padding, which appends the pad character. The replacement happens in the constructor, so no stored value holds a
+surrogate or a value above U+10FFFF.
+
+Per back end:
+
+- `wide_wide_string` and `uxstring`: a `Character_Type` value above U+10FFFF or in
+  U+D800..U+DFFF is stored as U+FFFD.
+- `wide_string`: a lone surrogate is stored as U+FFFD. Characters are code units, so
+  two surrogates passed one character at a time give two U+FFFD, not one code point;
+  `From_Wide_Wide_String` works the same way per element.
+- `vss`: already conforming (the character is converted with `To_Valid_Virtual_Character`).
+- `standard`: **not covered**. A `Character` is one byte (section 9.2), and a byte at
+  or above 16#80# is stored as given, so `From_Character` and `"&"` with such a byte
+  can leave ill-formed UTF-8 in the storage. Replacing it with U+FFFD (three bytes)
+  would break the `Length` postconditions of `Append_Character` and `Prepend_Character`
+  and the byte model of `Element`. This needs a decision; it is not changed here.
+  The same holds for `To_String_Type` and the Latin-1 `"&"` on `standard` (section 9.2).
+
+The Latin-1 inputs (`To_String_Type`, `"&"` with a `String`, `Replace` with a `String`)
+store only scalar values on `wide_string`, `wide_wide_string` and `vss` (they read
+Latin-1 code points up to U+00FF) and on `uxstring` (UTF-8 with algorithm R, section 9.2).
+
 ## 10. Known issues
 
 ### 10.1 `Display_Width` sums cluster widths in `Natural`, unguarded (outside KI-046)
