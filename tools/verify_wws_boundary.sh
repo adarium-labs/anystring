@@ -5,6 +5,11 @@
 #  test suite, and reports PASS / FAIL per backend.
 set -uo pipefail
 
+#  Assertions on at build time: the length-contract tests (e.g. the vss
+#  "Slice past Length raises") need the Pre/Post checks compiled in, as in
+#  tests/run_all_backends.sh. The setting is read by the GPR when building.
+export ANYSTRING_ASSERTIONS=enabled
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${ROOT}"
@@ -72,6 +77,12 @@ for backend in "${BACKENDS[@]}"; do
         overall=1
     fi
 done
+
+#  Negative-compile check: a client must not be able to name the String_Type
+#  bridge on the scalar-invariant backends (tools/check_bridge_boundary.sh).
+if ! "${ROOT}/tools/check_bridge_boundary.sh"; then
+    overall=1
+fi
 
 echo ""
 if [ "${overall}" -eq 0 ]; then
